@@ -9,18 +9,39 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.11.2",
+    "@hookform/resolvers": "^5.2.2",
+    "@mercadopago/sdk-js": "^0.0.3",
+    "@prisma/client": "^5.22.0",
+    "@tanstack/react-query": "^5.100.10",
+    "@types/bcryptjs": "^2.4.6",
+    "@vercel/blob": "^2.3.3",
+    "axios": "^1.16.0",
+    "bcryptjs": "^3.0.3",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^1.14.0",
+    "next": "14.2.35",
+    "next-auth": "^4.24.14",
+    "prisma": "^5.22.0",
     "react": "^18",
     "react-dom": "^18",
-    "next": "14.2.35"
+    "react-hook-form": "^7.75.0",
+    "react-hot-toast": "^2.6.0",
+    "sharp": "^0.34.5",
+    "slugify": "^1.6.9",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.13"
   },
   "devDependencies": {
-    "typescript": "^5",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.35",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
-    "eslint": "^8",
-    "eslint-config-next": "14.2.35"
+    "typescript": "^5"
   }
 }

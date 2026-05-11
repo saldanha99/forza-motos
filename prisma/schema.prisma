@@ -1,0 +1,183 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  nome          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  senha         String?
+  telefone      String?
+  cpf           String?
+  role          Role      @default(CUSTOMER)
+  createdAt     DateTime  @default(now())
+
+  accounts     Account[]
+  sessions     Session[]
+  orders       Order[]
+  appointments Appointment[]
+  crm          CustomerCRM?
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+model Product {
+  id                   String      @id @default(cuid())
+  sku                  String      @unique
+  nome                 String
+  slug                 String      @unique
+  descricao            String      @db.Text
+  preco                Decimal     @db.Decimal(10, 2)
+  precoPromocional     Decimal?    @db.Decimal(10, 2)
+  estoque              Int         @default(0)
+  categoria            String
+  marca                String
+  compatibilidadeMotos Json        @default("[]")
+  imagens              Json        @default("[]")
+  ativo                Boolean     @default(true)
+  destaque             Boolean     @default(false)
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  orderItems OrderItem[]
+}
+
+model Order {
+  id                 String      @id @default(cuid())
+  orderNumber        String      @unique
+  userId             String?
+  user               User?       @relation(fields: [userId], references: [id])
+  status             OrderStatus @default(AGUARDANDO_PAGAMENTO)
+  subtotal           Decimal     @db.Decimal(10, 2)
+  frete              Decimal     @db.Decimal(10, 2)
+  desconto           Decimal     @default(0) @db.Decimal(10, 2)
+  total              Decimal     @db.Decimal(10, 2)
+  enderecoEntrega    Json
+  pagamentoMetodo    String?
+  pagamentoIdExterno String?
+  olistOrderId       String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  items    OrderItem[]
+  tracking OrderTracking[]
+}
+
+enum OrderStatus {
+  AGUARDANDO_PAGAMENTO
+  CONFIRMADO
+  SEPARANDO
+  ENVIADO
+  ENTREGUE
+  CANCELADO
+}
+
+model OrderItem {
+  id            String  @id @default(cuid())
+  orderId       String
+  order         Order   @relation(fields: [orderId], references: [id])
+  productId     String
+  product       Product @relation(fields: [productId], references: [id])
+  quantidade    Int
+  precoUnitario Decimal @db.Decimal(10, 2)
+}
+
+model OrderTracking {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  status    String
+  descricao String
+  createdAt DateTime @default(now())
+}
+
+model CustomerCRM {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  user         User      @relation(fields: [userId], references: [id])
+  totalPedidos Int       @default(0)
+  totalGasto   Decimal   @default(0) @db.Decimal(10, 2)
+  ultimaCompra DateTime?
+  notas        String?   @db.Text
+  etapaFunil   Funil     @default(LEAD)
+}
+
+enum Funil {
+  LEAD
+  ORCAMENTO
+  FECHADO
+  RECORRENTE
+}
+
+model Appointment {
+  id               String   @id @default(cuid())
+  userId           String?
+  user             User?    @relation(fields: [userId], references: [id])
+  nome             String
+  telefone         String
+  servico          String
+  motoModelo       String
+  dataPreferida    DateTime
+  horarioPreferido String
+  status           String   @default("pendente")
+  notas            String?  @db.Text
+  createdAt        DateTime @default(now())
+}
+
+model BlogPost {
+  id        String   @id @default(cuid())
+  titulo    String
+  slug      String   @unique
+  capaUrl   String?
+  conteudo  String   @db.Text
+  autor     String
+  publicado Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
