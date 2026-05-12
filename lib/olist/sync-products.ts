@@ -1,148 +1,88 @@
 /**
- * Sincronização de produtos Tiny ERP → banco local
+ * Sincronização Tiny ERP → banco local
  *
- * Estratégia para evitar rate limit:
- * 1. Usa dados da LISTAGEM para atualizar preço/estoque de produtos já existentes (1 req/página)
- * 2. Só chama produto.obter.php para produtos NOVOS (imagens + descrição completa)
- * 3. Delay automático de 600ms entre requests (no client)
- * 4. Processa em lotes de 20 para evitar timeout 504 no Vercel
+ * FASE 1 — syncPaginaListagem(): usa só a listagem, 1 request por página
+ *   → Rápido, sem rate limit, atualiza nome/preço/estoque de todos os produtos
+ *
+ * FASE 2 — syncImagensLote(): busca imagens de até 3 produtos sem foto por vez
+ *   → Chamado separadamente, delay 1.2s entre requests
  */
 
-import { fetchAllTinyProducts, fetchTinyProduct } from './client'
+import { fetchTinyProductPage, fetchTinyProduct, extrairImagensTiny } from './client'
 import { prisma } from '../prisma'
 import { gerarSlug } from '../utils'
 
-/**
- * Extrai URLs de imagem do produto Tiny
- * O Tiny retorna imagens em produto.fotos.foto[] ou produto.imagens.imagem[]
- */
-function extrairImagens(p: any): string[] {
-  // Formato: { fotos: { foto: [...] } } ou { fotos: [...] }
-  if (p.fotos) {
-    const raw = p.fotos.foto ?? p.fotos
-    const lista = Array.isArray(raw) ? raw : [raw]
-    const urls = lista
-      .map((f: any) => (typeof f === 'string' ? f : f?.url || f?.link || ''))
-      .filter(Boolean)
-    if (urls.length) return urls
-  }
-
-  // Formato: { imagens: { imagem: [...] } } ou { imagens: [...] }
-  if (p.imagens) {
-    const raw = p.imagens.imagem ?? p.imagens
-    const lista = Array.isArray(raw) ? raw : [raw]
-    const urls = lista
-      .map((i: any) => (typeof i === 'string' ? i : i?.url || i?.link || ''))
-      .filter(Boolean)
-    if (urls.length) return urls
-  }
-
-  // Campos únicos de imagem
-  if (p.foto && typeof p.foto === 'string') return [p.foto]
-  if (p.imagem_principal && typeof p.imagem_principal === 'string') return [p.imagem_principal]
-
-  return []
-}
-
-/**
- * Mapeia produto da LISTAGEM (dados resumidos) para atualização rápida
- * Disponível sem chamada extra: id, codigo, nome, preco, situacao, saldo
- */
+/** Mapeia dados resumidos da listagem */
 function mapearListagem(p: any) {
   return {
-    sku:    String(p.codigo || p.id),
-    nome:   p.nome || 'Produto sem nome',
-    preco:  Number(p.preco ?? p.preco_venda ?? 0),
-    precoPromocional: p.preco_promocional && Number(p.preco_promocional) > 0
+    sku:      String(p.codigo || p.id),
+    nome:     p.nome || 'Produto sem nome',
+    preco:    Number(p.preco ?? p.preco_venda ?? 0),
+    precoPromocional: (p.preco_promocional && Number(p.preco_promocional) > 0)
       ? Number(p.preco_promocional)
       : null,
-    // Estoque: Tiny usa diferentes campos dependendo da versão
-    estoque: Number(
-      p.saldo_fisico_total ??
-      p.saldo_fisico ??
-      p.saldo ??
-      p.estoque_atual ??
-      p.quantidade ??
-      0
-    ),
-    ativo: p.situacao === 'A' || p.situacao === 'Ativo',
-    tinyId: String(p.id),
-    categoria: p.categoria?.descricao || (typeof p.categoria === 'string' ? p.categoria : '') || p.secao || 'Geral',
-    marca: p.marca || '',
+    estoque:  Number(p.saldo_fisico_total ?? p.saldo_fisico ?? p.saldo ?? p.estoque_atual ?? p.quantidade ?? 0),
+    ativo:    p.situacao === 'A' || p.situacao === 'Ativo',
+    tinyId:   String(p.id),
+    categoria: p.categoria?.descricao || (typeof p.categoria === 'string' ? p.categoria : '') || 'Geral',
+    marca:    p.marca || '',
   }
 }
 
 /**
- * Mapeia produto COMPLETO (do produto.obter.php) para criação de novo produto
+ * FASE 1 — Processa UMA página da listagem do Tiny
+ * 1 request apenas → nunca estoura rate limit nem timeout
+ * Cria produtos sem imagem; atualiza preço/estoque de existentes
  */
-function mapearDetalhes(p: any) {
-  const base = mapearListagem(p)
-  return {
-    ...base,
-    descricao: p.descricao_complementar || p.obs || p.descricao_curta || '',
-    imagens: extrairImagens(p),
-    compatibilidadeMotos: p.compatibilidade ? [p.compatibilidade] : [],
-  }
-}
-
-/**
- * Sincronização em lote com estratégia anti-rate-limit:
- * - Produtos existentes: atualiza preço/estoque/nome com dados da listagem (SEM chamada extra)
- * - Produtos novos: busca detalhes completos (1 chamada extra por produto novo)
- *
- * @param pagina - página de produtos a processar (1-based)
- * @param limite - produtos por lote
- */
-export async function syncProdutosOlist(pagina = 1, limite = 20) {
-  const listaProdutos = await fetchAllTinyProducts()
-  const total = listaProdutos.length
-
-  const inicio = (pagina - 1) * limite
-  const lote = listaProdutos.slice(inicio, inicio + limite)
-  const totalPaginas = Math.ceil(total / limite)
+export async function syncPaginaListagem(pagina: number) {
+  const { produtos, totalPaginas } = await fetchTinyProductPage(pagina)
 
   let criados = 0
   let atualizados = 0
   let erros = 0
 
-  for (const item of lote) {
+  for (const item of produtos) {
     try {
-      const dados = mapearListagem(item)
+      const d = mapearListagem(item)
 
-      const existing = await prisma.product.findUnique({ where: { sku: dados.sku } })
+      const existing = await prisma.product.findUnique({ where: { sku: d.sku } })
 
       if (existing) {
-        // Produto já existe: atualiza com dados da listagem (sem chamada extra!)
         await prisma.product.update({
-          where: { sku: dados.sku },
+          where: { sku: d.sku },
           data: {
-            nome:             dados.nome,
-            preco:            dados.preco,
-            precoPromocional: dados.precoPromocional ?? undefined,
-            estoque:          dados.estoque,
-            ativo:            dados.ativo,
-            tinyId:           dados.tinyId,
-            categoria:        dados.categoria || existing.categoria,
-            marca:            dados.marca || existing.marca,
+            nome:             d.nome,
+            preco:            d.preco,
+            precoPromocional: d.precoPromocional ?? undefined,
+            estoque:          d.estoque,
+            ativo:            d.ativo,
+            tinyId:           d.tinyId,
           },
         })
         atualizados++
       } else {
-        // Produto novo: busca detalhes completos (imagens, descrição)
-        let detalhes: any = null
-        try {
-          detalhes = await fetchTinyProduct(item.id)
-        } catch (e) {
-          console.warn(`[sync] Detalhe indisponível para ${item.id}, usando listagem`)
-        }
-
-        const d = detalhes ? mapearDetalhes(detalhes) : { ...dados, descricao: '', imagens: [], compatibilidadeMotos: [] }
-
+        // Cria sem imagem — Fase 2 buscará as imagens depois
         let slug = gerarSlug(d.nome)
         const slugExists = await prisma.product.findUnique({ where: { slug } })
         if (slugExists) slug = `${slug}-${d.sku}`
 
-        await prisma.product.create({ data: { ...d, slug } })
+        await prisma.product.create({
+          data: {
+            sku:               d.sku,
+            nome:              d.nome,
+            slug,
+            descricao:         '',
+            preco:             d.preco,
+            precoPromocional:  d.precoPromocional ?? undefined,
+            estoque:           d.estoque,
+            ativo:             d.ativo,
+            tinyId:            d.tinyId,
+            categoria:         d.categoria,
+            marca:             d.marca,
+            imagens:           [],
+            compatibilidadeMotos: [],
+          },
+        })
         criados++
       }
     } catch (err: any) {
@@ -155,7 +95,6 @@ export async function syncProdutosOlist(pagina = 1, limite = 20) {
     criados,
     atualizados,
     erros,
-    total,
     paginaAtual: pagina,
     totalPaginas,
     hasMore: pagina < totalPaginas,
@@ -163,76 +102,152 @@ export async function syncProdutosOlist(pagina = 1, limite = 20) {
 }
 
 /**
- * Sincroniza um único produto pelo ID do Tiny (usado pelo webhook)
+ * FASE 2 — Busca imagens e descrição de até `limite` produtos que estão sem foto
+ * Cada produto = 1 request ao Tiny (com delay 1.2s)
  */
-export async function syncProdutoUnico(tinyId: string | number): Promise<'criado' | 'atualizado' | 'ignorado'> {
-  let produtoTiny: any = null
-  try {
-    produtoTiny = await fetchTinyProduct(tinyId)
-  } catch {
-    return 'ignorado'
-  }
-  if (!produtoTiny) return 'ignorado'
+export async function syncImagensLote(limite = 3) {
+  // Busca produtos sem imagens (array vazio ou null)
+  const semImagem = await prisma.product.findMany({
+    where: {
+      tinyId: { not: null },
+      // imagens = '[]' ou vazio
+    },
+    select: { id: true, sku: true, tinyId: true, imagens: true, nome: true },
+    take: limite * 3, // busca mais para filtrar
+  })
 
-  const dados = mapearDetalhes(produtoTiny)
-  const existing = await prisma.product.findUnique({ where: { sku: dados.sku } })
-
-  if (existing) {
-    await prisma.product.update({
-      where: { sku: dados.sku },
-      data: {
-        nome:             dados.nome,
-        descricao:        dados.descricao,
-        preco:            dados.preco,
-        precoPromocional: dados.precoPromocional ?? undefined,
-        estoque:          dados.estoque,
-        categoria:        dados.categoria,
-        marca:            dados.marca,
-        imagens:          dados.imagens,
-        ativo:            dados.ativo,
-        tinyId:           dados.tinyId,
-      },
+  // Filtra os que realmente não têm imagens
+  const precisam = semImagem
+    .filter(p => {
+      const imgs = Array.isArray(p.imagens) ? p.imagens : []
+      return imgs.length === 0
     })
-    return 'atualizado'
+    .slice(0, limite)
+
+  if (precisam.length === 0) {
+    return { atualizados: 0, semImagem: 0, hasMore: false }
   }
 
-  let slug = gerarSlug(dados.nome)
-  const slugExists = await prisma.product.findUnique({ where: { slug } })
-  if (slugExists) slug = `${slug}-${dados.sku}`
+  // Conta total sem imagem para saber se tem mais
+  const totalSemImagem = await prisma.product.count({
+    where: { tinyId: { not: null } },
+  })
 
-  await prisma.product.create({ data: { ...dados, slug } })
-  return 'criado'
-}
-
-/**
- * Sync somente de estoque e preço — ultra rápido, usa apenas listagem
- * Ideal para o cron diário
- */
-export async function syncEstoquePrecos() {
-  const listaProdutos = await fetchAllTinyProducts()
   let atualizados = 0
   let erros = 0
 
-  for (const item of listaProdutos) {
+  for (const produto of precisam) {
     try {
-      const dados = mapearListagem(item)
-      const existing = await prisma.product.findUnique({ where: { sku: dados.sku } })
-      if (!existing) continue
+      const detalhe = await fetchTinyProduct(produto.tinyId!)
+      if (!detalhe) continue
+
+      const imagens = extrairImagensTiny(detalhe)
+      const descricao = detalhe.descricao_complementar || detalhe.obs || detalhe.descricao_curta || ''
+      const categoria = detalhe.categoria?.descricao || (typeof detalhe.categoria === 'string' ? detalhe.categoria : '') || undefined
+      const marca = detalhe.marca || undefined
 
       await prisma.product.update({
-        where: { sku: dados.sku },
+        where: { id: produto.id },
         data: {
-          preco:            dados.preco,
-          precoPromocional: dados.precoPromocional ?? undefined,
-          estoque:          dados.estoque,
-          ativo:            dados.ativo,
+          imagens,
+          descricao: descricao || undefined,
+          ...(categoria && { categoria }),
+          ...(marca && { marca }),
         },
       })
       atualizados++
-    } catch {
+    } catch (err: any) {
+      console.error(`[imagens] Erro ${produto.tinyId}:`, err?.message)
       erros++
     }
   }
 
-  return { atualizados, erros, total: listaProdutos.length }
+  // Verifica se ainda tem mais sem imagem depois deste lote
+  const aindasemImagem = await prisma.product.findMany({
+    where: { tinyId: { not: null } },
+    select: { imagens: true },
+  })
+  const restantes = aindasemImagem.filter(p => {
+    const imgs = Array.isArray(p.imagens) ? p.imagens : []
+    return imgs.length === 0
+  }).length
+
+  return {
+    atualizados,
+    erros,
+    semImagem: totalSemImagem,
+    restantes,
+    hasMore: restantes > 0,
+  }
+}
+
+/** Sync de estoque/preço para o cron diário — apenas listagem */
+export async function syncEstoquePrecos() {
+  let pagina = 1
+  let totalPaginas = 1
+  let atualizados = 0
+  let erros = 0
+  let total = 0
+
+  while (pagina <= totalPaginas) {
+    const { produtos, totalPaginas: tp } = await fetchTinyProductPage(pagina)
+    totalPaginas = tp
+    total += produtos.length
+
+    for (const item of produtos) {
+      try {
+        const d = mapearListagem(item)
+        const existing = await prisma.product.findUnique({ where: { sku: d.sku } })
+        if (!existing) continue
+
+        await prisma.product.update({
+          where: { sku: d.sku },
+          data: {
+            preco:            d.preco,
+            precoPromocional: d.precoPromocional ?? undefined,
+            estoque:          d.estoque,
+            ativo:            d.ativo,
+          },
+        })
+        atualizados++
+      } catch { erros++ }
+    }
+    pagina++
+  }
+
+  return { atualizados, erros, total }
+}
+
+/** Compat: mantém a assinatura antiga */
+export async function syncProdutosOlist(pagina = 1, _limite = 20) {
+  return syncPaginaListagem(pagina)
+}
+
+/** Sync produto único via webhook */
+export async function syncProdutoUnico(tinyId: string | number): Promise<'criado' | 'atualizado' | 'ignorado'> {
+  const detalhe = await fetchTinyProduct(tinyId).catch(() => null)
+  if (!detalhe) return 'ignorado'
+
+  const d = mapearListagem(detalhe)
+  const imagens = extrairImagensTiny(detalhe)
+  const descricao = detalhe.descricao_complementar || detalhe.obs || ''
+
+  const existing = await prisma.product.findUnique({ where: { sku: d.sku } })
+
+  if (existing) {
+    await prisma.product.update({
+      where: { sku: d.sku },
+      data: { ...d, imagens, descricao },
+    })
+    return 'atualizado'
+  }
+
+  let slug = gerarSlug(d.nome)
+  const slugExists = await prisma.product.findUnique({ where: { slug } })
+  if (slugExists) slug = `${slug}-${d.sku}`
+
+  await prisma.product.create({
+    data: { ...d, slug, imagens, descricao, compatibilidadeMotos: [] },
+  })
+  return 'criado'
 }

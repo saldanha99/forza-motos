@@ -1,39 +1,35 @@
 'use client'
 
 import { useState } from 'react'
-import { RefreshCw, CheckCircle2, AlertCircle, Loader2, Package, ShoppingBag } from 'lucide-react'
-
-interface SyncResult {
-  criados?: number
-  atualizados?: number
-  erros?: number
-  total?: number
-  paginaAtual?: number
-  totalPaginas?: number
-  hasMore?: boolean
-  error?: string
-}
-
-interface PedidosResult {
-  ok?: boolean
-  totalTiny?: number
-  atualizados?: number
-  erros?: number
-  error?: string
-}
+import { RefreshCw, CheckCircle2, AlertCircle, Loader2, Package, ShoppingBag, Image as ImageIcon } from 'lucide-react'
 
 export function OlistSyncButton() {
-  const [loadingProdutos, setLoadingProdutos] = useState(false)
-  const [loadingPedidos, setLoadingPedidos] = useState(false)
-  const [progresso, setProgresso] = useState<SyncResult | null>(null)
-  const [acumulado, setAcumulado] = useState({ criados: 0, atualizados: 0, erros: 0 })
-  const [resultadoPedidos, setResultadoPedidos] = useState<PedidosResult | null>(null)
+  // ── Fase 1: sync metadados ─────────────────────────────────────────────────
+  const [loadingSync, setLoadingSync] = useState(false)
+  const [syncPagina, setSyncPagina] = useState(0)
+  const [syncTotal, setSyncTotal] = useState(0)
+  const [syncAcum, setSyncAcum] = useState({ criados: 0, atualizados: 0, erros: 0 })
+  const [syncDone, setSyncDone] = useState(false)
+  const [syncError, setSyncError] = useState('')
 
-  // ── Sync de produtos em lotes ──────────────────────────────────────────────
-  async function handleSyncProdutos() {
-    setLoadingProdutos(true)
-    setProgresso(null)
-    setAcumulado({ criados: 0, atualizados: 0, erros: 0 })
+  // ── Fase 2: buscar imagens ─────────────────────────────────────────────────
+  const [loadingImagens, setLoadingImagens] = useState(false)
+  const [imagensRestantes, setImagensRestantes] = useState<number | null>(null)
+  const [imagensAcum, setImagensAcum] = useState(0)
+  const [imagensError, setImagensError] = useState('')
+  const [imagensDone, setImagensDone] = useState(false)
+
+  // ── Fase 3: sync pedidos ───────────────────────────────────────────────────
+  const [loadingPedidos, setLoadingPedidos] = useState(false)
+  const [pedidosResult, setPedidosResult] = useState<any>(null)
+
+  async function handleSyncMetadados() {
+    setLoadingSync(true)
+    setSyncDone(false)
+    setSyncError('')
+    setSyncPagina(0)
+    setSyncTotal(0)
+    setSyncAcum({ criados: 0, atualizados: 0, erros: 0 })
 
     let pagina = 1
     let acum = { criados: 0, atualizados: 0, erros: 0 }
@@ -45,146 +41,175 @@ export function OlistSyncButton() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pagina }),
         })
+        const data = await res.json()
 
-        if (!res.ok) {
-          const err = await res.json()
-          setProgresso(p => ({ ...p, error: err.error || 'Erro no servidor' }))
-          break
-        }
+        if (data.error) { setSyncError(data.error); break }
 
-        const data: SyncResult = await res.json()
         acum = {
-          criados:    acum.criados    + (data.criados    ?? 0),
+          criados:     acum.criados     + (data.criados     ?? 0),
           atualizados: acum.atualizados + (data.atualizados ?? 0),
-          erros:      acum.erros      + (data.erros      ?? 0),
+          erros:       acum.erros       + (data.erros       ?? 0),
         }
-        setAcumulado(acum)
-        setProgresso({ ...data, ...acum })
+        setSyncAcum(acum)
+        setSyncPagina(data.paginaAtual ?? pagina)
+        setSyncTotal(data.totalPaginas ?? 1)
 
-        if (!data.hasMore) break
+        if (!data.hasMore) { setSyncDone(true); break }
         pagina++
       } catch {
-        setProgresso(p => ({ ...(p ?? {}), error: 'Erro de conexão' }))
+        setSyncError('Erro de conexão com o servidor')
         break
       }
     }
-    setLoadingProdutos(false)
+    setLoadingSync(false)
   }
 
-  // ── Sync de status de pedidos ──────────────────────────────────────────────
+  async function handleBuscarImagens() {
+    setLoadingImagens(true)
+    setImagensDone(false)
+    setImagensError('')
+    let totalAcum = 0
+
+    while (true) {
+      try {
+        const res = await fetch('/api/olist/imagens', { method: 'POST' })
+        const data = await res.json()
+
+        if (data.error) { setImagensError(data.error); break }
+
+        totalAcum += data.atualizados ?? 0
+        setImagensAcum(totalAcum)
+        setImagensRestantes(data.restantes ?? 0)
+
+        if (!data.hasMore) { setImagensDone(true); break }
+        // Aguarda 2s antes do próximo lote (evita rate limit)
+        await new Promise(r => setTimeout(r, 2000))
+      } catch {
+        setImagensError('Erro de conexão')
+        break
+      }
+    }
+    setLoadingImagens(false)
+  }
+
   async function handleSyncPedidos() {
     setLoadingPedidos(true)
-    setResultadoPedidos(null)
+    setPedidosResult(null)
     try {
       const res = await fetch('/api/olist/pedidos', { method: 'POST' })
-      const data = await res.json()
-      setResultadoPedidos(data)
+      setPedidosResult(await res.json())
     } catch {
-      setResultadoPedidos({ error: 'Erro de conexão' })
+      setPedidosResult({ error: 'Erro de conexão' })
     } finally {
       setLoadingPedidos(false)
     }
   }
 
-  const pct = progresso?.totalPaginas
-    ? Math.round(((progresso.paginaAtual ?? 1) / progresso.totalPaginas) * 100)
-    : 0
+  const pctSync = syncTotal > 0 ? Math.round((syncPagina / syncTotal) * 100) : 0
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 space-y-5">
-
-      {/* ── Cabeçalho ── */}
       <div>
         <h3 className="font-semibold text-white text-sm">Sincronização OLIST / Tiny</h3>
-        <p className="text-xs text-zinc-500 mt-0.5">Estoque, preços e pedidos · Cron diário às 6h</p>
+        <p className="text-xs text-zinc-500 mt-0.5">Cron automático diário às 6h</p>
       </div>
 
-      {/* ── Sync Produtos ── */}
-      <div className="space-y-3">
+      {/* ── Fase 1: Metadados ── */}
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-zinc-300">
-            <Package size={15} className="text-zinc-500" />
-            <span>Produtos (estoque + preço + imagens)</span>
+            <Package size={14} className="text-zinc-500" />
+            <div>
+              <span>Passo 1 — Produtos</span>
+              <p className="text-[11px] text-zinc-600">Importa nome, preço e estoque (rápido)</p>
+            </div>
           </div>
-          <button
-            onClick={handleSyncProdutos}
-            disabled={loadingProdutos}
-            className="flex items-center gap-2 px-3 py-1.5 bg-vermelho hover:bg-red-700 disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors"
-          >
-            {loadingProdutos ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-            {loadingProdutos ? 'Importando…' : 'Sincronizar'}
+          <button onClick={handleSyncMetadados} disabled={loadingSync}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-vermelho hover:bg-red-700 disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors">
+            {loadingSync ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+            {loadingSync ? `Página ${syncPagina}/${syncTotal}…` : 'Sincronizar'}
           </button>
         </div>
 
-        {/* Barra de progresso */}
-        {loadingProdutos && progresso && (
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-xs text-zinc-400">
-              <span>Lote {progresso.paginaAtual} de {progresso.totalPaginas}</span>
-              <span>{pct}%</span>
+        {loadingSync && syncTotal > 0 && (
+          <div>
+            <div className="flex justify-between text-xs text-zinc-500 mb-1">
+              <span>Página {syncPagina} de {syncTotal}</span>
+              <span>{pctSync}%</span>
             </div>
-            <div className="w-full bg-zinc-800 rounded-full h-1.5">
-              <div className="bg-vermelho h-1.5 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+            <div className="w-full bg-zinc-800 rounded-full h-1">
+              <div className="bg-vermelho h-1 rounded-full transition-all" style={{ width: `${pctSync}%` }} />
             </div>
-            <p className="text-xs text-zinc-500">
-              {acumulado.criados} criados · {acumulado.atualizados} atualizados · {acumulado.erros} erros
-            </p>
           </div>
         )}
 
-        {/* Resultado */}
-        {!loadingProdutos && progresso && (
-          <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${
-            progresso.error
-              ? 'bg-red-900/30 text-red-400 border border-red-800/40'
-              : 'bg-green-900/30 text-green-400 border border-green-800/40'
-          }`}>
-            {progresso.error ? <AlertCircle size={13} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={13} className="mt-0.5 shrink-0" />}
+        {!loadingSync && (syncDone || syncError) && (
+          <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${syncError ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'}`}>
+            {syncError ? <AlertCircle size={12} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={12} className="mt-0.5 shrink-0" />}
             <span>
-              {progresso.error
-                ? `Erro: ${progresso.error}`
-                : `${progresso.total} produtos · ${acumulado.criados} criados · ${acumulado.atualizados} atualizados${acumulado.erros ? ` · ${acumulado.erros} erros` : ''}`
-              }
+              {syncError || `${syncAcum.criados} criados · ${syncAcum.atualizados} atualizados · ${syncAcum.erros} erros`}
             </span>
+          </div>
+        )}
+      </div>
+
+      {/* ── Fase 2: Imagens ── */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-zinc-300">
+            <ImageIcon size={14} className="text-zinc-500" />
+            <div>
+              <span>Passo 2 — Imagens</span>
+              <p className="text-[11px] text-zinc-600">Busca fotos dos produtos (3 por vez)</p>
+            </div>
+          </div>
+          <button onClick={handleBuscarImagens} disabled={loadingImagens}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors">
+            {loadingImagens ? <Loader2 size={12} className="animate-spin" /> : <ImageIcon size={12} />}
+            {loadingImagens ? `${imagensAcum} foto(s)…` : 'Buscar imagens'}
+          </button>
+        </div>
+
+        {imagensRestantes !== null && (
+          <p className="text-[11px] text-zinc-600">
+            {imagensRestantes > 0 ? `${imagensRestantes} produtos ainda sem imagem` : 'Todos os produtos têm imagem ✓'}
+          </p>
+        )}
+
+        {!loadingImagens && (imagensDone || imagensError) && (
+          <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${imagensError ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'}`}>
+            {imagensError ? <AlertCircle size={12} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={12} className="mt-0.5 shrink-0" />}
+            <span>{imagensError || `${imagensAcum} imagens importadas${imagensRestantes ? ` · ${imagensRestantes} restantes` : ' · Concluído!'}`}</span>
           </div>
         )}
       </div>
 
       <div className="border-t border-zinc-800" />
 
-      {/* ── Sync Pedidos ── */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-zinc-300">
-            <ShoppingBag size={15} className="text-zinc-500" />
-            <span>Status de pedidos do Tiny</span>
+      {/* ── Fase 3: Pedidos ── */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm text-zinc-300">
+          <ShoppingBag size={14} className="text-zinc-500" />
+          <div>
+            <span>Status de pedidos</span>
+            <p className="text-[11px] text-zinc-600">Atualiza rastreio do Tiny</p>
           </div>
-          <button
-            onClick={handleSyncPedidos}
-            disabled={loadingPedidos}
-            className="flex items-center gap-2 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors"
-          >
-            {loadingPedidos ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-            {loadingPedidos ? 'Atualizando…' : 'Atualizar'}
-          </button>
         </div>
-
-        {!loadingPedidos && resultadoPedidos && (
-          <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${
-            resultadoPedidos.error
-              ? 'bg-red-900/30 text-red-400 border border-red-800/40'
-              : 'bg-green-900/30 text-green-400 border border-green-800/40'
-          }`}>
-            {resultadoPedidos.error ? <AlertCircle size={13} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={13} className="mt-0.5 shrink-0" />}
-            <span>
-              {resultadoPedidos.error
-                ? `Erro: ${resultadoPedidos.error}`
-                : `${resultadoPedidos.totalTiny ?? 0} pedidos no Tiny · ${resultadoPedidos.atualizados ?? 0} status atualizados`
-              }
-            </span>
-          </div>
-        )}
+        <button onClick={handleSyncPedidos} disabled={loadingPedidos}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors">
+          {loadingPedidos ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+          {loadingPedidos ? 'Atualizando…' : 'Atualizar'}
+        </button>
       </div>
+
+      {!loadingPedidos && pedidosResult && (
+        <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${pedidosResult.error ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'}`}>
+          {pedidosResult.error ? <AlertCircle size={12} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={12} className="mt-0.5 shrink-0" />}
+          <span>
+            {pedidosResult.error || `${pedidosResult.totalTiny ?? 0} pedidos · ${pedidosResult.atualizados ?? 0} atualizados`}
+          </span>
+        </div>
+      )}
     </div>
   )
 }

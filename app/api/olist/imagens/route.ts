@@ -1,24 +1,22 @@
 /**
- * Sync FASE 1 — processa UMA página da listagem por chamada
- * 1 request ao Tiny → nunca estoura rate limit nem timeout de 10s
+ * Busca imagens de produtos sem foto (3 por vez)
+ * Separado do sync principal para evitar rate limit e timeout
  */
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { syncPaginaListagem } from '@/lib/olist/sync-products'
+import { syncImagensLote } from '@/lib/olist/sync-products'
 
-export const maxDuration = 30
+export const maxDuration = 60
 
-export async function POST(req: Request) {
+export async function POST(_req: Request) {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
   }
 
   try {
-    const body = await req.json().catch(() => ({}))
-    const pagina = Number(body.pagina ?? 1)
-    const result = await syncPaginaListagem(pagina)
+    const result = await syncImagensLote(3)
     return NextResponse.json(result)
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
