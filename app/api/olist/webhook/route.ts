@@ -1,5 +1,18 @@
+/**
+ * Webhook recebido do Tiny / OLIST
+ *
+ * Eventos tratados:
+ * - produto.criado / produto.alterado → sincroniza o produto no banco
+ * - order.updated → atualiza status do pedido
+ *
+ * Para registrar este webhook no Tiny:
+ *   Menu → Configurações → API → Webhooks
+ *   URL: https://forza-motos-app.vercel.app/api/olist/webhook
+ */
+
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { syncProdutoUnico } from '@/lib/olist/sync-products'
 
 const STATUS_MAP: Record<string, string> = {
   new: 'CONFIRMADO',
@@ -12,37 +25,83 @@ const STATUS_MAP: Record<string, string> = {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json()
+    // Tiny envia JSON ou form-encoded dependendo da configuração
+    const contentType = req.headers.get('content-type') ?? ''
+    let body: any
 
-    if (body.event === 'order.updated' && body.data?.id) {
-      const olistId = String(body.data.id)
-      const novoStatus = STATUS_MAP[body.data.status]
-
-      if (!novoStatus) return NextResponse.json({ ok: true })
-
-      const pedido = await prisma.order.findFirst({
-        where: { olistOrderId: olistId },
-      })
-
-      if (!pedido) return NextResponse.json({ ok: true })
-
-      await prisma.order.update({
-        where: { id: pedido.id },
-        data: {
-          status: novoStatus as any,
-          tracking: {
-            create: {
-              status: novoStatus,
-              descricao: `Status atualizado pelo OLIST: ${body.data.status}`,
-            },
-          },
-        },
-      })
+    if (contentType.includes('application/json')) {
+      body = await req.json()
+    } else {
+      const text = await req.text()
+      try {
+        // Tiny às vezes envia JSON dentro de um campo "dados"
+        const params = new URLSearchParams(text)
+        const dados = params.get('dados')
+        body = dados ? JSON.parse(dados) : Object.fromEntries(params)
+      } catch {
+        body = {}
+      }
     }
 
-    return NextResponse.json({ ok: true })
+    const evento = body.evento || body.event || ''
+    const tipo = body.tipo || ''
+
+    // ── Produto criado ou alterado ──────────────────────────────────────────
+    if (
+      evento === 'produto.criado' ||
+      evento === 'produto.alterado' ||
+      tipo === 'produto' ||
+      evento === 'product.created' ||
+      evento === 'product.updated'
+    ) {
+      const id = body.dados?.id || body.data?.id || body.id
+      if (id) {
+        await syncProdutoUnico(id)
+        console.log(`[webhook] Produto ${id} sincronizado (${evento})`)
+      }
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── Atualização de pedido ───────────────────────────────────────────────
+    if (
+      evento === 'order.updated' ||
+      evento === 'pedido.atualizado' ||
+      (tipo === 'pedido' && body.dados?.situacao)
+    ) {
+      const olistId = String(
+        body.dados?.id || body.data?.id || body.id || ''
+      )
+      const statusKey = body.dados?.situacao || body.data?.status || ''
+      const novoStatus = STATUS_MAP[statusKey]
+
+      if (olistId && novoStatus) {
+        const pedido = await prisma.order.findFirst({
+          where: { olistOrderId: olistId },
+        })
+
+        if (pedido) {
+          await prisma.order.update({
+            where: { id: pedido.id },
+            data: {
+              status: novoStatus as any,
+              tracking: {
+                create: {
+                  status: novoStatus,
+                  descricao: `Status atualizado via webhook OLIST/Tiny: ${statusKey}`,
+                },
+              },
+            },
+          })
+          console.log(`[webhook] Pedido ${olistId} → ${novoStatus}`)
+        }
+      }
+      return NextResponse.json({ ok: true })
+    }
+
+    // Evento desconhecido — retorna 200 para não reprocessar
+    return NextResponse.json({ ok: true, evento_ignorado: evento })
   } catch (e) {
-    console.error('Webhook OLIST erro:', e)
-    return NextResponse.json({ ok: true })
+    console.error('[webhook] Erro:', e)
+    return NextResponse.json({ ok: true }) // sempre 200 para o Tiny não retentar
   }
 }

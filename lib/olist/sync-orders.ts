@@ -1,4 +1,4 @@
-import { olistFetch } from './client'
+import { tinyFetch } from './client'
 import { prisma } from '../prisma'
 
 export async function replicarPedidoOlist(orderId: string) {
@@ -45,14 +45,16 @@ export async function replicarPedidoOlist(orderId: string) {
     },
   }
 
-  const result = await olistFetch('/orders/', {
-    method: 'POST',
-    body: JSON.stringify(payload),
+  // Cria o pedido no Tiny via API
+  const result = await tinyFetch('pedido.incluir.php', {
+    pedido: JSON.stringify(payload),
   })
+
+  const tinyPedidoId = result.retorno?.registros?.[0]?.id ?? result.retorno?.id ?? null
 
   await prisma.order.update({
     where: { id: orderId },
-    data: { olistOrderId: String(result.id) },
+    data: { olistOrderId: tinyPedidoId ? String(tinyPedidoId) : undefined },
   })
 
   return result
