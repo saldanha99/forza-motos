@@ -68,7 +68,8 @@ export async function tinyFetch(
  * A listagem inclui: id, codigo, nome, preco, situacao, saldo (estoque)
  */
 export async function fetchTinyProductPage(pagina: number): Promise<{ produtos: any[]; totalPaginas: number }> {
-  const data = await tinyFetch('produtos.pesquisa.php', { pagina, situacao: 'A' })
+  // delayMs=0 — listagem paginada não sofre rate limit como produto.obter.php
+  const data = await tinyFetch('produtos.pesquisa.php', { pagina, situacao: 'A' }, 0)
   const produtos = (data.retorno?.produtos ?? []).map((p: any) => p.produto ?? p)
   const totalPaginas = Number(data.retorno?.numero_paginas ?? data.retorno?.paginas ?? 1)
   return { produtos, totalPaginas }

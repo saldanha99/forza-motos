@@ -31,64 +31,89 @@ function mapearListagem(p: any) {
 
 /**
  * FASE 1 — Processa UMA página da listagem do Tiny
- * 1 request apenas → nunca estoura rate limit nem timeout
+ * 1 request Tiny (sem delay) + operações DB em paralelo → bem abaixo de 10s
  * Cria produtos sem imagem; atualiza preço/estoque de existentes
  */
 export async function syncPaginaListagem(pagina: number) {
   const { produtos, totalPaginas } = await fetchTinyProductPage(pagina)
 
+  if (produtos.length === 0) {
+    return { criados: 0, atualizados: 0, erros: 0, paginaAtual: pagina, totalPaginas, hasMore: false }
+  }
+
+  const dados = produtos.map(mapearListagem)
+  const skus = dados.map(d => d.sku)
+
+  // 1 query para saber quais SKUs já existem
+  const existentes = await prisma.product.findMany({
+    where: { sku: { in: skus } },
+    select: { sku: true },
+  })
+  const skusExistentes = new Set(existentes.map(e => e.sku))
+
+  // Verifica slugs existentes para novos produtos (em batch)
+  const novos = dados.filter(d => !skusExistentes.has(d.sku))
+  const slugsNovos = novos.map(d => gerarSlug(d.nome))
+  const slugsExistentes = slugsNovos.length > 0
+    ? await prisma.product.findMany({
+        where: { slug: { in: slugsNovos } },
+        select: { slug: true },
+      }).then(r => new Set(r.map(s => s.slug)))
+    : new Set<string>()
+
   let criados = 0
   let atualizados = 0
   let erros = 0
 
-  for (const item of produtos) {
-    try {
-      const d = mapearListagem(item)
+  // Atualiza existentes em paralelo (batches de 10)
+  const existentesParaAtualizar = dados.filter(d => skusExistentes.has(d.sku))
+  const updateResults = await Promise.allSettled(
+    existentesParaAtualizar.map(d =>
+      prisma.product.update({
+        where: { sku: d.sku },
+        data: {
+          nome:             d.nome,
+          preco:            d.preco,
+          precoPromocional: d.precoPromocional ?? undefined,
+          estoque:          d.estoque,
+          ativo:            d.ativo,
+          tinyId:           d.tinyId,
+        },
+      })
+    )
+  )
+  for (const r of updateResults) {
+    if (r.status === 'fulfilled') atualizados++
+    else { erros++; console.error('[sync] update error:', r.reason?.message) }
+  }
 
-      const existing = await prisma.product.findUnique({ where: { sku: d.sku } })
-
-      if (existing) {
-        await prisma.product.update({
-          where: { sku: d.sku },
-          data: {
-            nome:             d.nome,
-            preco:            d.preco,
-            precoPromocional: d.precoPromocional ?? undefined,
-            estoque:          d.estoque,
-            ativo:            d.ativo,
-            tinyId:           d.tinyId,
-          },
-        })
-        atualizados++
-      } else {
-        // Cria sem imagem — Fase 2 buscará as imagens depois
-        let slug = gerarSlug(d.nome)
-        const slugExists = await prisma.product.findUnique({ where: { slug } })
-        if (slugExists) slug = `${slug}-${d.sku}`
-
-        await prisma.product.create({
-          data: {
-            sku:               d.sku,
-            nome:              d.nome,
-            slug,
-            descricao:         '',
-            preco:             d.preco,
-            precoPromocional:  d.precoPromocional ?? undefined,
-            estoque:           d.estoque,
-            ativo:             d.ativo,
-            tinyId:            d.tinyId,
-            categoria:         d.categoria,
-            marca:             d.marca,
-            imagens:           [],
-            compatibilidadeMotos: [],
-          },
-        })
-        criados++
-      }
-    } catch (err: any) {
-      console.error(`[sync] Erro produto ${item.id}:`, err?.message)
-      erros++
-    }
+  // Cria novos em paralelo
+  const createResults = await Promise.allSettled(
+    novos.map(d => {
+      let slug = gerarSlug(d.nome)
+      if (slugsExistentes.has(slug)) slug = `${slug}-${d.sku}`
+      return prisma.product.create({
+        data: {
+          sku:               d.sku,
+          nome:              d.nome,
+          slug,
+          descricao:         '',
+          preco:             d.preco,
+          precoPromocional:  d.precoPromocional ?? undefined,
+          estoque:           d.estoque,
+          ativo:             d.ativo,
+          tinyId:            d.tinyId,
+          categoria:         d.categoria,
+          marca:             d.marca,
+          imagens:           [],
+          compatibilidadeMotos: [],
+        },
+      })
+    })
+  )
+  for (const r of createResults) {
+    if (r.status === 'fulfilled') criados++
+    else { erros++; console.error('[sync] create error:', r.reason?.message) }
   }
 
   return {
