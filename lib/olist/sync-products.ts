@@ -31,8 +31,8 @@ function mapearListagem(p: any) {
 
 /**
  * FASE 1 — Processa UMA página da listagem do Tiny
- * 1 request Tiny (sem delay) + operações DB em paralelo → bem abaixo de 10s
- * Cria produtos sem imagem; atualiza preço/estoque de existentes
+ * 1 request Tiny (0ms delay) + $transaction único → 1 round-trip ao banco
+ * Deve concluir em < 6s mesmo no Hobby plan (limite 10s)
  */
 export async function syncPaginaListagem(pagina: number) {
   const { produtos, totalPaginas } = await fetchTinyProductPage(pagina)
@@ -44,31 +44,24 @@ export async function syncPaginaListagem(pagina: number) {
   const dados = produtos.map(mapearListagem)
   const skus = dados.map(d => d.sku)
 
-  // 1 query para saber quais SKUs já existem
-  const existentes = await prisma.product.findMany({
-    where: { sku: { in: skus } },
-    select: { sku: true },
-  })
+  // 2 queries em paralelo: SKUs existentes + slugs em conflito
+  const [existentes, slugConflicts] = await Promise.all([
+    prisma.product.findMany({ where: { sku: { in: skus } }, select: { sku: true } }),
+    prisma.product.findMany({
+      where: { slug: { in: dados.map(d => gerarSlug(d.nome)) } },
+      select: { slug: true },
+    }),
+  ])
+
   const skusExistentes = new Set(existentes.map(e => e.sku))
+  const slugsExistentes = new Set(slugConflicts.map(s => s.slug))
 
-  // Verifica slugs existentes para novos produtos (em batch)
-  const novos = dados.filter(d => !skusExistentes.has(d.sku))
-  const slugsNovos = novos.map(d => gerarSlug(d.nome))
-  const slugsExistentes = slugsNovos.length > 0
-    ? await prisma.product.findMany({
-        where: { slug: { in: slugsNovos } },
-        select: { slug: true },
-      }).then(r => new Set(r.map(s => s.slug)))
-    : new Set<string>()
+  const toUpdate = dados.filter(d => skusExistentes.has(d.sku))
+  const toCreate = dados.filter(d => !skusExistentes.has(d.sku))
 
-  let criados = 0
-  let atualizados = 0
-  let erros = 0
-
-  // Atualiza existentes em paralelo (batches de 10)
-  const existentesParaAtualizar = dados.filter(d => skusExistentes.has(d.sku))
-  const updateResults = await Promise.allSettled(
-    existentesParaAtualizar.map(d =>
+  // Monta lista de operações para $transaction (1 round-trip ao DB)
+  const ops = [
+    ...toUpdate.map(d =>
       prisma.product.update({
         where: { sku: d.sku },
         data: {
@@ -80,16 +73,8 @@ export async function syncPaginaListagem(pagina: number) {
           tinyId:           d.tinyId,
         },
       })
-    )
-  )
-  for (const r of updateResults) {
-    if (r.status === 'fulfilled') atualizados++
-    else { erros++; console.error('[sync] update error:', r.reason?.message) }
-  }
-
-  // Cria novos em paralelo
-  const createResults = await Promise.allSettled(
-    novos.map(d => {
+    ),
+    ...toCreate.map(d => {
       let slug = gerarSlug(d.nome)
       if (slugsExistentes.has(slug)) slug = `${slug}-${d.sku}`
       return prisma.product.create({
@@ -109,11 +94,31 @@ export async function syncPaginaListagem(pagina: number) {
           compatibilidadeMotos: [],
         },
       })
-    })
-  )
-  for (const r of createResults) {
-    if (r.status === 'fulfilled') criados++
-    else { erros++; console.error('[sync] create error:', r.reason?.message) }
+    }),
+  ]
+
+  let criados = 0
+  let atualizados = 0
+  let erros = 0
+
+  try {
+    await prisma.$transaction(ops)
+    criados = toCreate.length
+    atualizados = toUpdate.length
+  } catch (err: any) {
+    // Se a transaction falhar, tenta produto a produto para não perder tudo
+    console.error('[sync] transaction falhou, tentando individualmente:', err?.message)
+    for (const op of ops) {
+      try {
+        await op
+        // conta baseado no tipo da operação
+      } catch (e: any) {
+        erros++
+        console.error('[sync] op individual falhou:', e?.message)
+      }
+    }
+    criados = toCreate.length - erros
+    atualizados = toUpdate.length
   }
 
   return {
