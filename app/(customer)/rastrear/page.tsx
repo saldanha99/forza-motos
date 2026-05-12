@@ -43,8 +43,7 @@ export default function RastrearPage({ searchParams }: { searchParams: { pedido?
     try {
       const res = await fetch(`/api/rastrear?pedido=${encodeURIComponent(numeroPedido.trim())}`)
       if (!res.ok) throw new Error('Pedido não encontrado')
-      const data = await res.json()
-      setPedido(data)
+      setPedido(await res.json())
     } catch {
       setErro('Pedido não encontrado. Verifique o número e tente novamente.')
     } finally {
@@ -52,16 +51,14 @@ export default function RastrearPage({ searchParams }: { searchParams: { pedido?
     }
   }
 
-  const whatsMsg = pedido
-    ? `Olá! Tenho uma dúvida sobre o pedido ${pedido.orderNumber}`
-    : ''
+  const whatsMsg = pedido ? `Olá! Tenho uma dúvida sobre o pedido ${pedido.orderNumber}` : ''
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="font-rajdhani font-bold text-4xl text-white mb-2 uppercase tracking-wide">
-        Rastrear Pedido
-      </h1>
-      <p className="text-zinc-500 mb-8">Digite o número do pedido no formato FM-2026-0001</p>
+      <div className="mb-8">
+        <h1 className="font-grotesk font-bold text-3xl text-ink mb-1">Rastrear Pedido</h1>
+        <p className="text-dim">Digite o número do pedido no formato FM-2026-0001</p>
+      </div>
 
       <form onSubmit={buscarPedido} className="flex gap-3 mb-8">
         <Input
@@ -74,30 +71,30 @@ export default function RastrearPage({ searchParams }: { searchParams: { pedido?
       </form>
 
       {erro && (
-        <div className="bg-red-900/20 border border-red-800 rounded-lg p-4 text-red-400 text-sm mb-6">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-red-600 dark:text-red-400 text-sm mb-6">
           {erro}
         </div>
       )}
 
       {pedido && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Cabeçalho */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
+          <div className="bg-card border border-line rounded-xl p-5">
             <div className="flex items-start justify-between flex-wrap gap-3">
               <div>
-                <p className="text-xs text-zinc-600 mb-1">Pedido</p>
-                <p className="font-rajdhani font-bold text-2xl text-white">{pedido.orderNumber}</p>
-                <p className="text-xs text-zinc-600 mt-1">Realizado em {formatDate(pedido.createdAt)}</p>
+                <p className="text-xs text-faint mb-1">Pedido</p>
+                <p className="font-grotesk font-bold text-2xl text-ink">{pedido.orderNumber}</p>
+                <p className="text-xs text-faint mt-1">Realizado em {formatDate(pedido.createdAt)}</p>
               </div>
               {statusBadge(pedido.status)}
             </div>
           </div>
 
           {/* Timeline */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-            <h2 className="font-rajdhani font-semibold text-lg text-white mb-5">Acompanhamento</h2>
+          <div className="bg-card border border-line rounded-xl p-5">
+            <h2 className="font-grotesk font-semibold text-base text-ink mb-5">Acompanhamento</h2>
             {pedido.tracking.length === 0 ? (
-              <p className="text-sm text-zinc-500">Nenhuma atualização ainda.</p>
+              <p className="text-sm text-dim">Nenhuma atualização ainda.</p>
             ) : (
               <div className="space-y-4">
                 {pedido.tracking.map((t, i) => {
@@ -105,14 +102,14 @@ export default function RastrearPage({ searchParams }: { searchParams: { pedido?
                   return (
                     <div key={i} className="flex gap-4">
                       <div className="flex flex-col items-center">
-                        <div className="w-8 h-8 bg-vermelho/10 border border-vermelho/30 rounded-full flex items-center justify-center">
+                        <div className="w-8 h-8 bg-[var(--vermelho-light)] border border-vermelho/20 rounded-full flex items-center justify-center">
                           <Icon size={14} className="text-vermelho" />
                         </div>
-                        {i < pedido.tracking.length - 1 && <div className="w-px h-6 bg-zinc-800 mt-1" />}
+                        {i < pedido.tracking.length - 1 && <div className="w-px h-6 bg-line mt-1" />}
                       </div>
                       <div className="pb-4">
-                        <p className="text-sm font-medium text-white">{t.descricao}</p>
-                        <p className="text-xs text-zinc-600 mt-0.5">{formatDate(t.createdAt)}</p>
+                        <p className="text-sm font-medium text-ink">{t.descricao}</p>
+                        <p className="text-xs text-faint mt-0.5">{formatDate(t.createdAt)}</p>
                       </div>
                     </div>
                   )
@@ -122,21 +119,21 @@ export default function RastrearPage({ searchParams }: { searchParams: { pedido?
           </div>
 
           {/* Itens */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-            <h2 className="font-rajdhani font-semibold text-lg text-white mb-4">Itens do pedido</h2>
+          <div className="bg-card border border-line rounded-xl p-5">
+            <h2 className="font-grotesk font-semibold text-base text-ink mb-4">Itens do pedido</h2>
             <div className="space-y-2">
               {pedido.items.map((item, i) => (
                 <div key={i} className="flex justify-between text-sm">
-                  <span className="text-zinc-400">{item.nome} × {item.quantidade}</span>
-                  <span className="text-white">{formatPrice(Number(item.precoUnitario) * item.quantidade)}</span>
+                  <span className="text-dim">{item.nome} × {item.quantidade}</span>
+                  <span className="text-ink font-medium">{formatPrice(Number(item.precoUnitario) * item.quantidade)}</span>
                 </div>
               ))}
-              <div className="border-t border-zinc-700 pt-2 mt-3 space-y-1 text-sm">
-                <div className="flex justify-between text-zinc-500">
+              <div className="border-t border-line pt-2 mt-3 space-y-1 text-sm">
+                <div className="flex justify-between text-dim">
                   <span>Frete</span>
                   <span>{formatPrice(pedido.frete)}</span>
                 </div>
-                <div className="flex justify-between font-bold text-white">
+                <div className="flex justify-between font-bold text-ink">
                   <span>Total</span>
                   <span>{formatPrice(pedido.total)}</span>
                 </div>
@@ -145,9 +142,9 @@ export default function RastrearPage({ searchParams }: { searchParams: { pedido?
           </div>
 
           {/* Endereço mascarado */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-            <h2 className="font-rajdhani font-semibold text-lg text-white mb-2">Entrega</h2>
-            <p className="text-sm text-zinc-400">
+          <div className="bg-card border border-line rounded-xl p-5">
+            <h2 className="font-grotesk font-semibold text-base text-ink mb-2">Entrega</h2>
+            <p className="text-sm text-dim">
               {mascaraEndereco(
                 `${pedido.enderecoEntrega?.rua}, ${pedido.enderecoEntrega?.numero} – ${pedido.enderecoEntrega?.cidade}/${pedido.enderecoEntrega?.estado}`
               )}
@@ -159,7 +156,7 @@ export default function RastrearPage({ searchParams }: { searchParams: { pedido?
             href={whatsappLink('5519974049445', whatsMsg)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium transition-colors"
+            className="flex items-center justify-center gap-2 w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium transition-colors"
           >
             <MessageCircle size={18} />
             Dúvida sobre este pedido? Fale no WhatsApp

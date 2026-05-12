@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import toast from 'react-hot-toast'
 import { whatsappLink } from '@/lib/utils'
-import { CheckCircle } from 'lucide-react'
+import { CheckCircle, Calendar, Clock, Wrench } from 'lucide-react'
 
 const SERVICOS = [
   'Troca de Pneu Dianteiro',
@@ -60,15 +60,17 @@ export default function AgendarPage() {
     }
   }
 
-  const data = form.dataPreferida ? new Date(form.dataPreferida).toLocaleDateString('pt-BR') : ''
+  const data = form.dataPreferida ? new Date(form.dataPreferida + 'T00:00:00').toLocaleDateString('pt-BR') : ''
   const whatsMsg = `Olá! Gostaria de agendar:\n\n*Serviço:* ${form.servico}\n*Moto:* ${form.motoModelo}\n*Data:* ${data}\n*Horário:* ${form.horarioPreferido}\n*Nome:* ${form.nome}`
 
   if (sucesso) {
     return (
       <div className="max-w-lg mx-auto px-4 py-20 text-center">
-        <CheckCircle size={64} className="mx-auto text-green-500 mb-6" />
-        <h1 className="font-rajdhani font-bold text-4xl text-white mb-3">Agendamento enviado!</h1>
-        <p className="text-zinc-400 mb-8">
+        <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+          <CheckCircle size={36} className="text-green-600" />
+        </div>
+        <h1 className="font-grotesk font-bold text-3xl text-ink mb-3">Agendamento enviado!</h1>
+        <p className="text-dim mb-8 leading-relaxed">
           Recebemos seu pedido. Em breve nossa equipe entrará em contato para confirmar.
           Você também pode confirmar agora pelo WhatsApp:
         </p>
@@ -77,7 +79,7 @@ export default function AgendarPage() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          <Button size="lg" className="bg-green-600 hover:bg-green-700">
+          <Button size="lg" className="bg-green-600 hover:bg-green-700 border-0">
             Confirmar no WhatsApp
           </Button>
         </a>
@@ -86,28 +88,46 @@ export default function AgendarPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <h1 className="font-rajdhani font-bold text-4xl text-white mb-2 uppercase tracking-wide">
-        Agendar Serviço
-      </h1>
-      <p className="text-zinc-500 mb-8">
-        Preencha o formulário e nossa equipe confirmará seu agendamento via WhatsApp.
-      </p>
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="font-grotesk font-bold text-4xl text-ink mb-2">
+          Agendar Serviço
+        </h1>
+        <p className="text-dim">
+          Preencha o formulário e nossa equipe confirmará seu agendamento via WhatsApp.
+        </p>
+      </div>
 
-      <form onSubmit={handleSubmit} className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 space-y-4">
+      {/* Cards de info */}
+      <div className="grid grid-cols-3 gap-3 mb-8">
+        {[
+          { icon: Clock, label: 'Seg–Sex', sub: '8h às 18h' },
+          { icon: Calendar, label: 'Sábado', sub: '8h às 13h' },
+          { icon: Wrench, label: 'Box rápido', sub: 'Sem fila' },
+        ].map((item) => (
+          <div key={item.label} className="bg-card border border-line rounded-xl p-4 text-center">
+            <item.icon size={20} className="text-vermelho mx-auto mb-2" />
+            <p className="font-medium text-sm text-ink">{item.label}</p>
+            <p className="text-xs text-faint">{item.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      <form onSubmit={handleSubmit} className="bg-card border border-line rounded-xl p-6 space-y-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Seu nome *" value={form.nome} onChange={(e) => update('nome', e.target.value)} />
           <Input label="Telefone / WhatsApp *" value={form.telefone} onChange={(e) => update('telefone', e.target.value)} placeholder="(19) 99999-9999" />
         </div>
 
         <div>
-          <label className="text-sm text-zinc-400 font-medium block mb-1">Serviço desejado *</label>
+          <label className="text-sm text-dim font-medium block mb-1.5">Serviço desejado *</label>
           <select
             value={form.servico}
             onChange={(e) => update('servico', e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-2.5 text-white text-sm focus:outline-none focus:border-vermelho"
+            className="w-full bg-card border border-line rounded-md px-3 py-2.5 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-vermelho/30 focus:border-vermelho transition-colors"
           >
-            <option value="">Selecione...</option>
+            <option value="">Selecione o serviço...</option>
             {SERVICOS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
@@ -115,13 +135,19 @@ export default function AgendarPage() {
         <Input label="Modelo da moto *" value={form.motoModelo} onChange={(e) => update('motoModelo', e.target.value)} placeholder="Ex: Honda CB 300R 2023" />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input label="Data preferida *" type="date" value={form.dataPreferida} onChange={(e) => update('dataPreferida', e.target.value)} min={new Date().toISOString().split('T')[0]} />
+          <Input
+            label="Data preferida *"
+            type="date"
+            value={form.dataPreferida}
+            onChange={(e) => update('dataPreferida', e.target.value)}
+            min={new Date().toISOString().split('T')[0]}
+          />
           <div>
-            <label className="text-sm text-zinc-400 font-medium block mb-1">Horário preferido *</label>
+            <label className="text-sm text-dim font-medium block mb-1.5">Horário preferido *</label>
             <select
               value={form.horarioPreferido}
               onChange={(e) => update('horarioPreferido', e.target.value)}
-              className="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-2.5 text-white text-sm focus:outline-none focus:border-vermelho"
+              className="w-full bg-card border border-line rounded-md px-3 py-2.5 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-vermelho/30 focus:border-vermelho transition-colors"
             >
               <option value="">Selecione...</option>
               {HORARIOS.map((h) => <option key={h} value={h}>{h}</option>)}
@@ -130,12 +156,12 @@ export default function AgendarPage() {
         </div>
 
         <div>
-          <label className="text-sm text-zinc-400 font-medium block mb-1">Observações</label>
+          <label className="text-sm text-dim font-medium block mb-1.5">Observações</label>
           <textarea
             value={form.notas}
             onChange={(e) => update('notas', e.target.value)}
             rows={3}
-            className="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-2.5 text-white text-sm focus:outline-none focus:border-vermelho resize-none"
+            className="w-full bg-card border border-line rounded-md px-3 py-2.5 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-vermelho/30 focus:border-vermelho resize-none transition-colors placeholder-faint"
             placeholder="Alguma informação adicional..."
           />
         </div>

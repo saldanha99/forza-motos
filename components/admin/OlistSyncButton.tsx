@@ -1,44 +1,84 @@
 'use client'
 
 import { useState } from 'react'
-import { RefreshCw, Webhook, CheckCircle2, AlertCircle, Info } from 'lucide-react'
+import { RefreshCw, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 
 interface SyncResult {
-  criados?: number
-  atualizados?: number
-  erros?: number
-  total?: number
+  criados: number
+  atualizados: number
+  erros: number
+  total: number
+  paginaAtual: number
+  totalPaginas: number
+  hasMore: boolean
   error?: string
 }
 
 export function OlistSyncButton() {
   const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<SyncResult | null>(null)
-  const [showWebhookInfo, setShowWebhookInfo] = useState(false)
+  const [progresso, setProgresso] = useState<SyncResult | null>(null)
+  const [acumulado, setAcumulado] = useState({ criados: 0, atualizados: 0, erros: 0 })
+  const [concluido, setConcluido] = useState(false)
 
   async function handleSync() {
     setLoading(true)
-    setResult(null)
-    try {
-      const res = await fetch('/api/olist/sync', { method: 'POST' })
-      const data = await res.json()
-      setResult(data)
-    } catch {
-      setResult({ error: 'Erro de conexão com o servidor' })
-    } finally {
-      setLoading(false)
+    setProgresso(null)
+    setConcluido(false)
+    setAcumulado({ criados: 0, atualizados: 0, erros: 0 })
+
+    let pagina = 1
+    let acum = { criados: 0, atualizados: 0, erros: 0 }
+
+    while (true) {
+      try {
+        const res = await fetch('/api/olist/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pagina }),
+        })
+
+        if (!res.ok) {
+          const err = await res.json()
+          setProgresso({ ...acum, total: 0, paginaAtual: pagina, totalPaginas: 1, hasMore: false, error: err.error || 'Erro no servidor' })
+          break
+        }
+
+        const data: SyncResult = await res.json()
+
+        acum = {
+          criados: acum.criados + data.criados,
+          atualizados: acum.atualizados + data.atualizados,
+          erros: acum.erros + data.erros,
+        }
+        setAcumulado(acum)
+        setProgresso({ ...data, ...acum })
+
+        if (!data.hasMore) {
+          setConcluido(true)
+          break
+        }
+
+        pagina++
+      } catch {
+        setProgresso(p => p ? { ...p, error: 'Erro de conexão' } : null)
+        break
+      }
     }
+
+    setLoading(false)
   }
+
+  const pct = progresso && progresso.totalPaginas > 0
+    ? Math.round((progresso.paginaAtual / progresso.totalPaginas) * 100)
+    : 0
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 space-y-4">
-
-      {/* Cabeçalho */}
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-semibold text-white text-sm">Sincronização OLIST / Tiny</h3>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Importar produtos do catálogo Tiny ERP · Sync automático a cada 6h
+            Importar produtos do catálogo Tiny ERP · Sync automático diário às 6h
           </p>
         </div>
         <button
@@ -46,72 +86,52 @@ export function OlistSyncButton() {
           disabled={loading}
           className="flex items-center gap-2 px-4 py-2 bg-vermelho hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium rounded-md transition-colors"
         >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          {loading ? 'Sincronizando…' : 'Sincronizar agora'}
+          {loading
+            ? <Loader2 size={14} className="animate-spin" />
+            : <RefreshCw size={14} />
+          }
+          {loading ? 'Importando…' : 'Sincronizar agora'}
         </button>
       </div>
 
-      {/* Resultado */}
-      {result && (
+      {/* Barra de progresso */}
+      {loading && progresso && (
+        <div className="space-y-1.5">
+          <div className="flex justify-between text-xs text-zinc-400">
+            <span>Lote {progresso.paginaAtual} de {progresso.totalPaginas}</span>
+            <span>{pct}%</span>
+          </div>
+          <div className="w-full bg-zinc-800 rounded-full h-1.5">
+            <div
+              className="bg-vermelho h-1.5 rounded-full transition-all duration-500"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <p className="text-xs text-zinc-500">
+            {acumulado.criados} criados · {acumulado.atualizados} atualizados · {acumulado.erros} erros
+          </p>
+        </div>
+      )}
+
+      {/* Resultado final */}
+      {!loading && progresso && (
         <div className={`flex items-start gap-2 text-xs px-3 py-2.5 rounded-md ${
-          result.error
+          progresso.error
             ? 'bg-red-900/30 text-red-400 border border-red-800/40'
             : 'bg-green-900/30 text-green-400 border border-green-800/40'
         }`}>
-          {result.error
+          {progresso.error
             ? <AlertCircle size={14} className="mt-0.5 shrink-0" />
             : <CheckCircle2 size={14} className="mt-0.5 shrink-0" />
           }
           <span>
-            {result.error
-              ? `Erro: ${result.error}`
-              : `${result.total} produto(s) processado(s) — ${result.criados} criado(s), ${result.atualizados} atualizado(s)${result.erros ? `, ${result.erros} erro(s)` : ''}`
+            {progresso.error
+              ? `Erro: ${progresso.error}`
+              : `✅ ${progresso.total} produtos processados — ${acumulado.criados} criados, ${acumulado.atualizados} atualizados${acumulado.erros ? `, ${acumulado.erros} com erro` : ''}`
             }
           </span>
         </div>
       )}
-
-      {/* Divider */}
-      <div className="border-t border-zinc-800" />
-
-      {/* Webhook info */}
-      <div>
-        <button
-          onClick={() => setShowWebhookInfo(!showWebhookInfo)}
-          className="flex items-center gap-2 text-xs text-zinc-400 hover:text-white transition-colors"
-        >
-          <Webhook size={13} />
-          <span>Sync automático via webhook</span>
-          <span className="text-zinc-600">{showWebhookInfo ? '▲' : '▼'}</span>
-        </button>
-
-        {showWebhookInfo && (
-          <div className="mt-3 bg-zinc-800/50 border border-zinc-700 rounded-md p-3 space-y-2">
-            <div className="flex items-start gap-2 text-xs text-zinc-400">
-              <Info size={13} className="mt-0.5 shrink-0 text-blue-400" />
-              <p>
-                Para sincronizar automaticamente quando um produto for criado ou alterado no Tiny,
-                registre o webhook abaixo:
-              </p>
-            </div>
-            <div className="space-y-1.5 text-xs">
-              <div>
-                <span className="text-zinc-500">URL do webhook:</span>
-                <code className="ml-2 bg-zinc-900 px-2 py-0.5 rounded text-green-400 font-mono text-[11px]">
-                  https://forza-motos-app.vercel.app/api/olist/webhook
-                </code>
-              </div>
-              <div className="text-zinc-500">
-                No Tiny: <span className="text-zinc-300">Menu → Configurações → API → Webhooks</span>
-              </div>
-              <div className="text-zinc-500">
-                Eventos a ativar:{' '}
-                <span className="text-zinc-300">Produto criado · Produto alterado</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   )
 }

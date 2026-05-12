@@ -32,7 +32,7 @@ export default async function ProdutoPage({ params }: Props) {
 
       {relacionados.length > 0 && (
         <section className="mt-16">
-          <h2 className="font-rajdhani font-bold text-2xl text-white mb-6 uppercase tracking-wide">
+          <h2 className="font-grotesk font-bold text-2xl text-ink mb-6">
             Produtos Relacionados
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

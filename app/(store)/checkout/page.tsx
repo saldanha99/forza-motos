@@ -9,6 +9,7 @@ import { formatPrice } from '@/lib/utils'
 import { calcularFrete } from '@/lib/correios'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
+import { Check } from 'lucide-react'
 
 type Etapa = 'dados' | 'frete' | 'pagamento'
 
@@ -59,13 +60,7 @@ export default function CheckoutPage() {
       const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
       const d = await r.json()
       if (!d.erro) {
-        setForm((f) => ({
-          ...f,
-          rua: d.logradouro,
-          bairro: d.bairro,
-          cidade: d.localidade,
-          estado: d.uf,
-        }))
+        setForm((f) => ({ ...f, rua: d.logradouro, bairro: d.bairro, cidade: d.localidade, estado: d.uf }))
       }
     } catch {}
   }
@@ -121,47 +116,48 @@ export default function CheckoutPage() {
   }
 
   const total = subtotal() + (freteSelecionado?.valor ?? 0)
+  const etapas: Etapa[] = ['dados', 'frete', 'pagamento']
+  const etapaIdx = etapas.indexOf(etapa)
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <h1 className="font-rajdhani font-bold text-4xl text-white mb-8 uppercase tracking-wide">
-        Checkout
-      </h1>
+      <h1 className="font-grotesk font-bold text-3xl text-ink mb-8">Checkout</h1>
 
-      {/* Etapas */}
-      <div className="flex items-center gap-3 mb-10 text-sm">
-        {(['dados', 'frete', 'pagamento'] as Etapa[]).map((e, i) => (
-          <div key={e} className="flex items-center gap-3">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-              etapa === e ? 'bg-vermelho text-white' :
-              i < ['dados','frete','pagamento'].indexOf(etapa) ? 'bg-green-600 text-white' : 'bg-zinc-800 text-zinc-500'
-            }`}>
-              {i + 1}
+      {/* Stepper */}
+      <div className="flex items-center gap-0 mb-10">
+        {etapas.map((e, i) => (
+          <div key={e} className="flex items-center">
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                i < etapaIdx
+                  ? 'bg-green-500 text-white'
+                  : i === etapaIdx
+                  ? 'bg-vermelho text-white shadow-md'
+                  : 'bg-surface border border-line text-faint'
+              }`}>
+                {i < etapaIdx ? <Check size={14} /> : i + 1}
+              </div>
+              <span className={`text-sm font-medium capitalize hidden sm:inline ${
+                i === etapaIdx ? 'text-ink' : i < etapaIdx ? 'text-dim' : 'text-faint'
+              }`}>
+                {e === 'dados' ? 'Dados' : e === 'frete' ? 'Frete' : 'Pagamento'}
+              </span>
             </div>
-            <span className={etapa === e ? 'text-white font-medium capitalize' : 'text-zinc-500 capitalize'}>
-              {e === 'dados' ? 'Dados' : e === 'frete' ? 'Frete' : 'Pagamento'}
-            </span>
-            {i < 2 && <div className="w-8 h-px bg-zinc-700" />}
+            {i < 2 && <div className="w-12 sm:w-16 h-px bg-line mx-3" />}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           {/* Etapa 1: Dados */}
           {etapa === 'dados' && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 space-y-4">
-              <h2 className="font-rajdhani font-semibold text-xl text-white">Dados pessoais e entrega</h2>
+            <div className="bg-card border border-line rounded-xl p-6 space-y-4">
+              <h2 className="font-grotesk font-semibold text-xl text-ink">Dados pessoais e entrega</h2>
               <Input label="Nome completo *" value={form.nome} onChange={(e) => updateForm('nome', e.target.value)} />
               <Input label="E-mail *" type="email" value={form.email} onChange={(e) => updateForm('email', e.target.value)} />
               <Input label="Telefone" value={form.telefone} onChange={(e) => updateForm('telefone', e.target.value)} placeholder="(19) 99999-9999" />
-              <Input
-                label="CEP *"
-                value={form.cep}
-                onChange={(e) => updateForm('cep', e.target.value)}
-                onBlur={buscarCEP}
-                placeholder="00000-000"
-              />
+              <Input label="CEP *" value={form.cep} onChange={(e) => updateForm('cep', e.target.value)} onBlur={buscarCEP} placeholder="00000-000" />
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <Input label="Rua *" value={form.rua} onChange={(e) => updateForm('rua', e.target.value)} />
@@ -172,18 +168,20 @@ export default function CheckoutPage() {
                 <Input label="Cidade" value={form.cidade} onChange={(e) => updateForm('cidade', e.target.value)} />
               </div>
               <Button onClick={avancarParaFrete} loading={loading} className="w-full" size="lg">
-                Calcular frete
+                Calcular Frete
               </Button>
             </div>
           )}
 
           {/* Etapa 2: Frete */}
           {etapa === 'frete' && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 space-y-4">
-              <h2 className="font-rajdhani font-semibold text-xl text-white">Escolha o frete</h2>
+            <div className="bg-card border border-line rounded-xl p-6 space-y-4">
+              <h2 className="font-grotesk font-semibold text-xl text-ink">Escolha o frete</h2>
               {freteOpcoes.map((op) => (
-                <label key={op.codigo} className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors ${
-                  freteSelecionado?.codigo === op.codigo ? 'border-vermelho bg-vermelho/5' : 'border-zinc-700 hover:border-zinc-600'
+                <label key={op.codigo} className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-colors ${
+                  freteSelecionado?.codigo === op.codigo
+                    ? 'border-vermelho bg-[var(--vermelho-light)]'
+                    : 'border-line hover:border-line-hi'
                 }`}>
                   <div className="flex items-center gap-3">
                     <input
@@ -194,15 +192,15 @@ export default function CheckoutPage() {
                       className="accent-vermelho"
                     />
                     <div>
-                      <p className="font-semibold text-white">{op.servico}</p>
-                      <p className="text-xs text-zinc-500">Prazo: até {op.prazo} dias úteis</p>
+                      <p className="font-semibold text-ink text-sm">{op.servico}</p>
+                      <p className="text-xs text-faint">Prazo: até {op.prazo} dias úteis</p>
                     </div>
                   </div>
-                  <span className="font-bold text-white">{formatPrice(op.valor)}</span>
+                  <span className="font-bold text-ink">{formatPrice(op.valor)}</span>
                 </label>
               ))}
-              <div className="flex gap-3">
-                <Button variant="ghost" onClick={() => setEtapa('dados')} className="flex-1">Voltar</Button>
+              <div className="flex gap-3 pt-2">
+                <Button variant="surface" onClick={() => setEtapa('dados')} className="flex-1">Voltar</Button>
                 <Button onClick={() => freteSelecionado && setEtapa('pagamento')} disabled={!freteSelecionado} className="flex-1" size="lg">
                   Ir para Pagamento
                 </Button>
@@ -212,14 +210,14 @@ export default function CheckoutPage() {
 
           {/* Etapa 3: Pagamento */}
           {etapa === 'pagamento' && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 space-y-4">
-              <h2 className="font-rajdhani font-semibold text-xl text-white">Pagamento</h2>
-              <div className="bg-zinc-800 rounded-lg p-4 text-sm text-zinc-400">
-                <p>Você será redirecionado para o <strong className="text-white">Mercado Pago</strong> para concluir o pagamento com segurança.</p>
-                <p className="mt-2 text-xs">Aceitamos: PIX, cartão de crédito/débito e boleto bancário.</p>
+            <div className="bg-card border border-line rounded-xl p-6 space-y-4">
+              <h2 className="font-grotesk font-semibold text-xl text-ink">Pagamento</h2>
+              <div className="bg-surface border border-line rounded-xl p-5 text-sm text-dim">
+                <p>Você será redirecionado para o <strong className="text-ink">Mercado Pago</strong> para concluir o pagamento com segurança.</p>
+                <p className="mt-2 text-xs text-faint">Aceitamos: PIX, cartão de crédito/débito e boleto bancário.</p>
               </div>
               <div className="flex gap-3">
-                <Button variant="ghost" onClick={() => setEtapa('frete')} className="flex-1">Voltar</Button>
+                <Button variant="surface" onClick={() => setEtapa('frete')} className="flex-1">Voltar</Button>
                 <Button onClick={finalizarPedido} loading={loading} className="flex-1" size="lg">
                   Pagar {formatPrice(total)}
                 </Button>
@@ -230,20 +228,20 @@ export default function CheckoutPage() {
 
         {/* Resumo */}
         <div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 sticky top-24">
-            <h3 className="font-rajdhani font-semibold text-lg text-white mb-4">Resumo</h3>
-            <div className="space-y-2 text-sm text-zinc-400 mb-4">
+          <div className="bg-card border border-line rounded-xl p-5 sticky top-24">
+            <h3 className="font-grotesk font-semibold text-base text-ink mb-4">Resumo do pedido</h3>
+            <div className="space-y-2 text-sm text-dim mb-4">
               {items.map((i) => (
                 <div key={i.id} className="flex justify-between gap-2">
-                  <span className="truncate">{i.nome} x{i.quantidade}</span>
-                  <span className="text-white shrink-0">{formatPrice(i.preco * i.quantidade)}</span>
+                  <span className="truncate">{i.nome} ×{i.quantidade}</span>
+                  <span className="text-ink shrink-0 font-medium">{formatPrice(i.preco * i.quantidade)}</span>
                 </div>
               ))}
-              <div className="border-t border-zinc-700 pt-2 flex justify-between">
+              <div className="border-t border-line pt-2 flex justify-between">
                 <span>Frete</span>
-                <span className="text-white">{freteSelecionado ? formatPrice(freteSelecionado.valor) : '-'}</span>
+                <span className="text-ink">{freteSelecionado ? formatPrice(freteSelecionado.valor) : '–'}</span>
               </div>
-              <div className="flex justify-between font-bold text-white text-base">
+              <div className="flex justify-between font-bold text-ink text-base pt-1">
                 <span>Total</span>
                 <span>{formatPrice(total)}</span>
               </div>

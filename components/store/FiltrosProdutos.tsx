@@ -33,91 +33,72 @@ export function FiltrosProdutos({ categorias, marcas, params }: Props) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Busca */}
-      <div>
-        <Input
-          label="Buscar"
-          placeholder="Nome ou modelo de moto..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && aplicar({ busca })}
-        />
-      </div>
+    <div className="bg-card border border-line rounded-xl p-5 space-y-5">
+      <Input
+        label="Buscar"
+        placeholder="Nome ou modelo..."
+        value={busca}
+        onChange={(e) => setBusca(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && aplicar({ busca })}
+      />
 
-      {/* Categorias */}
-      <div>
-        <h3 className="text-sm font-semibold text-zinc-300 mb-3 uppercase tracking-wide">Categoria</h3>
-        <ul className="space-y-1">
-          <li>
-            <button
-              onClick={() => aplicar({ categoria: '' })}
-              className={`text-sm w-full text-left py-1 px-2 rounded transition-colors ${
-                !params.categoria ? 'text-vermelho bg-vermelho/10' : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              Todos
-            </button>
-          </li>
-          {categorias.map((cat) => (
-            <li key={cat}>
+      {categorias.length > 0 && (
+        <div>
+          <h3 className="text-xs font-semibold text-faint mb-2.5 uppercase tracking-wider">Categoria</h3>
+          <ul className="space-y-0.5">
+            <li>
               <button
-                onClick={() => aplicar({ categoria: cat })}
-                className={`text-sm w-full text-left py-1 px-2 rounded transition-colors capitalize ${
-                  params.categoria === cat ? 'text-vermelho bg-vermelho/10' : 'text-zinc-400 hover:text-white'
+                onClick={() => aplicar({ categoria: '' })}
+                className={`text-sm w-full text-left py-1.5 px-2 rounded-md transition-colors ${
+                  !params.categoria ? 'text-vermelho bg-[var(--vermelho-light)] font-medium' : 'text-dim hover:text-ink hover:bg-card-hi'
                 }`}
               >
-                {cat}
+                Todos
               </button>
             </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Marcas */}
-      <div>
-        <h3 className="text-sm font-semibold text-zinc-300 mb-3 uppercase tracking-wide">Marca</h3>
-        <ul className="space-y-1">
-          {marcas.map((marca) => (
-            <li key={marca}>
-              <button
-                onClick={() => aplicar({ marca })}
-                className={`text-sm w-full text-left py-1 px-2 rounded transition-colors ${
-                  params.marca === marca ? 'text-vermelho bg-vermelho/10' : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                {marca}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Faixa de preço */}
-      <div>
-        <h3 className="text-sm font-semibold text-zinc-300 mb-3 uppercase tracking-wide">Preço</h3>
-        <div className="flex gap-2">
-          <Input
-            placeholder="Mín"
-            type="number"
-            value={minPreco}
-            onChange={(e) => setMinPreco(e.target.value)}
-            className="w-20"
-          />
-          <Input
-            placeholder="Máx"
-            type="number"
-            value={maxPreco}
-            onChange={(e) => setMaxPreco(e.target.value)}
-            className="w-20"
-          />
+            {categorias.map((cat) => (
+              <li key={cat}>
+                <button
+                  onClick={() => aplicar({ categoria: cat })}
+                  className={`text-sm w-full text-left py-1.5 px-2 rounded-md transition-colors capitalize ${
+                    params.categoria === cat ? 'text-vermelho bg-[var(--vermelho-light)] font-medium' : 'text-dim hover:text-ink hover:bg-card-hi'
+                  }`}
+                >
+                  {cat}
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          className="mt-2 w-full"
-          onClick={() => aplicar({ minPreco, maxPreco })}
-        >
+      )}
+
+      {marcas.length > 0 && (
+        <div>
+          <h3 className="text-xs font-semibold text-faint mb-2.5 uppercase tracking-wider">Marca</h3>
+          <ul className="space-y-0.5">
+            {marcas.map((marca) => (
+              <li key={marca}>
+                <button
+                  onClick={() => aplicar({ marca })}
+                  className={`text-sm w-full text-left py-1.5 px-2 rounded-md transition-colors ${
+                    params.marca === marca ? 'text-vermelho bg-[var(--vermelho-light)] font-medium' : 'text-dim hover:text-ink hover:bg-card-hi'
+                  }`}
+                >
+                  {marca}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div>
+        <h3 className="text-xs font-semibold text-faint mb-2.5 uppercase tracking-wider">Faixa de Preço</h3>
+        <div className="flex gap-2">
+          <Input placeholder="Mín" type="number" value={minPreco} onChange={(e) => setMinPreco(e.target.value)} />
+          <Input placeholder="Máx" type="number" value={maxPreco} onChange={(e) => setMaxPreco(e.target.value)} />
+        </div>
+        <Button size="sm" variant="outline" className="mt-2 w-full" onClick={() => aplicar({ minPreco, maxPreco })}>
           Aplicar
         </Button>
       </div>

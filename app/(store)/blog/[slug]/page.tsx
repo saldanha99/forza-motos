@@ -31,35 +31,35 @@ export default async function BlogPostPage({ params }: Props) {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <Link href="/blog" className="inline-flex items-center gap-2 text-zinc-500 hover:text-white text-sm mb-8 transition-colors">
+      <Link href="/blog" className="inline-flex items-center gap-2 text-dim hover:text-ink text-sm mb-8 transition-colors">
         <ArrowLeft size={16} /> Voltar ao blog
       </Link>
 
       <article>
-        <p className="text-xs text-zinc-600 mb-3">{formatDate(post.createdAt)} · por {post.autor}</p>
-        <h1 className="font-rajdhani font-bold text-4xl md:text-5xl text-white mb-8 leading-tight">{post.titulo}</h1>
+        <p className="text-xs text-faint mb-3">{formatDate(post.createdAt)} · por {post.autor}</p>
+        <h1 className="font-grotesk font-bold text-4xl md:text-5xl text-ink mb-8 leading-tight">{post.titulo}</h1>
 
         {post.capaUrl && (
-          <div className="relative aspect-video rounded-lg overflow-hidden mb-10 bg-zinc-800">
+          <div className="relative aspect-video rounded-xl overflow-hidden mb-10 bg-surface">
             <Image src={post.capaUrl} alt={post.titulo} fill className="object-cover" />
           </div>
         )}
 
         <div
-          className="prose prose-invert prose-zinc max-w-none prose-headings:font-rajdhani prose-headings:text-white prose-a:text-vermelho"
+          className="prose dark:prose-invert prose-zinc max-w-none prose-headings:font-grotesk prose-a:text-vermelho prose-img:rounded-xl"
           dangerouslySetInnerHTML={{ __html: post.conteudo }}
         />
       </article>
 
       {relacionados.length > 0 && (
-        <section className="mt-16 pt-10 border-t border-zinc-800">
-          <h2 className="font-rajdhani font-bold text-2xl text-white mb-6">Posts relacionados</h2>
+        <section className="mt-16 pt-10 border-t border-line">
+          <h2 className="font-grotesk font-bold text-2xl text-ink mb-6">Posts relacionados</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {relacionados.map((p) => (
               <Link key={p.id} href={`/blog/${p.slug}`}>
-                <div className="bg-zinc-900 border border-zinc-800 hover:border-zinc-600 rounded-lg p-4 transition-all">
-                  <p className="text-xs text-zinc-600 mb-2">{formatDate(p.createdAt)}</p>
-                  <h3 className="font-rajdhani font-semibold text-white hover:text-vermelho transition-colors line-clamp-2">
+                <div className="bg-card border border-line hover:border-line-hi rounded-xl p-4 transition-all">
+                  <p className="text-xs text-faint mb-2">{formatDate(p.createdAt)}</p>
+                  <h3 className="font-grotesk font-semibold text-ink hover:text-vermelho transition-colors line-clamp-2">
                     {p.titulo}
                   </h3>
                 </div>

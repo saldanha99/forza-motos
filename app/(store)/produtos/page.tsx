@@ -47,8 +47,8 @@ async function getFiltrosDisponiveis() {
     prisma.product.findMany({ where: { ativo: true }, select: { marca: true }, distinct: ['marca'] }),
   ])
   return {
-    categorias: categorias.map((c) => c.categoria),
-    marcas: marcas.map((m) => m.marca),
+    categorias: categorias.map((c) => c.categoria).filter(Boolean),
+    marcas: marcas.map((m) => m.marca).filter(Boolean),
   }
 }
 
@@ -64,14 +64,14 @@ export default async function ProdutosPage({ searchParams }: { searchParams: Sea
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <h1 className="font-rajdhani font-bold text-4xl text-white mb-2 uppercase tracking-wide">
-        Produtos
-      </h1>
-      <p className="text-zinc-500 text-sm mb-8">{total} produto{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}</p>
+      <div className="mb-7">
+        <h1 className="font-grotesk font-bold text-3xl text-ink mb-1">Produtos</h1>
+        <p className="text-dim text-sm">{total} produto{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}</p>
+      </div>
 
-      <div className="flex flex-col lg:flex-row gap-8">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Sidebar Filtros */}
-        <aside className="lg:w-64 shrink-0">
+        <aside className="lg:w-56 shrink-0">
           <FiltrosProdutos
             categorias={filtros.categorias}
             marcas={filtros.marcas}
@@ -82,9 +82,9 @@ export default async function ProdutosPage({ searchParams }: { searchParams: Sea
         {/* Grid */}
         <div className="flex-1">
           {produtos.length === 0 ? (
-            <div className="text-center py-20 text-zinc-500">
+            <div className="text-center py-20 text-faint">
               <p className="text-4xl mb-4">🔍</p>
-              <p>Nenhum produto encontrado com esses filtros.</p>
+              <p className="text-dim">Nenhum produto encontrado com esses filtros.</p>
             </div>
           ) : (
             <>
@@ -94,17 +94,16 @@ export default async function ProdutosPage({ searchParams }: { searchParams: Sea
                 ))}
               </div>
 
-              {/* Paginação */}
               {pages > 1 && (
                 <div className="flex justify-center gap-2 mt-10">
                   {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
                     <a
                       key={p}
                       href={`?${new URLSearchParams({ ...searchParams, page: String(p) })}`}
-                      className={`w-9 h-9 flex items-center justify-center rounded text-sm transition-colors ${
+                      className={`w-9 h-9 flex items-center justify-center rounded-md text-sm transition-colors font-medium ${
                         p === paginaAtual
                           ? 'bg-vermelho text-white'
-                          : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                          : 'bg-card border border-line text-dim hover:border-line-hi hover:text-ink'
                       }`}
                     >
                       {p}

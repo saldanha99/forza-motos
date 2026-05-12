@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { statusBadge } from '@/components/ui/Badge'
+import { OlistSyncButton } from '@/components/admin/OlistSyncButton'
 import Link from 'next/link'
 import { ShoppingBag, DollarSign, Users, AlertTriangle } from 'lucide-react'
 
@@ -62,6 +63,11 @@ export default async function DashboardPage() {
             <p className={`font-rajdhani font-bold text-2xl ${k.cor}`}>{k.value}</p>
           </div>
         ))}
+      </div>
+
+      {/* OLIST Sync */}
+      <div className="mb-8">
+        <OlistSyncButton />
       </div>
 
       {/* Últimos pedidos */}

@@ -11,20 +11,22 @@ export default function CheckoutSucessoPage({
 
   return (
     <div className="max-w-lg mx-auto px-4 py-20 text-center">
-      <CheckCircle size={64} className="mx-auto text-green-500 mb-6" />
-      <h1 className="font-rajdhani font-bold text-4xl text-white mb-3">Pedido Confirmado!</h1>
+      <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+        <CheckCircle size={40} className="text-green-600" />
+      </div>
+      <h1 className="font-grotesk font-bold text-3xl text-ink mb-3">Pedido Confirmado!</h1>
       {numeroPedido && (
-        <p className="text-zinc-400 mb-2">
-          Número do pedido: <strong className="text-white">{numeroPedido}</strong>
+        <p className="text-dim mb-2">
+          Número do pedido: <strong className="text-ink font-mono">{numeroPedido}</strong>
         </p>
       )}
-      <p className="text-zinc-500 text-sm mb-10">
+      <p className="text-faint text-sm mb-10 leading-relaxed">
         Em breve você receberá atualizações por e-mail. Acompanhe o status do pedido pelo nosso rastreador.
       </p>
-      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+      <div className="flex flex-col sm:flex-row gap-3 justify-center">
         {numeroPedido && (
           <Link href={`/rastrear?pedido=${numeroPedido}`}>
-            <Button variant="outline">Rastrear Pedido</Button>
+            <Button variant="surface">Rastrear Pedido</Button>
           </Link>
         )}
         <Link href="/produtos">
