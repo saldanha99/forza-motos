@@ -1,17 +1,14 @@
 /**
- * Rota de Cron para sincronização automática de produtos do Tiny/OLIST
- *
- * Chamada automaticamente pelo Vercel Cron (configurado em vercel.json)
- * Frequência: a cada 6 horas
- *
- * Protegida por CRON_SECRET para evitar chamadas não autorizadas
+ * Cron diário às 6h: sincroniza estoque e preços de todos os produtos
+ * Usa apenas a listagem do Tiny (sem chamada individual por produto = sem rate limit)
  */
 
 import { NextResponse } from 'next/server'
-import { syncProdutosOlist } from '@/lib/olist/sync-products'
+import { syncEstoquePrecos } from '@/lib/olist/sync-products'
+
+export const maxDuration = 60
 
 export async function GET(req: Request) {
-  // Verifica secret para proteger o endpoint
   const authHeader = req.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
 
@@ -20,12 +17,12 @@ export async function GET(req: Request) {
   }
 
   try {
-    console.log('[cron] Iniciando sync automático de produtos Tiny...')
-    const result = await syncProdutosOlist()
-    console.log('[cron] Sync concluído:', result)
+    console.log('[cron] Iniciando sync diário de estoque e preços...')
+    const result = await syncEstoquePrecos()
+    console.log('[cron] Concluído:', result)
     return NextResponse.json({ ok: true, ...result })
   } catch (e: any) {
-    console.error('[cron] Erro no sync:', e)
+    console.error('[cron] Erro:', e.message)
     return NextResponse.json({ ok: false, error: e.message }, { status: 500 })
   }
 }
