@@ -137,7 +137,7 @@ export function OlistSyncButton() {
 
         acum += data.atualizados ?? 0
         setEstoqueAcum(acum)
-        setEstoqueZerados(data.zerados ?? 0)
+        setEstoqueZerados(data.pendentes ?? data.zerados ?? 0)
         setEstoqueTotal(data.total ?? null)
 
         if (!data.hasMore) { setEstoqueDone(true); break }
@@ -270,8 +270,8 @@ export function OlistSyncButton() {
         {loadingEstoque && estoqueTotal !== null && (
           <div>
             <div className="flex justify-between text-xs text-zinc-500 mb-1">
-              <span>{estoqueZerados} produtos com saldo 0</span>
-              <span>{pctEstoque}% com estoque</span>
+              <span>{estoqueZerados} ainda pendentes</span>
+              <span>{estoqueTotal ? Math.round(((estoqueTotal - (estoqueZerados ?? 0)) / estoqueTotal) * 100) : 0}% verificados</span>
             </div>
             <div className="w-full bg-zinc-800 rounded-full h-1">
               <div className="bg-blue-500 h-1 rounded-full transition-all" style={{ width: `${pctEstoque}%` }} />
@@ -283,7 +283,7 @@ export function OlistSyncButton() {
           <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${estoqueError ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'}`}>
             {estoqueError ? <AlertCircle size={12} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={12} className="mt-0.5 shrink-0" />}
             <span>
-              {estoqueError || `${estoqueAcum} estoques atualizados · ${estoqueZerados ?? 0} produtos zerados`}
+              {estoqueError || `${estoqueAcum} verificados · ${estoqueZerados ?? 0} pendentes`}
             </span>
           </div>
         )}

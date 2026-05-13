@@ -266,20 +266,27 @@ export async function syncEstoquePrecos() {
 
 /**
  * FASE 4 — Sincroniza estoque real de `limite` produtos por vez
- * Usa produto.obter.estoque.php (delay 1.2s entre chamadas)
- * Para estoque físico da Forza lançado no Tiny
+ * Lógica:
+ *   - Depósito "Loja" > 0 → estoque físico real
+ *   - Depósitos dropship (Drop_EuroLaqui / F_drop) → 999 (disponível no fornecedor)
+ *   - Produto inativo → 0
+ * Prioridade: produtos com estoque=999 ainda não verificados (recém importados)
  */
 export async function syncEstoqueLote(limite = 5) {
-  // Busca produtos com tinyId — priorizando os com estoque 0 (podem ter sido reabastecidos)
-  const produtos = await prisma.product.findMany({
-    where: { tinyId: { not: null } },
-    select: { id: true, tinyId: true, estoque: true, nome: true },
-    orderBy: { estoque: 'asc' }, // começa pelos zerados
-    take: limite,
-  })
+  // Prioridade: produtos que nunca tiveram estoque real verificado (999 = placeholder)
+  // Depois: produtos com estoque 0 (podem ter sido reabastecidos)
+  const produtos = await prisma.$queryRaw<{ id: string; tinyId: string; estoque: number }[]>`
+    SELECT id, "tinyId", estoque FROM "Product"
+    WHERE "tinyId" IS NOT NULL
+    ORDER BY
+      CASE WHEN estoque = 999 THEN 0 ELSE 1 END,  -- 999 (não verificado) vem primeiro
+      estoque ASC,                                  -- depois os zerados
+      "updatedAt" ASC                               -- mais antigos
+    LIMIT ${limite}
+  `
 
   if (produtos.length === 0) {
-    return { atualizados: 0, restantes: 0, hasMore: false }
+    return { atualizados: 0, erros: 0, pendentes: 0, total: 0, hasMore: false }
   }
 
   let atualizados = 0
@@ -296,15 +303,19 @@ export async function syncEstoqueLote(limite = 5) {
     atualizados++
   }
 
-  const total = await prisma.product.count({ where: { tinyId: { not: null } } })
-  const zerados = await prisma.product.count({ where: { tinyId: { not: null }, estoque: 0 } })
+  const [total, pendentes] = await Promise.all([
+    prisma.product.count({ where: { tinyId: { not: null } } }),
+    prisma.$queryRaw<[{ n: number }]>`
+      SELECT COUNT(*)::int AS n FROM "Product" WHERE "tinyId" IS NOT NULL AND estoque = 999
+    `.then(r => r[0]?.n ?? 0),
+  ])
 
   return {
     atualizados,
     erros,
-    zerados,
+    pendentes,  // quantos ainda com 999 (placeholder, não verificados)
     total,
-    hasMore: zerados > 0,
+    hasMore: pendentes > 0,
   }
 }
 

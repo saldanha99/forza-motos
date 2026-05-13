@@ -109,7 +109,20 @@ export function ProductCard({ produto }: { produto: Produto }) {
           >
             {formatPrice(precoPromo ?? preco)}
           </div>
-          {!precoPromo && <div className="h-[18px]" />}
+          {/* Badge de estoque */}
+          <div className="mt-1.5 mb-1">
+            {produto.estoque >= 999 ? (
+              <span className="text-[10px] font-inter font-medium text-green-600 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                Disponível
+              </span>
+            ) : produto.estoque > 0 ? (
+              <span className="text-[10px] font-inter font-medium text-orange-600 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 inline-block" />
+                {produto.estoque} em estoque
+              </span>
+            ) : null}
+          </div>
           {produto.estoque > 0 && (
             <button
               onClick={handleAddToCart}
