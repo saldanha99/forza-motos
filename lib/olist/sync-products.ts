@@ -142,38 +142,41 @@ export async function syncPaginaListagem(pagina: number) {
 /**
  * FASE 2 — Busca imagens e descrição de até `limite` produtos que estão sem foto
  * Cada produto = 1 request ao Tiny (com delay 1.2s)
- * NOTA: Se o Tiny não tiver imagens cadastradas, retorna imagens=[] mas marca
- * o produto com imagensVerificadas para não tentar de novo.
+ * Usa imagensVerificadas para não re-checar produtos já consultados sem foto no Tiny.
  */
-export async function syncImagensLote(limite = 3) {
-  // Usa raw SQL para filtrar produtos sem imagens com tinyId
+export async function syncImagensLote(limite = 10) {
+  // Prioridade 1: produtos sem imagem E ainda não verificados
+  // Prioridade 2: produtos sem imagem mas já verificados (talvez tenham sido adicionadas fotos)
   const precisam = await prisma.$queryRaw<{ id: string; sku: string; tinyId: string; nome: string }[]>`
     SELECT id, sku, "tinyId", nome
     FROM "Product"
     WHERE "tinyId" IS NOT NULL
       AND (imagens::text = '[]' OR imagens IS NULL)
-      AND ("imagensVerificadas" IS NULL OR "imagensVerificadas" = false)
+      AND "imagensVerificadas" = false
     ORDER BY "updatedAt" ASC
     LIMIT ${limite}
-  `.catch(() =>
-    // fallback se coluna imagensVerificadas não existir
-    prisma.$queryRaw<{ id: string; sku: string; tinyId: string; nome: string }[]>`
-      SELECT id, sku, "tinyId", nome
-      FROM "Product"
-      WHERE "tinyId" IS NOT NULL
-        AND (imagens::text = '[]' OR imagens IS NULL)
-      ORDER BY "updatedAt" ASC
-      LIMIT ${limite}
-    `
-  )
+  `
 
   if (precisam.length === 0) {
-    // Conta quantos ainda estão sem imagem
-    const restantes = await prisma.$queryRaw<[{ n: number }]>`
-      SELECT COUNT(*)::int as n FROM "Product"
-      WHERE "tinyId" IS NOT NULL AND (imagens::text = '[]' OR imagens IS NULL)
-    `
-    return { atualizados: 0, semImagem: 0, restantes: restantes[0]?.n ?? 0, hasMore: false, semImagemNoTiny: false }
+    // Conta quantos ainda estão sem imagem (incluindo os já verificados)
+    const [semImagem, naoVerificados] = await Promise.all([
+      prisma.$queryRaw<[{ n: number }]>`
+        SELECT COUNT(*)::int as n FROM "Product"
+        WHERE "tinyId" IS NOT NULL AND (imagens::text = '[]' OR imagens IS NULL)
+      `,
+      prisma.$queryRaw<[{ n: number }]>`
+        SELECT COUNT(*)::int as n FROM "Product"
+        WHERE "tinyId" IS NOT NULL AND (imagens::text = '[]' OR imagens IS NULL) AND "imagensVerificadas" = false
+      `,
+    ])
+    return {
+      atualizados: 0,
+      semImagem: 0,
+      restantes: semImagem[0]?.n ?? 0,
+      naoVerificados: naoVerificados[0]?.n ?? 0,
+      hasMore: false,
+      semImagemNoTiny: false,
+    }
   }
 
   let atualizados = 0
@@ -192,11 +195,14 @@ export async function syncImagensLote(limite = 3) {
 
       if (imagens.length === 0) semImagemNoTiny++
 
-      // Atualiza mesmo sem imagens para marcar que já verificou o Tiny
+      // Sempre marca imagensVerificadas=true, mesmo sem fotos
+      // Isso impede que o mesmo produto seja re-consultado em cada rodada
       await prisma.product.update({
         where: { id: produto.id },
         data: {
           imagens,
+          imagensVerificadas: true,
+          temImagem: imagens.length > 0,
           descricao: descricao || undefined,
           ...(categoria && { categoria }),
           ...(marca && { marca }),
@@ -209,12 +215,20 @@ export async function syncImagensLote(limite = 3) {
     }
   }
 
-  // Conta restantes usando raw SQL
-  const restantesArr = await prisma.$queryRaw<[{ n: number }]>`
-    SELECT COUNT(*)::int as n FROM "Product"
-    WHERE "tinyId" IS NOT NULL AND (imagens::text = '[]' OR imagens IS NULL)
-  `
+  // Conta restantes ainda não verificados
+  const [restantesArr, naoVerificadosArr] = await Promise.all([
+    prisma.$queryRaw<[{ n: number }]>`
+      SELECT COUNT(*)::int as n FROM "Product"
+      WHERE "tinyId" IS NOT NULL AND (imagens::text = '[]' OR imagens IS NULL)
+    `,
+    prisma.$queryRaw<[{ n: number }]>`
+      SELECT COUNT(*)::int as n FROM "Product"
+      WHERE "tinyId" IS NOT NULL AND (imagens::text = '[]' OR imagens IS NULL) AND "imagensVerificadas" = false
+    `,
+  ])
+
   const restantes = restantesArr[0]?.n ?? 0
+  const naoVerificados = naoVerificadosArr[0]?.n ?? 0
 
   return {
     atualizados,
@@ -222,8 +236,11 @@ export async function syncImagensLote(limite = 3) {
     semImagem: precisam.length,
     semImagemNoTiny,
     restantes,
-    hasMore: restantes > 0,
-    tinyNaoTemImagens: semImagemNoTiny === precisam.length,
+    naoVerificados,
+    hasMore: naoVerificados > 0,
+    // Só sinaliza "Tiny sem fotos" quando TODOS do lote não tinham imagem
+    // Isso é informativo, não para o processo
+    tinyNaoTemImagens: semImagemNoTiny === precisam.length && precisam.length > 0,
   }
 }
 
@@ -352,7 +369,7 @@ export async function syncProdutoUnico(tinyId: string | number): Promise<'criado
   if (existing) {
     await prisma.product.update({
       where: { sku: d.sku },
-      data: { ...d, imagens, descricao },
+      data: { ...d, imagens, descricao, temImagem: imagens.length > 0 },
     })
     return 'atualizado'
   }
@@ -362,7 +379,7 @@ export async function syncProdutoUnico(tinyId: string | number): Promise<'criado
   if (slugExists) slug = `${slug}-${d.sku}`
 
   await prisma.product.create({
-    data: { ...d, slug, imagens, descricao, compatibilidadeMotos: [] },
+    data: { ...d, slug, imagens, descricao, temImagem: imagens.length > 0, compatibilidadeMotos: [] },
   })
   return 'criado'
 }

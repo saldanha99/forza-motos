@@ -3,6 +3,7 @@ import { Barlow_Condensed, Inter } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
 import { Toaster } from 'react-hot-toast'
+import { GoogleAnalytics } from '@/components/GoogleAnalytics'
 
 const barlowCondensed = Barlow_Condensed({
   subsets: ['latin'],
@@ -57,13 +58,16 @@ export const metadata: Metadata = {
     images: ['/og-image.jpg'],
   },
   alternates: { canonical: BASE_URL },
-  verification: { google: '' }, // adicione o código do Google Search Console aqui
+  ...(process.env.GOOGLE_SITE_VERIFICATION && {
+    verification: { google: process.env.GOOGLE_SITE_VERIFICATION },
+  }),
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" className={`${barlowCondensed.variable} ${inter.variable}`}>
       <body className="bg-white text-[#111] font-inter antialiased">
+        <GoogleAnalytics />
         <Providers>
           {children}
           <Toaster

@@ -6,6 +6,13 @@ const nextConfig = {
       { protocol: 'https', hostname: '**.blob.vercel-storage.com' },
       { protocol: 'https', hostname: 'olist.com' },
       { protocol: 'https', hostname: '**.olist.com' },
+      // Tiny ERP CDN domains
+      { protocol: 'https', hostname: 'tiny.com.br' },
+      { protocol: 'https', hostname: '**.tiny.com.br' },
+      { protocol: 'https', hostname: 'cdn.tiny.com.br' },
+      { protocol: 'https', hostname: '**.cdn.tiny.com.br' },
+      // Fallback: imagens de fornecedores dropship
+      { protocol: 'https', hostname: '**.amazonaws.com' },
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
     ],

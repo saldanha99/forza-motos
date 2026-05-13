@@ -136,36 +136,60 @@ export async function fetchTinyProductEstoque(id: string | number): Promise<numb
   }
 }
 
-/** Extrair URLs de imagem de um produto retornado pelo produto.obter.php */
+/**
+ * Extrair URLs de imagem de um produto retornado pelo produto.obter.php
+ * Suporta todos os formatos conhecidos do Tiny API v2
+ */
 export function extrairImagensTiny(p: any): string[] {
   if (!p) return []
 
-  // Formato: produto.fotos.foto[] ou produto.fotos[]
-  if (p.fotos) {
-    const raw = p.fotos.foto ?? p.fotos
-    const lista = Array.isArray(raw) ? raw : (raw ? [raw] : [])
-    const urls = lista.map((f: any) => (typeof f === 'string' ? f : f?.url || f?.link || '')).filter(Boolean)
-    if (urls.length) return urls
+  const urls: string[] = []
+
+  // Helper: normaliza item de foto para URL
+  function toUrl(item: any): string {
+    if (!item) return ''
+    if (typeof item === 'string') return item
+    return item.url || item.link || item.endereco || item.src || item.path || ''
   }
 
-  // Formato: produto.imagens.imagem[] ou produto.imagens[]
-  if (p.imagens) {
-    const raw = p.imagens.imagem ?? p.imagens
-    const lista = Array.isArray(raw) ? raw : (raw ? [raw] : [])
-    const urls = lista.map((i: any) => (typeof i === 'string' ? i : i?.url || i?.link || '')).filter(Boolean)
-    if (urls.length) return urls
+  // Helper: transforma campo em array de urls
+  function extrairArray(campo: any): string[] {
+    if (!campo) return []
+    // Já é um array?
+    if (Array.isArray(campo)) return campo.map(toUrl).filter(Boolean)
+    // É um objeto com sub-campo?
+    const subCampos = ['foto', 'imagem', 'image', 'item']
+    for (const sub of subCampos) {
+      if (campo[sub] !== undefined) {
+        const sub_raw = campo[sub]
+        const sub_lista = Array.isArray(sub_raw) ? sub_raw : [sub_raw]
+        const sub_urls = sub_lista.map(toUrl).filter(Boolean)
+        if (sub_urls.length) return sub_urls
+      }
+    }
+    // É um objeto simples (foto única)?
+    const u = toUrl(campo)
+    if (u) return [u]
+    return []
   }
 
-  // Formato: produto.imagens_externas (Tiny v2)
-  if (p.imagens_externas && Array.isArray(p.imagens_externas) && p.imagens_externas.length > 0) {
-    const urls = p.imagens_externas
-      .map((i: any) => (typeof i === 'string' ? i : i?.url || i?.link || i?.endereco || ''))
-      .filter(Boolean)
-    if (urls.length) return urls
-  }
+  // 1. Campo "fotos" (mais comum no Tiny API v2)
+  if (p.fotos) urls.push(...extrairArray(p.fotos))
+  if (urls.length) return urls
 
+  // 2. Campo "imagens"
+  if (p.imagens) urls.push(...extrairArray(p.imagens))
+  if (urls.length) return urls
+
+  // 3. Imagens externas (Tiny v2 — produtos com foto hospedada fora)
+  if (p.imagens_externas) urls.push(...extrairArray(p.imagens_externas))
+  if (urls.length) return urls
+
+  // 4. Campos de foto única
   if (typeof p.foto === 'string' && p.foto) return [p.foto]
   if (typeof p.imagem_principal === 'string' && p.imagem_principal) return [p.imagem_principal]
+  if (typeof p.url_imagem === 'string' && p.url_imagem) return [p.url_imagem]
+  if (typeof p.imagem === 'string' && p.imagem) return [p.imagem]
 
   return []
 }

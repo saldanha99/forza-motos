@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 const COLS = [
   {
@@ -49,10 +50,14 @@ export function Footer() {
 
         {/* Brand column */}
         <div>
-          <div className="bg-white rounded-[5px] px-3 py-[6px] inline-flex mb-5">
-            <span className="font-barlow font-black text-xl text-[#111] tracking-wide leading-none">
-              FORZA<span className="text-[#d42b2b]">MOTOS</span>
-            </span>
+          <div className="bg-white rounded-[5px] px-2 py-[6px] inline-flex mb-5">
+            <Image
+              src="/logo.png"
+              alt="Forza Motos"
+              width={120}
+              height={44}
+              className="h-[40px] w-auto object-contain"
+            />
           </div>
 
           <p className="text-[13px] text-[#777] leading-[1.7] mb-4">

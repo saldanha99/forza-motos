@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import { ProductDetail } from '@/components/store/ProductDetail'
 import { ProductCard } from '@/components/store/ProductCard'
+import { Breadcrumb } from '@/components/store/Breadcrumb'
 import type { Metadata } from 'next'
 
 const BASE = 'https://forza-motos-app.vercel.app'
@@ -52,6 +53,7 @@ export default async function ProdutoPage({ params }: Props) {
       categoria: produto.categoria,
       ativo: true,
       estoque: { gt: 0 },
+      temImagem: true,
       id: { not: produto.id },
     },
     take: 4,
@@ -89,17 +91,14 @@ export default async function ProdutoPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {/* Breadcrumb */}
-        <nav className="text-xs text-[#888] font-inter mb-6 flex items-center gap-1.5">
-          <a href="/" className="hover:text-[#d42b2b] transition-colors">Home</a>
-          <span className="opacity-40">/</span>
-          <a href="/produtos" className="hover:text-[#d42b2b] transition-colors">Produtos</a>
-          <span className="opacity-40">/</span>
-          <a href={`/produtos?categoria=${produto.categoria}`} className="hover:text-[#d42b2b] transition-colors">{produto.categoria}</a>
-          <span className="opacity-40">/</span>
-          <span className="text-[#333] truncate max-w-[200px]">{produto.nome}</span>
-        </nav>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <Breadcrumb
+          items={[
+            { name: 'Produtos', url: '/produtos' },
+            { name: produto.categoria, url: `/produtos?categoria=${encodeURIComponent(produto.categoria)}` },
+            { name: produto.nome, url: `/produtos/${produto.slug}` },
+          ]}
+        />
 
         <ProductDetail produto={produto} />
 

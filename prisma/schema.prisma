@@ -97,6 +97,10 @@ model Product {
   destaque             Boolean     @default(false)
   /// ID do produto no Tiny ERP
   tinyId               String?
+  /// Marca true após verificar imagens no Tiny (mesmo que não tenha nenhuma)
+  imagensVerificadas   Boolean     @default(false)
+  /// True quando o produto tem pelo menos 1 imagem — usado para filtrar exibição
+  temImagem            Boolean     @default(false)
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt
 

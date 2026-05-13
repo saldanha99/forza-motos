@@ -6,6 +6,9 @@ import { HeroCarousel } from '@/components/store/HeroCarousel'
 import { ScrollReveal } from '@/components/store/ScrollReveal'
 import { ArrowRight } from 'lucide-react'
 import type { Metadata } from 'next'
+import { getLocalBusinessSchema } from '@/lib/schema'
+import { ReviewsSection } from '@/components/store/ReviewsSection'
+import { TrustBar } from '@/components/store/TrustBar'
 
 export const metadata: Metadata = {
   title: 'Forza Motos — Pneus e Peças para Moto em Campinas/SP',
@@ -37,7 +40,7 @@ async function getHomeData() {
       temVendasReais = true
       const ids = topSold.map(t => t.productId)
       const prods = await prisma.product.findMany({
-        where: { id: { in: ids }, ativo: true, estoque: { gt: 0 } },
+        where: { id: { in: ids }, ativo: true, estoque: { gt: 0 }, temImagem: true },
       })
       // Preserva ordem do ranking de vendas
       const map = new Map(prods.map(p => [p.id, p]))
@@ -47,11 +50,7 @@ async function getHomeData() {
       maisVendidos = await prisma.$queryRaw`
         SELECT id, nome, slug, preco, "precoPromocional", imagens, estoque, marca, categoria, ativo
         FROM "Product"
-        WHERE ativo = true
-          AND estoque > 0
-          AND imagens::text != '[]'
-          AND imagens IS NOT NULL
-          AND imagens::text != 'null'
+        WHERE ativo = true AND estoque > 0 AND "temImagem" = true
         ORDER BY
           CASE WHEN "precoPromocional" IS NOT NULL THEN 0 ELSE 1 END,
           estoque DESC,
@@ -64,13 +63,8 @@ async function getHomeData() {
     const promos = await prisma.$queryRaw`
       SELECT id, nome, slug, preco, "precoPromocional", imagens, estoque, marca, categoria, ativo
       FROM "Product"
-      WHERE ativo = true
-        AND estoque > 0
-        AND "precoPromocional" IS NOT NULL
-        AND imagens::text != '[]'
-        AND imagens IS NOT NULL
-      ORDER BY
-        (1 - "precoPromocional"::float / preco::float) DESC
+      WHERE ativo = true AND estoque > 0 AND "precoPromocional" IS NOT NULL AND "temImagem" = true
+      ORDER BY (1 - "precoPromocional"::float / preco::float) DESC
       LIMIT 4
     ` as any[]
 
@@ -78,10 +72,7 @@ async function getHomeData() {
     const destaque = await prisma.$queryRaw`
       SELECT id, nome, slug, preco, "precoPromocional", imagens, estoque, marca, categoria, ativo
       FROM "Product"
-      WHERE ativo = true
-        AND estoque > 0
-        AND imagens::text != '[]'
-        AND imagens IS NOT NULL
+      WHERE ativo = true AND estoque > 0 AND "temImagem" = true
       ORDER BY "updatedAt" DESC
       LIMIT 12
     ` as any[]
@@ -176,69 +167,8 @@ const SERVICOS = [
   },
 ]
 
-const TRUST = [
-  {
-    title: 'Entrega Brasil',
-    sub: 'Em todo o território nacional',
-    icon: (
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-        <rect x="1" y="6" width="20" height="16" rx="2" stroke="#d42b2b" strokeWidth="2"/>
-        <path d="M21 11h6l4 6v6h-10V11z" stroke="#d42b2b" strokeWidth="2"/>
-        <circle cx="8" cy="25" r="3" stroke="#d42b2b" strokeWidth="2"/>
-        <circle cx="24" cy="25" r="3" stroke="#d42b2b" strokeWidth="2"/>
-      </svg>
-    ),
-  },
-  {
-    title: 'Envio em 24h',
-    sub: 'Despacho no mesmo dia',
-    icon: (
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-        <circle cx="16" cy="16" r="13" stroke="#d42b2b" strokeWidth="2"/>
-        <polyline points="16 8 16 16 21 19" stroke="#d42b2b" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-  {
-    title: 'Pagamento Seguro',
-    sub: 'Compra 100% protegida',
-    icon: (
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-        <path d="M16 2l3.5 7 7.7 1.1-5.6 5.4 1.3 7.7L16 20.5l-6.9 3.6 1.3-7.7L4.8 10.1l7.7-1.1L16 2z" stroke="#d42b2b" strokeWidth="2" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
-  {
-    title: 'Troca Fácil',
-    sub: '30 dias para troca ou devolução',
-    icon: (
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-        <path d="M26 14c0 8-10 16-10 16S6 22 6 14a10 10 0 0120 0z" stroke="#d42b2b" strokeWidth="2"/>
-        <path d="M11 14l3.5 3.5L21 11" stroke="#d42b2b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
-]
 
-const LOCAL_BUSINESS_LD = {
-  '@context': 'https://schema.org',
-  '@type': ['LocalBusiness', 'AutoPartsStore'],
-  name: 'Forza Motos',
-  description: 'Credenciada Pirelli, Metzeler e Michelin. Box rápido para motos em Campinas/SP. Troca de pneu em 30 minutos, sem agendamento.',
-  url: 'https://forza-motos-app.vercel.app',
-  telephone: '+55-19-99999-9999',
-  address: {
-    '@type': 'PostalAddress',
-    addressLocality: 'Campinas',
-    addressRegion: 'SP',
-    addressCountry: 'BR',
-  },
-  geo: { '@type': 'GeoCoordinates', latitude: -22.9056, longitude: -47.0608 },
-  openingHours: 'Mo-Sa 08:00-18:00',
-  priceRange: '$$',
-  image: 'https://forza-motos-app.vercel.app/og-image.jpg',
-  sameAs: [],
-}
+const LOCAL_BUSINESS_LD = getLocalBusinessSchema()
 
 export default async function HomePage() {
   const { destaque, promos, maisVendidos, temVendasReais } = await getHomeData()
@@ -249,6 +179,9 @@ export default async function HomePage() {
 
       {/* ── Hero Carousel ─────────────────────────────────────────────────── */}
       <HeroCarousel />
+
+      {/* ── TrustBar ─────────────────────────────────────────────────────── */}
+      <TrustBar />
 
       {/* ── Mais Vendidos ────────────────────────────────────────────────── */}
       {maisVendidos.length > 0 && (
@@ -302,23 +235,6 @@ export default async function HomePage() {
           </div>
         </div>
       )}
-
-      {/* ── TrustBar ─────────────────────────────────────────────────────── */}
-      <div style={{ background: '#f9f9f9', borderTop: '1px solid #eee', borderBottom: '1px solid #eee', padding: '28px 0' }}>
-        <div className="max-w-[1280px] mx-auto px-6 md:px-12 grid grid-cols-2 md:grid-cols-4 gap-6">
-          {TRUST.map(({ title, sub, icon }, i) => (
-            <ScrollReveal key={title} delay={i * 80}>
-              <div className="flex items-center gap-4 group">
-                <div className="transition-transform duration-300 group-hover:scale-110">{icon}</div>
-                <div>
-                  <div className="font-barlow font-bold text-[16px] text-[#111]">{title}</div>
-                  <div className="font-inter text-[12px] text-[#888] mt-0.5">{sub}</div>
-                </div>
-              </div>
-            </ScrollReveal>
-          ))}
-        </div>
-      </div>
 
       {/* ── Serviços Box Rápido ───────────────────────────────────────────── */}
       <div style={{ background: '#fff', borderBottom: '1px solid #eee', padding: '52px 0' }}>
@@ -497,6 +413,9 @@ export default async function HomePage() {
           </div>
         </div>
       </div>
+
+      {/* ── Reviews / Depoimentos ────────────────────────────────────────── */}
+      <ReviewsSection />
     </>
   )
 }

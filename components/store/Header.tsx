@@ -2,17 +2,18 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useCartStore } from '@/store/cart'
 import { Search, User, ShoppingCart, Menu, X } from 'lucide-react'
 
 const CATS = [
-  { id: 'Pneus',       label: 'Pneus',      href: '/produtos?categoria=Pneus' },
-  { id: 'oleo',        label: 'Óleo',        href: '/produtos?categoria=Lubrificantes' },
+  { id: 'Pneus',       label: 'Pneus',       href: '/pneus' },
+  { id: 'oleo',        label: 'Óleos',       href: '/oleos' },
+  { id: 'freios',      label: 'Pastilhas',   href: '/pastilhas' },
+  { id: 'suspensao',   label: 'Serviços',    href: '/servicos' },
   { id: 'filtros',     label: 'Filtros',     href: '/produtos?categoria=Filtros' },
-  { id: 'freios',      label: 'Freios',      href: '/produtos?categoria=Freios' },
-  { id: 'suspensao',   label: 'Suspensão',   href: '/produtos?categoria=Suspensão' },
   { id: 'correntes',   label: 'Correntes',   href: '/produtos?categoria=Transmissão' },
   { id: 'capacetes',   label: 'Capacetes',   href: '/produtos?categoria=Capacetes' },
   { id: 'acessorios',  label: 'Acessórios',  href: '/produtos?categoria=Acessórios' },
@@ -131,10 +132,15 @@ export function Header() {
 
         {/* Logo */}
         <Link href="/" className="shrink-0">
-          <div className="bg-white rounded-[5px] px-3 py-[5px] flex items-center">
-            <span className="font-barlow font-black text-lg md:text-xl text-[#111] tracking-wide leading-none">
-              FORZA<span className="text-[#d42b2b]">MOTOS</span>
-            </span>
+          <div className="bg-white rounded-[5px] px-2 py-[5px] flex items-center justify-center" style={{ minWidth: 52 }}>
+            <Image
+              src="/logo.png"
+              alt="Forza Motos"
+              width={120}
+              height={44}
+              className="h-[36px] md:h-[42px] w-auto object-contain"
+              priority
+            />
           </div>
         </Link>
 

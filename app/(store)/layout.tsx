@@ -1,14 +1,19 @@
 import { Header } from '@/components/store/Header'
 import { Footer } from '@/components/store/Footer'
 import { WhatsappButton } from '@/components/store/WhatsappButton'
+import { AnnouncementBar } from '@/components/store/AnnouncementBar'
+import { SmoothScroll } from '@/components/SmoothScroll'
 
 export default function StoreLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1">{children}</main>
-      <Footer />
-      <WhatsappButton />
-    </div>
+    <SmoothScroll>
+      <div className="min-h-screen flex flex-col">
+        <AnnouncementBar />
+        <Header />
+        <main className="flex-1">{children}</main>
+        <Footer />
+        <WhatsappButton />
+      </div>
+    </SmoothScroll>
   )
 }

@@ -181,9 +181,7 @@ export function ProductDetail({ produto }: { produto: Produto }) {
         {produto.estoque > 0 ? (
           <div className="flex items-center gap-2 mb-6">
             <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
-            <span className="text-[13px] font-inter text-green-700">
-              Em estoque · {produto.estoque} unidade{produto.estoque !== 1 ? 's' : ''}
-            </span>
+            <span className="text-[13px] font-inter text-green-700">Em estoque</span>
           </div>
         ) : (
           <div className="flex items-center gap-2 mb-6">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { RefreshCw, CheckCircle2, AlertCircle, Loader2, Package, ShoppingBag, Image as ImageIcon, Warehouse } from 'lucide-react'
+import { RefreshCw, CheckCircle2, AlertCircle, Loader2, Package, ShoppingBag, Image as ImageIcon, Warehouse, Trash2, ScanSearch } from 'lucide-react'
 
 export function OlistSyncButton() {
   // ── Fase 1: sync metadados ─────────────────────────────────────────────────
@@ -15,6 +15,7 @@ export function OlistSyncButton() {
   // ── Fase 2: buscar imagens ─────────────────────────────────────────────────
   const [loadingImagens, setLoadingImagens] = useState(false)
   const [imagensRestantes, setImagensRestantes] = useState<number | null>(null)
+  const [imagensNaoVerificadas, setImagensNaoVerificadas] = useState<number | null>(null)
   const [imagensAcum, setImagensAcum] = useState(0)
   const [imagensError, setImagensError] = useState('')
   const [imagensDone, setImagensDone] = useState(false)
@@ -23,6 +24,14 @@ export function OlistSyncButton() {
   // ── Fase 3: sync pedidos ───────────────────────────────────────────────────
   const [loadingPedidos, setLoadingPedidos] = useState(false)
   const [pedidosResult, setPedidosResult] = useState<any>(null)
+
+  // ── Limpar imagens duplicadas ──────────────────────────────────────────────
+  const [loadingLimparImgs, setLoadingLimparImgs] = useState(false)
+  const [limparImgsResult, setLimparImgsResult] = useState<any>(null)
+
+  // ── Reconciliação: remove fantasmas ───────────────────────────────────────
+  const [loadingRecon, setLoadingRecon] = useState(false)
+  const [reconResult, setReconResult] = useState<any>(null)
 
   // ── Fase 4: sync estoque físico ────────────────────────────────────────────
   const [loadingEstoque, setLoadingEstoque] = useState(false)
@@ -79,7 +88,6 @@ export function OlistSyncButton() {
     setImagensError('')
     setTinyNaoTemImagens(false)
     let totalAcum = 0
-    let rodadasSemImagem = 0
 
     while (true) {
       try {
@@ -91,22 +99,54 @@ export function OlistSyncButton() {
         totalAcum += data.atualizados ?? 0
         setImagensAcum(totalAcum)
         setImagensRestantes(data.restantes ?? 0)
+        setImagensNaoVerificadas(data.naoVerificados ?? 0)
 
-        if (data.tinyNaoTemImagens) rodadasSemImagem++
-        if (rodadasSemImagem >= 3) {
-          setTinyNaoTemImagens(true)
-          setImagensDone(true)
-          break
-        }
+        // Informa se o lote atual não tinha imagens (mas não para o processo)
+        if (data.tinyNaoTemImagens) setTinyNaoTemImagens(true)
+        else setTinyNaoTemImagens(false)
 
+        // Para apenas quando não há mais produtos não verificados
         if (!data.hasMore) { setImagensDone(true); break }
-        await new Promise(r => setTimeout(r, 2000))
+        // Delay entre lotes (10 produtos × 1.2s de rate limit do Tiny)
+        await new Promise(r => setTimeout(r, 3000))
       } catch {
         setImagensError('Erro de conexão')
         break
       }
     }
     setLoadingImagens(false)
+  }
+
+  async function handleLimparImgsDuplicadas() {
+    setLoadingLimparImgs(true)
+    setLimparImgsResult(null)
+    try {
+      const res = await fetch('/api/admin/limpar-imgs-duplicadas', { method: 'POST' })
+      setLimparImgsResult(await res.json())
+    } catch {
+      setLimparImgsResult({ error: 'Erro de conexão' })
+    } finally {
+      setLoadingLimparImgs(false)
+    }
+  }
+
+  async function handleReconciliar() {
+    setLoadingRecon(true)
+    setReconResult(null)
+    try {
+      // Usa uma janela de 90 min — o sync completo leva ~5 min
+      // Produtos não tocados no sync recente são fantasmas
+      const res = await fetch('/api/olist/reconciliar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ minutosAtras: 90 }),
+      })
+      setReconResult(await res.json())
+    } catch {
+      setReconResult({ error: 'Erro de conexão' })
+    } finally {
+      setLoadingRecon(false)
+    }
   }
 
   async function handleSyncPedidos() {
@@ -215,33 +255,35 @@ export function OlistSyncButton() {
           <button onClick={handleBuscarImagens} disabled={loadingImagens}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors">
             {loadingImagens ? <Loader2 size={12} className="animate-spin" /> : <ImageIcon size={12} />}
-            {loadingImagens ? `${imagensAcum} foto(s)…` : 'Buscar imagens'}
+            {loadingImagens ? `${imagensAcum} foto(s) · ${imagensNaoVerificadas ?? '…'} pendentes` : 'Buscar imagens'}
           </button>
         </div>
 
-        {imagensRestantes !== null && (
+        {loadingImagens && imagensNaoVerificadas !== null && (
+          <p className="text-[11px] text-zinc-500">
+            {imagensNaoVerificadas > 0
+              ? `${imagensNaoVerificadas} produtos ainda não verificados`
+              : 'Verificação concluída!'}
+            {tinyNaoTemImagens && <span className="text-yellow-600"> · Lote atual sem fotos no Tiny</span>}
+          </p>
+        )}
+
+        {!loadingImagens && imagensRestantes !== null && (
           <p className="text-[11px] text-zinc-600">
-            {imagensRestantes > 0 ? `${imagensRestantes} produtos ainda sem imagem` : 'Todos os produtos têm imagem ✓'}
+            {imagensRestantes > 0 ? `${imagensRestantes} produtos sem imagem no banco` : 'Todos os produtos têm imagem ✓'}
           </p>
         )}
 
         {!loadingImagens && (imagensDone || imagensError) && (
           <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${
-            imagensError ? 'bg-red-900/30 text-red-400' :
-            tinyNaoTemImagens ? 'bg-yellow-900/30 text-yellow-400' :
-            'bg-green-900/30 text-green-400'
+            imagensError ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'
           }`}>
             {imagensError
               ? <AlertCircle size={12} className="mt-0.5 shrink-0" />
-              : tinyNaoTemImagens
-                ? <AlertCircle size={12} className="mt-0.5 shrink-0" />
-                : <CheckCircle2 size={12} className="mt-0.5 shrink-0" />}
+              : <CheckCircle2 size={12} className="mt-0.5 shrink-0" />}
             <span>
               {imagensError ||
-                (tinyNaoTemImagens
-                  ? 'Tiny não tem fotos cadastradas — adicione imagens diretamente em cada produto'
-                  : `${imagensAcum} imagens importadas${imagensRestantes ? ` · ${imagensRestantes} restantes` : ' · Concluído!'}`
-                )
+                `${imagensAcum} produtos verificados · ${imagensRestantes ?? 0} sem foto cadastrada no Tiny`
               }
             </span>
           </div>
@@ -319,6 +361,93 @@ export function OlistSyncButton() {
           </span>
         </div>
       )}
+
+      <div className="border-t border-zinc-800" />
+
+      {/* ── Limpar imagens duplicadas ── */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-zinc-300">
+            <ScanSearch size={14} className="text-zinc-500" />
+            <div>
+              <span>Imagens repetidas</span>
+              <p className="text-[11px] text-zinc-600">Detecta e limpa fotos erradas/padrão</p>
+            </div>
+          </div>
+          <button onClick={handleLimparImgsDuplicadas} disabled={loadingLimparImgs}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-700 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors">
+            {loadingLimparImgs ? <Loader2 size={12} className="animate-spin" /> : <ScanSearch size={12} />}
+            {loadingLimparImgs ? 'Verificando…' : 'Limpar duplicadas'}
+          </button>
+        </div>
+        <p className="text-[11px] text-zinc-700">
+          Se todos os produtos mostram a mesma foto, use isso antes de "Buscar imagens"
+        </p>
+        {!loadingLimparImgs && limparImgsResult && (
+          <div className={`flex flex-col gap-1 text-xs px-3 py-2 rounded-md ${
+            limparImgsResult.error ? 'bg-red-900/30 text-red-400'
+            : limparImgsResult.resetados > 0 ? 'bg-orange-900/30 text-orange-400'
+            : 'bg-green-900/30 text-green-400'
+          }`}>
+            <div className="flex items-center gap-2">
+              {limparImgsResult.error
+                ? <AlertCircle size={12} className="shrink-0" />
+                : limparImgsResult.resetados > 0
+                  ? <AlertCircle size={12} className="shrink-0" />
+                  : <CheckCircle2 size={12} className="shrink-0" />}
+              <span>{limparImgsResult.error || limparImgsResult.info}</span>
+            </div>
+            {limparImgsResult.urlsSuspeitas?.length > 0 && (
+              <p className="text-[10px] opacity-70 pl-4 break-all">
+                URL removida: {limparImgsResult.urlsSuspeitas[0]}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-zinc-800" />
+
+      {/* ── Reconciliação: remove produtos fantasmas ── */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-zinc-300">
+            <Trash2 size={14} className="text-zinc-500" />
+            <div>
+              <span>Limpar fantasmas</span>
+              <p className="text-[11px] text-zinc-600">Desativa produtos removidos do Tiny</p>
+            </div>
+          </div>
+          <button onClick={handleReconciliar} disabled={loadingRecon}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors">
+            {loadingRecon ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+            {loadingRecon ? 'Verificando…' : 'Reconciliar'}
+          </button>
+        </div>
+        <p className="text-[11px] text-zinc-700">
+          Use após um sync completo · Banco: ~2825 · Tiny: ~1603 (variações contam como SKUs separados)
+        </p>
+        {!loadingRecon && reconResult && (
+          <div className={`flex flex-col gap-1 text-xs px-3 py-2 rounded-md ${reconResult.error ? 'bg-red-900/30 text-red-400' : reconResult.desativados > 0 ? 'bg-yellow-900/30 text-yellow-400' : 'bg-green-900/30 text-green-400'}`}>
+            <div className="flex items-center gap-2">
+              {reconResult.error ? <AlertCircle size={12} className="shrink-0" /> : reconResult.desativados > 0 ? <AlertCircle size={12} className="shrink-0" /> : <CheckCircle2 size={12} className="shrink-0" />}
+              <span>
+                {reconResult.error ||
+                  (reconResult.desativados > 0
+                    ? `${reconResult.desativados} fantasmas desativados de ${reconResult.totalAtivos} ativos`
+                    : `Nenhum fantasma encontrado · ${reconResult.totalAtivos} produtos OK`
+                  )
+                }
+              </span>
+            </div>
+            {!reconResult.error && reconResult.desativados > 0 && reconResult.exemplos?.length > 0 && (
+              <p className="text-[10px] opacity-70 pl-4">
+                Ex: {reconResult.exemplos.slice(0,3).map((e: any) => e.nome).join(' · ')}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

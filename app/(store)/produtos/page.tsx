@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/store/ProductCard'
 import { FiltrosProdutos } from '@/components/store/FiltrosProdutos'
+import { Breadcrumb } from '@/components/store/Breadcrumb'
 
 interface SearchParams {
   [key: string]: string | undefined
@@ -13,7 +14,7 @@ interface SearchParams {
 }
 
 async function getProdutos(params: SearchParams) {
-  const where: any = { ativo: true, estoque: { gt: 0 } }
+  const where: any = { ativo: true, estoque: { gt: 0 }, temImagem: true }
 
   if (params.busca) {
     where.OR = [
@@ -42,9 +43,10 @@ async function getProdutos(params: SearchParams) {
 }
 
 async function getFiltrosDisponiveis() {
+  const filtroBase = { ativo: true, estoque: { gt: 0 }, temImagem: true }
   const [categorias, marcas] = await Promise.all([
-    prisma.product.findMany({ where: { ativo: true, estoque: { gt: 0 } }, select: { categoria: true }, distinct: ['categoria'] }),
-    prisma.product.findMany({ where: { ativo: true, estoque: { gt: 0 } }, select: { marca: true }, distinct: ['marca'] }),
+    prisma.product.findMany({ where: filtroBase, select: { categoria: true }, distinct: ['categoria'] }),
+    prisma.product.findMany({ where: filtroBase, select: { marca: true }, distinct: ['marca'] }),
   ])
   return {
     categorias: categorias.map((c) => c.categoria).filter(Boolean),
@@ -63,8 +65,15 @@ export default async function ProdutosPage({ searchParams }: { searchParams: Sea
   const paginaAtual = Number(searchParams.page ?? 1)
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="mb-7">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <Breadcrumb
+        items={[
+          { name: 'Produtos', url: '/produtos' },
+          ...(searchParams.categoria ? [{ name: searchParams.categoria, url: `/produtos?categoria=${searchParams.categoria}` }] : []),
+        ]}
+      />
+
+      <div className="mb-7 mt-4">
         <h1 className="font-grotesk font-bold text-3xl text-ink mb-1">Produtos</h1>
         <p className="text-dim text-sm">{total} produto{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}</p>
       </div>
