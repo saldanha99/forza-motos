@@ -21,21 +21,75 @@ export const metadata: Metadata = {
 
 async function getHomeData() {
   try {
-    const [destaque, promos] = await Promise.all([
-      prisma.product.findMany({
-        where: { ativo: true, estoque: { gt: 0 } },
-        take: 12,
-        orderBy: { createdAt: 'desc' },
-      }),
-      prisma.product.findMany({
-        where: { ativo: true, estoque: { gt: 0 }, NOT: { precoPromocional: null } },
-        take: 4,
-        orderBy: { createdAt: 'desc' },
-      }),
-    ])
-    return { destaque, promos }
-  } catch {
-    return { destaque: [], promos: [] }
+    // ── Mais Vendidos: usa ranking de pedidos reais; fallback = produtos com imagem + estoque ──
+    const topSold = await prisma.orderItem.groupBy({
+      by: ['productId'],
+      _sum: { quantidade: true },
+      orderBy: { _sum: { quantidade: 'desc' } },
+      take: 12,
+    })
+
+    let maisVendidos: any[] = []
+    let temVendasReais = false
+
+    if (topSold.length >= 4) {
+      // Tem vendas reais — busca os produtos do ranking
+      temVendasReais = true
+      const ids = topSold.map(t => t.productId)
+      const prods = await prisma.product.findMany({
+        where: { id: { in: ids }, ativo: true, estoque: { gt: 0 } },
+      })
+      // Preserva ordem do ranking de vendas
+      const map = new Map(prods.map(p => [p.id, p]))
+      maisVendidos = ids.map(id => map.get(id)).filter(Boolean)
+    } else {
+      // Sem vendas ainda — usa produtos com imagem real e estoque, melhor preço
+      maisVendidos = await prisma.$queryRaw`
+        SELECT id, nome, slug, preco, "precoPromocional", imagens, estoque, marca, categoria, ativo
+        FROM "Product"
+        WHERE ativo = true
+          AND estoque > 0
+          AND imagens::text != '[]'
+          AND imagens IS NOT NULL
+          AND imagens::text != 'null'
+        ORDER BY
+          CASE WHEN "precoPromocional" IS NOT NULL THEN 0 ELSE 1 END,
+          estoque DESC,
+          "updatedAt" DESC
+        LIMIT 12
+      `
+    }
+
+    // ── Promoções com imagem ──
+    const promos = await prisma.$queryRaw`
+      SELECT id, nome, slug, preco, "precoPromocional", imagens, estoque, marca, categoria, ativo
+      FROM "Product"
+      WHERE ativo = true
+        AND estoque > 0
+        AND "precoPromocional" IS NOT NULL
+        AND imagens::text != '[]'
+        AND imagens IS NOT NULL
+      ORDER BY
+        (1 - "precoPromocional"::float / preco::float) DESC
+      LIMIT 4
+    ` as any[]
+
+    // ── Destaque para o carousel ──
+    const destaque = await prisma.$queryRaw`
+      SELECT id, nome, slug, preco, "precoPromocional", imagens, estoque, marca, categoria, ativo
+      FROM "Product"
+      WHERE ativo = true
+        AND estoque > 0
+        AND imagens::text != '[]'
+        AND imagens IS NOT NULL
+      ORDER BY "updatedAt" DESC
+      LIMIT 12
+    ` as any[]
+
+    return { destaque, promos: promos as any[], maisVendidos: maisVendidos as any[], temVendasReais }
+  } catch (e) {
+    console.error('[home] getHomeData error:', e)
+    return { destaque: [], promos: [], maisVendidos: [], temVendasReais: false }
   }
 }
 
@@ -187,7 +241,7 @@ const LOCAL_BUSINESS_LD = {
 }
 
 export default async function HomePage() {
-  const { destaque, promos } = await getHomeData()
+  const { destaque, promos, maisVendidos, temVendasReais } = await getHomeData()
 
   return (
     <>
@@ -195,6 +249,59 @@ export default async function HomePage() {
 
       {/* ── Hero Carousel ─────────────────────────────────────────────────── */}
       <HeroCarousel />
+
+      {/* ── Mais Vendidos ────────────────────────────────────────────────── */}
+      {maisVendidos.length > 0 && (
+        <div style={{ background: '#fff', borderBottom: '1px solid #eee', padding: '52px 0' }}>
+          <div className="max-w-[1280px] mx-auto px-6 md:px-12">
+            <ScrollReveal>
+              <div className="flex items-end justify-between mb-7">
+                <div>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span
+                      className="font-barlow font-bold text-[11px] uppercase tracking-[1.5px] text-white px-2.5 py-1"
+                      style={{ background: '#d42b2b', borderRadius: 3 }}
+                    >
+                      {temVendasReais ? '🔥 TOP VENDAS' : '⭐ DESTAQUE'}
+                    </span>
+                    <span className="text-[#aaa] text-[11px] font-inter">
+                      {temVendasReais ? 'Baseado em pedidos reais' : 'Em estoque · Com imagem'}
+                    </span>
+                  </div>
+                  <h2 className="font-barlow font-black text-[32px] md:text-[38px] text-[#111] tracking-[-0.5px] leading-[1.1]">
+                    {temVendasReais ? 'MAIS VENDIDOS' : 'PRODUTOS EM DESTAQUE'}
+                  </h2>
+                </div>
+                <Link
+                  href="/produtos"
+                  className="hidden md:flex items-center gap-1.5 text-[#d42b2b] text-[13px] font-inter font-medium hover:gap-2.5 transition-all"
+                >
+                  Ver catálogo completo <ArrowRight size={14} />
+                </Link>
+              </div>
+            </ScrollReveal>
+
+            {/* Grid 2→4→6 colunas */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+              {maisVendidos.slice(0, 12).map((p: any, i: number) => (
+                <ScrollReveal key={p.id} delay={i * 40}>
+                  <ProductCard produto={p} />
+                </ScrollReveal>
+              ))}
+            </div>
+
+            <div className="mt-6 flex justify-center md:hidden">
+              <Link
+                href="/produtos"
+                className="flex items-center gap-2 font-barlow font-bold text-[15px] uppercase tracking-[0.5px] text-white px-7 py-3 bg-[#d42b2b] hover:bg-[#b82222] transition-colors"
+                style={{ borderRadius: 4 }}
+              >
+                Ver todos os produtos <ArrowRight size={15} />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── TrustBar ─────────────────────────────────────────────────────── */}
       <div style={{ background: '#f9f9f9', borderTop: '1px solid #eee', borderBottom: '1px solid #eee', padding: '28px 0' }}>
