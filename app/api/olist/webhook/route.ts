@@ -12,7 +12,7 @@
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { syncProdutoUnico } from '@/lib/olist/sync-products'
+import { syncProdutoUnico, syncEstoqueProduto } from '@/lib/olist/sync-products'
 
 const STATUS_MAP: Record<string, string> = {
   new: 'CONFIRMADO',
@@ -46,6 +46,23 @@ export async function POST(req: Request) {
     const evento = body.evento || body.event || ''
     const tipo = body.tipo || ''
 
+    // ── Atualização de estoque ─────────────────────────────────────────────
+    // Tiny dispara quando estoque muda no depósito
+    if (
+      evento === 'produto.estoque' ||
+      evento === 'estoque.atualizado' ||
+      evento === 'stock.updated' ||
+      (tipo === 'produto' && body.dados?.estoque !== undefined) ||
+      (tipo === 'estoque')
+    ) {
+      const id = body.dados?.id || body.data?.id || body.id
+      if (id) {
+        const novoEstoque = await syncEstoqueProduto(id)
+        console.log(`[webhook] Estoque produto ${id} → ${novoEstoque}`)
+      }
+      return NextResponse.json({ ok: true })
+    }
+
     // ── Produto criado ou alterado ──────────────────────────────────────────
     if (
       evento === 'produto.criado' ||
@@ -56,7 +73,10 @@ export async function POST(req: Request) {
     ) {
       const id = body.dados?.id || body.data?.id || body.id
       if (id) {
+        // Sincroniza dados completos (inclui estoque real)
         await syncProdutoUnico(id)
+        // Também atualiza estoque via endpoint específico (mais preciso)
+        await syncEstoqueProduto(id).catch(() => {})
         console.log(`[webhook] Produto ${id} sincronizado (${evento})`)
       }
       return NextResponse.json({ ok: true })

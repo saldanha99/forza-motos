@@ -13,7 +13,7 @@ interface SearchParams {
 }
 
 async function getProdutos(params: SearchParams) {
-  const where: any = { ativo: true }
+  const where: any = { ativo: true, estoque: { gt: 0 } }
 
   if (params.busca) {
     where.OR = [
@@ -43,8 +43,8 @@ async function getProdutos(params: SearchParams) {
 
 async function getFiltrosDisponiveis() {
   const [categorias, marcas] = await Promise.all([
-    prisma.product.findMany({ where: { ativo: true }, select: { categoria: true }, distinct: ['categoria'] }),
-    prisma.product.findMany({ where: { ativo: true }, select: { marca: true }, distinct: ['marca'] }),
+    prisma.product.findMany({ where: { ativo: true, estoque: { gt: 0 } }, select: { categoria: true }, distinct: ['categoria'] }),
+    prisma.product.findMany({ where: { ativo: true, estoque: { gt: 0 } }, select: { marca: true }, distinct: ['marca'] }),
   ])
   return {
     categorias: categorias.map((c) => c.categoria).filter(Boolean),

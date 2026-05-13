@@ -8,7 +8,7 @@
  *   → Chamado separadamente, delay 1.2s entre requests
  */
 
-import { fetchTinyProductPage, fetchTinyProduct, extrairImagensTiny } from './client'
+import { fetchTinyProductPage, fetchTinyProduct, fetchTinyProductEstoque, extrairImagensTiny } from './client'
 import { prisma } from '../prisma'
 import { gerarSlug } from '../utils'
 
@@ -262,6 +262,64 @@ export async function syncEstoquePrecos() {
   }
 
   return { atualizados, erros, total }
+}
+
+/**
+ * FASE 4 — Sincroniza estoque real de `limite` produtos por vez
+ * Usa produto.obter.estoque.php (delay 1.2s entre chamadas)
+ * Para estoque físico da Forza lançado no Tiny
+ */
+export async function syncEstoqueLote(limite = 5) {
+  // Busca produtos com tinyId — priorizando os com estoque 0 (podem ter sido reabastecidos)
+  const produtos = await prisma.product.findMany({
+    where: { tinyId: { not: null } },
+    select: { id: true, tinyId: true, estoque: true, nome: true },
+    orderBy: { estoque: 'asc' }, // começa pelos zerados
+    take: limite,
+  })
+
+  if (produtos.length === 0) {
+    return { atualizados: 0, restantes: 0, hasMore: false }
+  }
+
+  let atualizados = 0
+  let erros = 0
+
+  for (const produto of produtos) {
+    const novoEstoque = await fetchTinyProductEstoque(produto.tinyId!)
+    if (novoEstoque === -1) { erros++; continue }
+
+    await prisma.product.update({
+      where: { id: produto.id },
+      data: { estoque: novoEstoque },
+    })
+    atualizados++
+  }
+
+  const total = await prisma.product.count({ where: { tinyId: { not: null } } })
+  const zerados = await prisma.product.count({ where: { tinyId: { not: null }, estoque: 0 } })
+
+  return {
+    atualizados,
+    erros,
+    zerados,
+    total,
+    hasMore: zerados > 0,
+  }
+}
+
+/**
+ * Atualiza estoque de um produto único via webhook do Tiny
+ */
+export async function syncEstoqueProduto(tinyId: string | number): Promise<number> {
+  const novoEstoque = await fetchTinyProductEstoque(tinyId)
+  if (novoEstoque === -1) return -1
+
+  await prisma.product.updateMany({
+    where: { tinyId: String(tinyId) },
+    data: { estoque: novoEstoque },
+  })
+  return novoEstoque
 }
 
 /** Compat: mantém a assinatura antiga */

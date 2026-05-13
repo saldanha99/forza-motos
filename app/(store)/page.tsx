@@ -8,12 +8,12 @@ async function getHomeData() {
   try {
     const [destaque, promos] = await Promise.all([
       prisma.product.findMany({
-        where: { ativo: true },
+        where: { ativo: true, estoque: { gt: 0 } },
         take: 12,
         orderBy: { createdAt: 'desc' },
       }),
       prisma.product.findMany({
-        where: { ativo: true, NOT: { precoPromocional: null } },
+        where: { ativo: true, estoque: { gt: 0 }, NOT: { precoPromocional: null } },
         take: 4,
         orderBy: { createdAt: 'desc' },
       }),

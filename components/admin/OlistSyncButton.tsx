@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { RefreshCw, CheckCircle2, AlertCircle, Loader2, Package, ShoppingBag, Image as ImageIcon } from 'lucide-react'
+import { RefreshCw, CheckCircle2, AlertCircle, Loader2, Package, ShoppingBag, Image as ImageIcon, Warehouse } from 'lucide-react'
 
 export function OlistSyncButton() {
   // ── Fase 1: sync metadados ─────────────────────────────────────────────────
@@ -23,6 +23,14 @@ export function OlistSyncButton() {
   // ── Fase 3: sync pedidos ───────────────────────────────────────────────────
   const [loadingPedidos, setLoadingPedidos] = useState(false)
   const [pedidosResult, setPedidosResult] = useState<any>(null)
+
+  // ── Fase 4: sync estoque físico ────────────────────────────────────────────
+  const [loadingEstoque, setLoadingEstoque] = useState(false)
+  const [estoqueAcum, setEstoqueAcum] = useState(0)
+  const [estoqueZerados, setEstoqueZerados] = useState<number | null>(null)
+  const [estoqueTotal, setEstoqueTotal] = useState<number | null>(null)
+  const [estoqueError, setEstoqueError] = useState('')
+  const [estoqueDone, setEstoqueDone] = useState(false)
 
   async function handleSyncMetadados() {
     setLoadingSync(true)
@@ -84,7 +92,6 @@ export function OlistSyncButton() {
         setImagensAcum(totalAcum)
         setImagensRestantes(data.restantes ?? 0)
 
-        // Detecta quando o Tiny não tem imagens cadastradas
         if (data.tinyNaoTemImagens) rodadasSemImagem++
         if (rodadasSemImagem >= 3) {
           setTinyNaoTemImagens(true)
@@ -93,7 +100,6 @@ export function OlistSyncButton() {
         }
 
         if (!data.hasMore) { setImagensDone(true); break }
-        // Aguarda 2s antes do próximo lote (evita rate limit)
         await new Promise(r => setTimeout(r, 2000))
       } catch {
         setImagensError('Erro de conexão')
@@ -116,13 +122,45 @@ export function OlistSyncButton() {
     }
   }
 
+  async function handleSyncEstoque() {
+    setLoadingEstoque(true)
+    setEstoqueDone(false)
+    setEstoqueError('')
+    let acum = 0
+
+    while (true) {
+      try {
+        const res = await fetch('/api/olist/estoque', { method: 'POST' })
+        const data = await res.json()
+
+        if (data.error) { setEstoqueError(data.error); break }
+
+        acum += data.atualizados ?? 0
+        setEstoqueAcum(acum)
+        setEstoqueZerados(data.zerados ?? 0)
+        setEstoqueTotal(data.total ?? null)
+
+        if (!data.hasMore) { setEstoqueDone(true); break }
+        // 6s entre lotes (5 produtos × 1.2s delay cada)
+        await new Promise(r => setTimeout(r, 6000))
+      } catch {
+        setEstoqueError('Erro de conexão')
+        break
+      }
+    }
+    setLoadingEstoque(false)
+  }
+
   const pctSync = syncTotal > 0 ? Math.round((syncPagina / syncTotal) * 100) : 0
+  const pctEstoque = estoqueTotal && estoqueZerados !== null
+    ? Math.round(((estoqueTotal - estoqueZerados) / estoqueTotal) * 100)
+    : 0
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 space-y-5">
       <div>
         <h3 className="font-semibold text-white text-sm">Sincronização OLIST / Tiny</h3>
-        <p className="text-xs text-zinc-500 mt-0.5">Cron automático diário às 6h</p>
+        <p className="text-xs text-zinc-500 mt-0.5">Cron automático diário às 6h · Webhook em tempo real ativo</p>
       </div>
 
       {/* ── Fase 1: Metadados ── */}
@@ -132,7 +170,7 @@ export function OlistSyncButton() {
             <Package size={14} className="text-zinc-500" />
             <div>
               <span>Passo 1 — Produtos</span>
-              <p className="text-[11px] text-zinc-600">Importa nome, preço e estoque (rápido)</p>
+              <p className="text-[11px] text-zinc-600">Importa nome, preço e situação (rápido)</p>
             </div>
           </div>
           <button onClick={handleSyncMetadados} disabled={loadingSync}
@@ -201,7 +239,7 @@ export function OlistSyncButton() {
             <span>
               {imagensError ||
                 (tinyNaoTemImagens
-                  ? 'Tiny não tem fotos cadastradas — adicione as imagens manualmente em cada produto ou cole a URL da imagem'
+                  ? 'Tiny não tem fotos cadastradas — adicione imagens diretamente em cada produto'
                   : `${imagensAcum} imagens importadas${imagensRestantes ? ` · ${imagensRestantes} restantes` : ' · Concluído!'}`
                 )
               }
@@ -210,9 +248,54 @@ export function OlistSyncButton() {
         )}
       </div>
 
+      {/* ── Fase 4: Estoque físico ── */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-zinc-300">
+            <Warehouse size={14} className="text-zinc-500" />
+            <div>
+              <span>Passo 3 — Estoque físico</span>
+              <p className="text-[11px] text-zinc-600">Saldo real do Tiny (5 por vez · lento)</p>
+            </div>
+          </div>
+          <button onClick={handleSyncEstoque} disabled={loadingEstoque}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors">
+            {loadingEstoque ? <Loader2 size={12} className="animate-spin" /> : <Warehouse size={12} />}
+            {loadingEstoque
+              ? `${estoqueAcum} atualizados…`
+              : 'Sync estoque'}
+          </button>
+        </div>
+
+        {loadingEstoque && estoqueTotal !== null && (
+          <div>
+            <div className="flex justify-between text-xs text-zinc-500 mb-1">
+              <span>{estoqueZerados} produtos com saldo 0</span>
+              <span>{pctEstoque}% com estoque</span>
+            </div>
+            <div className="w-full bg-zinc-800 rounded-full h-1">
+              <div className="bg-blue-500 h-1 rounded-full transition-all" style={{ width: `${pctEstoque}%` }} />
+            </div>
+          </div>
+        )}
+
+        {!loadingEstoque && (estoqueDone || estoqueError) && (
+          <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${estoqueError ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'}`}>
+            {estoqueError ? <AlertCircle size={12} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={12} className="mt-0.5 shrink-0" />}
+            <span>
+              {estoqueError || `${estoqueAcum} estoques atualizados · ${estoqueZerados ?? 0} produtos zerados`}
+            </span>
+          </div>
+        )}
+
+        <p className="text-[11px] text-zinc-700">
+          Webhook ativo — qualquer lançamento no Tiny atualiza o site automaticamente
+        </p>
+      </div>
+
       <div className="border-t border-zinc-800" />
 
-      {/* ── Fase 3: Pedidos ── */}
+      {/* ── Fase 3→4: Pedidos ── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-zinc-300">
           <ShoppingBag size={14} className="text-zinc-500" />

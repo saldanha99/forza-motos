@@ -84,6 +84,22 @@ export async function fetchTinyProduct(id: string | number): Promise<any> {
   return data.retorno?.produto ?? null
 }
 
+/**
+ * Busca estoque detalhado de 1 produto (saldo por depósito)
+ * Retorna saldo total entre todos os depósitos
+ */
+export async function fetchTinyProductEstoque(id: string | number): Promise<number> {
+  try {
+    const data = await tinyFetch('produto.obter.estoque.php', { id: String(id) }, 1200)
+    const depositos = data.retorno?.produto?.depositos ?? []
+    const lista = Array.isArray(depositos) ? depositos : (depositos.deposito ? [depositos.deposito].flat() : [])
+    const total = lista.reduce((acc: number, d: any) => acc + Number(d.saldo ?? d.quantidade ?? 0), 0)
+    return Math.max(0, total)
+  } catch {
+    return -1 // -1 = erro ao buscar, manter valor anterior
+  }
+}
+
 /** Extrair URLs de imagem de um produto retornado pelo produto.obter.php */
 export function extrairImagensTiny(p: any): string[] {
   if (!p) return []
