@@ -17,16 +17,47 @@ const inter = Inter({
   display: 'swap',
 })
 
+const BASE_URL = 'https://forza-motos-app.vercel.app'
+
 export const metadata: Metadata = {
-  title: { default: 'Forza Motos', template: '%s | Forza Motos' },
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: 'Forza Motos — Pneus e Peças para Moto em Campinas/SP',
+    template: '%s | Forza Motos',
+  },
   description:
-    'Pneus e manutenção de motos em Campinas/SP. Credenciada Pirelli, Metzeler e Michelin. Box rápido: pneu, freio, óleo e transmissão.',
-  keywords: ['pneus moto', 'Campinas', 'Pirelli', 'Metzeler', 'Michelin', 'manutenção moto'],
+    'Credenciada Pirelli, Metzeler e Michelin em Campinas/SP. Troca de pneu em 30 min sem agendamento. Box rápido: pneu, freio, óleo e transmissão. Loja online com entrega em todo Brasil.',
+  keywords: [
+    'pneus moto Campinas', 'Pirelli moto', 'Metzeler moto', 'Michelin moto',
+    'troca pneu moto Campinas', 'peças moto', 'oficina moto Campinas',
+    'manutenção moto', 'box rápido moto', 'loja moto online',
+  ],
+  authors: [{ name: 'Forza Motos', url: BASE_URL }],
+  creator: 'Forza Motos',
+  publisher: 'Forza Motos',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
+  },
   openGraph: {
     siteName: 'Forza Motos',
     locale: 'pt_BR',
     type: 'website',
+    url: BASE_URL,
+    title: 'Forza Motos — Pneus e Peças para Moto em Campinas/SP',
+    description:
+      'Credenciada Pirelli, Metzeler e Michelin. Troca de pneu em 30 min sem agendamento. Entrega em todo Brasil.',
+    images: [{ url: '/og-image.jpg', width: 1200, height: 630, alt: 'Forza Motos' }],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Forza Motos — Pneus e Peças para Moto',
+    description: 'Credenciada Pirelli, Metzeler e Michelin em Campinas/SP.',
+    images: ['/og-image.jpg'],
+  },
+  alternates: { canonical: BASE_URL },
+  verification: { google: '' }, // adicione o código do Google Search Console aqui
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

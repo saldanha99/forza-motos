@@ -2,7 +2,22 @@ import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/store/ProductCard'
 import { FeaturedCarousel } from '@/components/store/FeaturedCarousel'
+import { HeroCarousel } from '@/components/store/HeroCarousel'
+import { ScrollReveal } from '@/components/store/ScrollReveal'
 import { ArrowRight } from 'lucide-react'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Forza Motos — Pneus e Peças para Moto em Campinas/SP',
+  description:
+    'Credenciada Pirelli, Metzeler e Michelin. Troca de pneu em 30 min sem agendamento. Loja online com +2.800 produtos e entrega em todo Brasil.',
+  alternates: { canonical: 'https://forza-motos-app.vercel.app' },
+  openGraph: {
+    title: 'Forza Motos — Pneus e Peças para Moto',
+    description: 'Credenciada Pirelli, Metzeler e Michelin em Campinas/SP. Entrega em todo Brasil.',
+    type: 'website',
+  },
+}
 
 async function getHomeData() {
   try {
@@ -151,128 +166,49 @@ const TRUST = [
   },
 ]
 
+const LOCAL_BUSINESS_LD = {
+  '@context': 'https://schema.org',
+  '@type': ['LocalBusiness', 'AutoPartsStore'],
+  name: 'Forza Motos',
+  description: 'Credenciada Pirelli, Metzeler e Michelin. Box rápido para motos em Campinas/SP. Troca de pneu em 30 minutos, sem agendamento.',
+  url: 'https://forza-motos-app.vercel.app',
+  telephone: '+55-19-99999-9999',
+  address: {
+    '@type': 'PostalAddress',
+    addressLocality: 'Campinas',
+    addressRegion: 'SP',
+    addressCountry: 'BR',
+  },
+  geo: { '@type': 'GeoCoordinates', latitude: -22.9056, longitude: -47.0608 },
+  openingHours: 'Mo-Sa 08:00-18:00',
+  priceRange: '$$',
+  image: 'https://forza-motos-app.vercel.app/og-image.jpg',
+  sameAs: [],
+}
+
 export default async function HomePage() {
   const { destaque, promos } = await getHomeData()
 
   return (
     <>
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <div
-        style={{
-          background: 'linear-gradient(135deg,#0c0c0c 0%,#181818 55%,#0c0c0c 100%)',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        {/* grid texture */}
-        <div
-          style={{
-            position: 'absolute', inset: 0,
-            backgroundImage: 'linear-gradient(rgba(255,255,255,0.022) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.022) 1px,transparent 1px)',
-            backgroundSize: '60px 60px',
-            pointerEvents: 'none',
-          }}
-        />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(LOCAL_BUSINESS_LD) }} />
 
-        <div className="max-w-[1280px] mx-auto grid md:grid-cols-2 min-h-[420px] px-6 md:px-12 relative z-10">
-          {/* Left: tire art */}
-          <div className="flex items-center justify-center py-10 relative">
-            <div
-              style={{
-                position: 'absolute', width: 320, height: 320, borderRadius: '50%',
-                background: 'radial-gradient(circle,rgba(212,43,43,0.12) 0%,transparent 70%)',
-                pointerEvents: 'none',
-              }}
-            />
-            <TireArt />
-
-            {/* Floating badges */}
-            <div
-              className="absolute hidden md:block"
-              style={{ top: '18%', left: '6%', background: 'rgba(255,255,255,0.07)', borderRadius: 6, padding: '8px 14px', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)' }}
-            >
-              <div className="text-[#777] text-[10px] font-inter">Credenciada</div>
-              <div className="text-white text-[14px] font-barlow font-bold">PIRELLI · MICHELIN</div>
-            </div>
-
-            <div
-              className="absolute hidden md:block"
-              style={{ bottom: '22%', right: '6%', background: 'rgba(212,43,43,0.14)', borderRadius: 6, padding: '8px 14px', border: '1px solid rgba(212,43,43,0.28)' }}
-            >
-              <div className="text-[#777] text-[10px] font-inter">Box rápido</div>
-              <div className="text-[#d42b2b] text-[16px] font-barlow font-black">30 MINUTOS</div>
-            </div>
-          </div>
-
-          {/* Right: info */}
-          <div className="py-12 md:pl-10 flex flex-col justify-center gap-[18px]">
-            {/* Badges */}
-            <div className="flex gap-2 items-center flex-wrap">
-              <span
-                className="text-white text-[11px] font-barlow font-bold px-3 py-1 uppercase tracking-[1px]"
-                style={{ background: '#d42b2b', borderRadius: 2 }}
-              >
-                BOX RÁPIDO
-              </span>
-              <span className="text-[#555] text-[11px] font-inter">Campinas / SP</span>
-            </div>
-
-            {/* Headline */}
-            <div>
-              <h1
-                className="font-barlow font-black text-[46px] md:text-[52px] text-white leading-[1.05] tracking-[-0.5px]"
-              >
-                PNEUS E PEÇAS<br />
-                <span style={{ color: '#d42b2b' }}>PARA SUA MOTO</span>
-              </h1>
-              <p className="font-inter text-[13px] text-[#666] mt-3 leading-[1.6]">
-                Credenciada Pirelli, Metzeler e Michelin&nbsp;·&nbsp;Campinas/SP<br />
-                Troca de pneu em até 30 minutos, sem agendamento
-              </p>
-            </div>
-
-            {/* CTA buttons */}
-            <div className="flex gap-3 flex-wrap mt-1">
-              <Link
-                href="/produtos"
-                className="inline-block font-barlow font-bold text-[19px] uppercase tracking-[0.5px] text-white px-8 py-[14px] bg-[#d42b2b] hover:bg-[#b82222] transition-colors"
-                style={{ borderRadius: 3 }}
-              >
-                VER PRODUTOS
-              </Link>
-              <Link
-                href="/agendar"
-                className="inline-block font-barlow font-bold text-[17px] uppercase tracking-[0.3px] text-[#bbb] px-6 py-[14px] hover:border-white/40 transition-colors"
-                style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 3 }}
-              >
-                AGENDAR SERVIÇO
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* slide dots */}
-        <div className="flex gap-1.5 justify-center pb-4 relative z-10">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              style={{ width: i === 0 ? 22 : 8, height: 8, borderRadius: 4, background: i === 0 ? '#d42b2b' : 'rgba(255,255,255,0.2)' }}
-            />
-          ))}
-        </div>
-      </div>
+      {/* ── Hero Carousel ─────────────────────────────────────────────────── */}
+      <HeroCarousel />
 
       {/* ── TrustBar ─────────────────────────────────────────────────────── */}
       <div style={{ background: '#f9f9f9', borderTop: '1px solid #eee', borderBottom: '1px solid #eee', padding: '28px 0' }}>
         <div className="max-w-[1280px] mx-auto px-6 md:px-12 grid grid-cols-2 md:grid-cols-4 gap-6">
-          {TRUST.map(({ title, sub, icon }) => (
-            <div key={title} className="flex items-center gap-4">
-              {icon}
-              <div>
-                <div className="font-barlow font-bold text-[16px] text-[#111]">{title}</div>
-                <div className="font-inter text-[12px] text-[#888] mt-0.5">{sub}</div>
+          {TRUST.map(({ title, sub, icon }, i) => (
+            <ScrollReveal key={title} delay={i * 80}>
+              <div className="flex items-center gap-4 group">
+                <div className="transition-transform duration-300 group-hover:scale-110">{icon}</div>
+                <div>
+                  <div className="font-barlow font-bold text-[16px] text-[#111]">{title}</div>
+                  <div className="font-inter text-[12px] text-[#888] mt-0.5">{sub}</div>
+                </div>
               </div>
-            </div>
+            </ScrollReveal>
           ))}
         </div>
       </div>
@@ -302,25 +238,25 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {SERVICOS.map((s) => (
-              <Link key={s.titulo} href="/agendar">
-                <div
-                  className="bg-white border border-[#eee] hover:border-[#d42b2b] hover:shadow-md rounded-lg p-5 transition-all cursor-pointer group"
-                >
-                  <div className="text-3xl mb-3">{s.icon}</div>
-                  <div className="font-barlow font-bold text-[18px] text-[#111] leading-[1.2] mb-1 group-hover:text-[#d42b2b] transition-colors">
-                    {s.titulo}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4" id="servicos">
+            {SERVICOS.map((s, i) => (
+              <ScrollReveal key={s.titulo} delay={i * 90}>
+                <Link href="/agendar">
+                  <div className="bg-white border border-[#eee] hover:border-[#d42b2b] hover:shadow-lg rounded-xl p-5 transition-all cursor-pointer group card-lift h-full">
+                    <div className="text-3xl mb-3 transition-transform duration-300 group-hover:scale-110 inline-block">{s.icon}</div>
+                    <div className="font-barlow font-bold text-[18px] text-[#111] leading-[1.2] mb-1 group-hover:text-[#d42b2b] transition-colors">
+                      {s.titulo}
+                    </div>
+                    <div className="font-inter text-[12px] text-[#888] mb-3">{s.sub}</div>
+                    <div
+                      className="inline-flex items-center gap-1 text-[11px] font-barlow font-bold px-2.5 py-1 rounded-sm uppercase tracking-[0.5px] text-white"
+                      style={{ background: s.cor }}
+                    >
+                      ⏱ {s.tempo}
+                    </div>
                   </div>
-                  <div className="font-inter text-[12px] text-[#888] mb-3">{s.sub}</div>
-                  <div
-                    className="inline-flex items-center gap-1 text-[11px] font-barlow font-bold px-2.5 py-1 rounded-sm uppercase tracking-[0.5px] text-white"
-                    style={{ background: s.cor, opacity: 0.9 }}
-                  >
-                    ⏱ {s.tempo}
-                  </div>
-                </div>
-              </Link>
+                </Link>
+              </ScrollReveal>
             ))}
           </div>
 
@@ -346,15 +282,22 @@ export default async function HomePage() {
       {/* ── PromosSection ─────────────────────────────────────────────────── */}
       {promos.length > 0 && (
         <div className="max-w-[1280px] mx-auto px-6 md:px-12 py-11">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="font-barlow font-bold text-[26px] text-[#111] tracking-[-0.3px]">Promoções</h2>
-            <Link href="/produtos" className="text-[#d42b2b] text-[13px] font-inter font-medium flex items-center gap-1">
-              Ver todos <ArrowRight size={13} />
-            </Link>
-          </div>
+          <ScrollReveal>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <p className="text-[#d42b2b] font-barlow font-bold text-[12px] uppercase tracking-[1.5px] mb-1">Ofertas especiais</p>
+                <h2 className="font-barlow font-bold text-[28px] text-[#111] tracking-[-0.3px]">Promoções</h2>
+              </div>
+              <Link href="/produtos" className="text-[#d42b2b] text-[13px] font-inter font-medium flex items-center gap-1 hover:gap-2 transition-all">
+                Ver todos <ArrowRight size={13} />
+              </Link>
+            </div>
+          </ScrollReveal>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-            {promos.map((p) => (
-              <ProductCard key={p.id} produto={p} />
+            {promos.map((p, i) => (
+              <ScrollReveal key={p.id} delay={i * 60}>
+                <ProductCard produto={p} />
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -370,37 +313,38 @@ export default async function HomePage() {
             </Link>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {POP_CATS.map((cat) => (
-              <Link key={cat.id} href={cat.href}>
-                <div
-                  className="overflow-hidden cursor-pointer flex flex-col justify-end relative transition-all duration-[180ms] hover:-translate-y-1"
-                  style={{
-                    background: cat.bg,
-                    borderRadius: 6,
-                    aspectRatio: '3/4',
-                    padding: '20px 16px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                  }}
-                >
-                  {/* overlay */}
+            {POP_CATS.map((cat, i) => (
+              <ScrollReveal key={cat.id} delay={i * 70}>
+                <Link href={cat.href}>
                   <div
+                    className="cat-card overflow-hidden cursor-pointer flex flex-col justify-end relative"
                     style={{
-                      position: 'absolute', inset: 0,
-                      background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.15) 60%, transparent 100%)',
+                      background: cat.bg,
+                      borderRadius: 10,
+                      aspectRatio: '3/4',
+                      padding: '20px 16px',
+                      boxShadow: '0 2px 12px rgba(0,0,0,0.2)',
                     }}
-                  />
-                  <div className="relative z-10">
-                    <div className="font-barlow font-bold text-[16px] text-white leading-[1.2] mb-1">{cat.label}</div>
-                    <div className="font-inter text-[10px] leading-[1.4]" style={{ color: 'rgba(255,255,255,0.6)' }}>{cat.sub}</div>
+                  >
                     <div
-                      className="mt-2.5 text-white text-[10px] font-barlow font-bold px-2.5 py-1 inline-block uppercase tracking-[0.5px]"
-                      style={{ background: '#d42b2b', borderRadius: 2 }}
-                    >
-                      Explorar
+                      style={{
+                        position: 'absolute', inset: 0,
+                        background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 60%, transparent 100%)',
+                      }}
+                    />
+                    <div className="relative z-10">
+                      <div className="font-barlow font-bold text-[16px] text-white leading-[1.2] mb-1">{cat.label}</div>
+                      <div className="font-inter text-[10px] leading-[1.4]" style={{ color: 'rgba(255,255,255,0.55)' }}>{cat.sub}</div>
+                      <div
+                        className="mt-3 text-white text-[10px] font-barlow font-bold px-2.5 py-1 inline-flex items-center gap-1 uppercase tracking-[0.5px]"
+                        style={{ background: '#d42b2b', borderRadius: 3 }}
+                      >
+                        Explorar <ArrowRight size={10} />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -427,19 +371,21 @@ export default async function HomePage() {
       </div>
 
       {/* ── MarcasSection ─────────────────────────────────────────────────── */}
-      <div style={{ background: '#f5f5f5', borderTop: '1px solid #eee', padding: '36px 0' }}>
+      <div style={{ background: '#f5f5f5', borderTop: '1px solid #eee', padding: '44px 0' }}>
         <div className="max-w-[1280px] mx-auto px-6 md:px-12">
-          <h2 className="font-barlow font-bold text-[26px] text-[#111] mb-6 tracking-[-0.3px]">Marcas</h2>
-          <div className="flex gap-2 flex-wrap items-center justify-between">
-            {BRANDS.map((brand) => (
-              <div
-                key={brand}
-                className="bg-white border border-[#eee] rounded-[6px] px-7 py-[18px] flex items-center justify-center flex-1 min-w-[100px] cursor-pointer hover:border-[#d42b2b] hover:shadow-sm transition-all"
-              >
-                <span className="font-barlow font-black text-[24px] md:text-[28px] text-[#333] tracking-[2px]">
-                  {brand}
-                </span>
-              </div>
+          <ScrollReveal>
+            <h2 className="font-barlow font-bold text-[26px] text-[#111] mb-2 tracking-[-0.3px]">Marcas Parceiras</h2>
+            <p className="font-inter text-[13px] text-[#888] mb-6">Distribuidora autorizada das principais marcas do mundo</p>
+          </ScrollReveal>
+          <div className="flex gap-2.5 flex-wrap items-center justify-between">
+            {BRANDS.map((brand, i) => (
+              <ScrollReveal key={brand} delay={i * 60}>
+                <div className="bg-white border border-[#eee] rounded-xl px-7 py-5 flex items-center justify-center cursor-pointer hover:border-[#d42b2b] hover:shadow-md transition-all duration-200 group card-lift min-w-[110px]">
+                  <span className="font-barlow font-black text-[22px] md:text-[26px] text-[#444] tracking-[2px] group-hover:text-[#d42b2b] transition-colors">
+                    {brand}
+                  </span>
+                </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>

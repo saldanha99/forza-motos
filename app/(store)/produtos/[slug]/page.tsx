@@ -4,14 +4,40 @@ import { ProductDetail } from '@/components/store/ProductDetail'
 import { ProductCard } from '@/components/store/ProductCard'
 import type { Metadata } from 'next'
 
+const BASE = 'https://forza-motos-app.vercel.app'
+
 interface Props {
   params: { slug: string }
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const produto = await prisma.product.findUnique({ where: { slug: params.slug } })
-  if (!produto) return { title: 'Produto não encontrado' }
-  return { title: produto.nome, description: produto.descricao.slice(0, 160) }
+  const p = await prisma.product.findUnique({ where: { slug: params.slug } })
+  if (!p) return { title: 'Produto não encontrado' }
+
+  const imagens = Array.isArray(p.imagens) ? p.imagens : []
+  const preco = Number(p.precoPromocional ?? p.preco)
+  const descricao = (p.descricao || p.nome).slice(0, 160)
+  const url = `${BASE}/produtos/${p.slug}`
+
+  return {
+    title: p.nome,
+    description: descricao,
+    keywords: [p.nome, p.marca, p.categoria, 'moto', 'Campinas'].filter(Boolean),
+    alternates: { canonical: url },
+    openGraph: {
+      title: p.nome,
+      description: descricao,
+      url,
+      type: 'website',
+      images: imagens.slice(0, 1).map((img: string) => ({ url: img, alt: p.nome })),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: p.nome,
+      description: descricao,
+      images: imagens.slice(0, 1),
+    },
+  }
 }
 
 export default async function ProdutoPage({ params }: Props) {
@@ -22,26 +48,74 @@ export default async function ProdutoPage({ params }: Props) {
   if (!produto) notFound()
 
   const relacionados = await prisma.product.findMany({
-    where: { categoria: produto.categoria, ativo: true, id: { not: produto.id } },
+    where: {
+      categoria: produto.categoria,
+      ativo: true,
+      estoque: { gt: 0 },
+      id: { not: produto.id },
+    },
     take: 4,
   })
 
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <ProductDetail produto={produto} />
+  const imagens = Array.isArray(produto.imagens) ? produto.imagens : []
+  const preco = Number(produto.precoPromocional ?? produto.preco)
 
-      {relacionados.length > 0 && (
-        <section className="mt-16">
-          <h2 className="font-grotesk font-bold text-2xl text-ink mb-6">
-            Produtos Relacionados
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {relacionados.map((p) => (
-              <ProductCard key={p.id} produto={p} />
-            ))}
-          </div>
-        </section>
-      )}
-    </div>
+  // JSON-LD estruturado para Google Shopping e SEO de produto
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: produto.nome,
+    description: produto.descricao || produto.nome,
+    sku: produto.sku,
+    brand: { '@type': 'Brand', name: produto.marca || 'Forza Motos' },
+    category: produto.categoria,
+    image: imagens,
+    url: `${BASE}/produtos/${produto.slug}`,
+    offers: {
+      '@type': 'Offer',
+      price: preco.toFixed(2),
+      priceCurrency: 'BRL',
+      availability: produto.estoque > 0
+        ? 'https://schema.org/InStock'
+        : 'https://schema.org/OutOfStock',
+      url: `${BASE}/produtos/${produto.slug}`,
+      seller: { '@type': 'Organization', name: 'Forza Motos' },
+    },
+  }
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        {/* Breadcrumb */}
+        <nav className="text-xs text-[#888] font-inter mb-6 flex items-center gap-1.5">
+          <a href="/" className="hover:text-[#d42b2b] transition-colors">Home</a>
+          <span className="opacity-40">/</span>
+          <a href="/produtos" className="hover:text-[#d42b2b] transition-colors">Produtos</a>
+          <span className="opacity-40">/</span>
+          <a href={`/produtos?categoria=${produto.categoria}`} className="hover:text-[#d42b2b] transition-colors">{produto.categoria}</a>
+          <span className="opacity-40">/</span>
+          <span className="text-[#333] truncate max-w-[200px]">{produto.nome}</span>
+        </nav>
+
+        <ProductDetail produto={produto} />
+
+        {relacionados.length > 0 && (
+          <section className="mt-16">
+            <h2 className="font-barlow font-bold text-2xl text-[#111] mb-6 tracking-[-0.3px]">
+              Produtos Relacionados
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {relacionados.map((p) => (
+                <ProductCard key={p.id} produto={p} />
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+    </>
   )
 }
