@@ -104,6 +104,14 @@ export function extrairImagensTiny(p: any): string[] {
     if (urls.length) return urls
   }
 
+  // Formato: produto.imagens_externas (Tiny v2)
+  if (p.imagens_externas && Array.isArray(p.imagens_externas) && p.imagens_externas.length > 0) {
+    const urls = p.imagens_externas
+      .map((i: any) => (typeof i === 'string' ? i : i?.url || i?.link || i?.endereco || ''))
+      .filter(Boolean)
+    if (urls.length) return urls
+  }
+
   if (typeof p.foto === 'string' && p.foto) return [p.foto]
   if (typeof p.imagem_principal === 'string' && p.imagem_principal) return [p.imagem_principal]
 

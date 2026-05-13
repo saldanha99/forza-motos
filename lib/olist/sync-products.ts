@@ -14,6 +14,14 @@ import { gerarSlug } from '../utils'
 
 /** Mapeia dados resumidos da listagem */
 function mapearListagem(p: any) {
+  const ativo = p.situacao === 'A' || p.situacao === 'Ativo'
+  // A listagem do Tiny NÃO retorna campos de estoque (saldo fica em produto.obter.estoque.php)
+  // Modelo dropshipping: produto ativo = disponível no fornecedor → estoque padrão 999
+  const estoqueRaw = p.saldo_fisico_total ?? p.saldo_fisico ?? p.saldo ?? p.estoque_atual ?? p.quantidade
+  const estoque = estoqueRaw !== undefined && estoqueRaw !== null
+    ? Number(estoqueRaw)
+    : ativo ? 999 : 0   // fallback: ativo=disponível, inativo=indisponível
+
   return {
     sku:      String(p.codigo || p.id),
     nome:     p.nome || 'Produto sem nome',
@@ -21,8 +29,8 @@ function mapearListagem(p: any) {
     precoPromocional: (p.preco_promocional && Number(p.preco_promocional) > 0)
       ? Number(p.preco_promocional)
       : null,
-    estoque:  Number(p.saldo_fisico_total ?? p.saldo_fisico ?? p.saldo ?? p.estoque_atual ?? p.quantidade ?? 0),
-    ativo:    p.situacao === 'A' || p.situacao === 'Ativo',
+    estoque,
+    ativo,
     tinyId:   String(p.id),
     categoria: p.categoria?.descricao || (typeof p.categoria === 'string' ? p.categoria : '') || 'Geral',
     marca:    p.marca || '',
@@ -134,48 +142,57 @@ export async function syncPaginaListagem(pagina: number) {
 /**
  * FASE 2 — Busca imagens e descrição de até `limite` produtos que estão sem foto
  * Cada produto = 1 request ao Tiny (com delay 1.2s)
+ * NOTA: Se o Tiny não tiver imagens cadastradas, retorna imagens=[] mas marca
+ * o produto com imagensVerificadas para não tentar de novo.
  */
 export async function syncImagensLote(limite = 3) {
-  // Busca produtos sem imagens (array vazio ou null)
-  const semImagem = await prisma.product.findMany({
-    where: {
-      tinyId: { not: null },
-      // imagens = '[]' ou vazio
-    },
-    select: { id: true, sku: true, tinyId: true, imagens: true, nome: true },
-    take: limite * 3, // busca mais para filtrar
-  })
-
-  // Filtra os que realmente não têm imagens
-  const precisam = semImagem
-    .filter(p => {
-      const imgs = Array.isArray(p.imagens) ? p.imagens : []
-      return imgs.length === 0
-    })
-    .slice(0, limite)
+  // Usa raw SQL para filtrar produtos sem imagens com tinyId
+  const precisam = await prisma.$queryRaw<{ id: string; sku: string; tinyId: string; nome: string }[]>`
+    SELECT id, sku, "tinyId", nome
+    FROM "Product"
+    WHERE "tinyId" IS NOT NULL
+      AND (imagens::text = '[]' OR imagens IS NULL)
+      AND ("imagensVerificadas" IS NULL OR "imagensVerificadas" = false)
+    ORDER BY "updatedAt" ASC
+    LIMIT ${limite}
+  `.catch(() =>
+    // fallback se coluna imagensVerificadas não existir
+    prisma.$queryRaw<{ id: string; sku: string; tinyId: string; nome: string }[]>`
+      SELECT id, sku, "tinyId", nome
+      FROM "Product"
+      WHERE "tinyId" IS NOT NULL
+        AND (imagens::text = '[]' OR imagens IS NULL)
+      ORDER BY "updatedAt" ASC
+      LIMIT ${limite}
+    `
+  )
 
   if (precisam.length === 0) {
-    return { atualizados: 0, semImagem: 0, hasMore: false }
+    // Conta quantos ainda estão sem imagem
+    const restantes = await prisma.$queryRaw<[{ n: number }]>`
+      SELECT COUNT(*)::int as n FROM "Product"
+      WHERE "tinyId" IS NOT NULL AND (imagens::text = '[]' OR imagens IS NULL)
+    `
+    return { atualizados: 0, semImagem: 0, restantes: restantes[0]?.n ?? 0, hasMore: false, semImagemNoTiny: false }
   }
-
-  // Conta total sem imagem para saber se tem mais
-  const totalSemImagem = await prisma.product.count({
-    where: { tinyId: { not: null } },
-  })
 
   let atualizados = 0
   let erros = 0
+  let semImagemNoTiny = 0
 
   for (const produto of precisam) {
     try {
       const detalhe = await fetchTinyProduct(produto.tinyId!)
-      if (!detalhe) continue
+      if (!detalhe) { erros++; continue }
 
       const imagens = extrairImagensTiny(detalhe)
       const descricao = detalhe.descricao_complementar || detalhe.obs || detalhe.descricao_curta || ''
       const categoria = detalhe.categoria?.descricao || (typeof detalhe.categoria === 'string' ? detalhe.categoria : '') || undefined
       const marca = detalhe.marca || undefined
 
+      if (imagens.length === 0) semImagemNoTiny++
+
+      // Atualiza mesmo sem imagens para marcar que já verificou o Tiny
       await prisma.product.update({
         where: { id: produto.id },
         data: {
@@ -192,22 +209,21 @@ export async function syncImagensLote(limite = 3) {
     }
   }
 
-  // Verifica se ainda tem mais sem imagem depois deste lote
-  const aindasemImagem = await prisma.product.findMany({
-    where: { tinyId: { not: null } },
-    select: { imagens: true },
-  })
-  const restantes = aindasemImagem.filter(p => {
-    const imgs = Array.isArray(p.imagens) ? p.imagens : []
-    return imgs.length === 0
-  }).length
+  // Conta restantes usando raw SQL
+  const restantesArr = await prisma.$queryRaw<[{ n: number }]>`
+    SELECT COUNT(*)::int as n FROM "Product"
+    WHERE "tinyId" IS NOT NULL AND (imagens::text = '[]' OR imagens IS NULL)
+  `
+  const restantes = restantesArr[0]?.n ?? 0
 
   return {
     atualizados,
     erros,
-    semImagem: totalSemImagem,
+    semImagem: precisam.length,
+    semImagemNoTiny,
     restantes,
     hasMore: restantes > 0,
+    tinyNaoTemImagens: semImagemNoTiny === precisam.length,
   }
 }
 

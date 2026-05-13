@@ -18,6 +18,7 @@ export function OlistSyncButton() {
   const [imagensAcum, setImagensAcum] = useState(0)
   const [imagensError, setImagensError] = useState('')
   const [imagensDone, setImagensDone] = useState(false)
+  const [tinyNaoTemImagens, setTinyNaoTemImagens] = useState(false)
 
   // ── Fase 3: sync pedidos ───────────────────────────────────────────────────
   const [loadingPedidos, setLoadingPedidos] = useState(false)
@@ -68,7 +69,9 @@ export function OlistSyncButton() {
     setLoadingImagens(true)
     setImagensDone(false)
     setImagensError('')
+    setTinyNaoTemImagens(false)
     let totalAcum = 0
+    let rodadasSemImagem = 0
 
     while (true) {
       try {
@@ -80,6 +83,14 @@ export function OlistSyncButton() {
         totalAcum += data.atualizados ?? 0
         setImagensAcum(totalAcum)
         setImagensRestantes(data.restantes ?? 0)
+
+        // Detecta quando o Tiny não tem imagens cadastradas
+        if (data.tinyNaoTemImagens) rodadasSemImagem++
+        if (rodadasSemImagem >= 3) {
+          setTinyNaoTemImagens(true)
+          setImagensDone(true)
+          break
+        }
 
         if (!data.hasMore) { setImagensDone(true); break }
         // Aguarda 2s antes do próximo lote (evita rate limit)
@@ -177,9 +188,24 @@ export function OlistSyncButton() {
         )}
 
         {!loadingImagens && (imagensDone || imagensError) && (
-          <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${imagensError ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'}`}>
-            {imagensError ? <AlertCircle size={12} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={12} className="mt-0.5 shrink-0" />}
-            <span>{imagensError || `${imagensAcum} imagens importadas${imagensRestantes ? ` · ${imagensRestantes} restantes` : ' · Concluído!'}`}</span>
+          <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${
+            imagensError ? 'bg-red-900/30 text-red-400' :
+            tinyNaoTemImagens ? 'bg-yellow-900/30 text-yellow-400' :
+            'bg-green-900/30 text-green-400'
+          }`}>
+            {imagensError
+              ? <AlertCircle size={12} className="mt-0.5 shrink-0" />
+              : tinyNaoTemImagens
+                ? <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                : <CheckCircle2 size={12} className="mt-0.5 shrink-0" />}
+            <span>
+              {imagensError ||
+                (tinyNaoTemImagens
+                  ? 'Tiny não tem fotos cadastradas — adicione as imagens manualmente em cada produto ou cole a URL da imagem'
+                  : `${imagensAcum} imagens importadas${imagensRestantes ? ` · ${imagensRestantes} restantes` : ' · Concluído!'}`
+                )
+              }
+            </span>
           </div>
         )}
       </div>
