@@ -29,13 +29,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: descricao,
       url,
       type: 'website',
-      images: imagens.slice(0, 1).map((img: string) => ({ url: img, alt: p.nome })),
+      images: (imagens as string[]).slice(0, 1).map((img) => ({ url: img, alt: p.nome })),
     },
     twitter: {
       card: 'summary_large_image',
       title: p.nome,
       description: descricao,
-      images: imagens.slice(0, 1),
+      images: imagens.length > 0 ? [String(imagens[0])] : [],
     },
   }
 }
