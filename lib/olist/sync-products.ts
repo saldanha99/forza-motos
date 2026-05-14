@@ -8,7 +8,7 @@
  *   → Chamado separadamente, delay 1.2s entre requests
  */
 
-import { fetchTinyProductPage, fetchTinyProduct, fetchTinyProductEstoque, extrairImagensTiny } from './client'
+import { fetchTinyProductPage, fetchTinyProduct, fetchTinyProductEstoque, extrairImagensTiny, fetchTinyEstoqueDelta, fetchTinyProdutosDelta, dataDiasAtras } from './client'
 import { prisma } from '../prisma'
 import { gerarSlug } from '../utils'
 
@@ -399,4 +399,172 @@ export async function syncProdutoUnico(tinyId: string | number): Promise<'criado
     data: { ...d, slug, imagens, descricao, temImagem: imagens.length > 0, compatibilidadeMotos: [] },
   })
   return 'criado'
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DELTA SYNC — usa extensão "API para estoque em tempo real"
+// Muito mais eficiente: processa apenas os produtos que realmente mudaram
+// ─────────────────────────────────────────────────────────────────────────────
+
+const DEPOSITOS_DROPSHIP = ['drop_eurolaqu', 'f_drop', 'eurolaqui', 'drop']
+
+function calcularEstoqueDepositos(depositos: any[]): number {
+  const lista: any[] = Array.isArray(depositos)
+    ? depositos
+    : (depositos as any)?.deposito
+      ? [(depositos as any).deposito].flat()
+      : []
+
+  let saldoLoja = 0
+  let temDropship = false
+
+  for (const item of lista) {
+    const dep = item.deposito ?? item
+    const nome = (dep.nome ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
+    const saldo = Number(dep.saldo ?? dep.quantidade ?? 0)
+    if (nome === 'loja') {
+      saldoLoja += saldo
+    } else if (DEPOSITOS_DROPSHIP.some(d => nome.includes(d))) {
+      temDropship = true
+    }
+  }
+
+  if (saldoLoja > 0) return saldoLoja
+  if (temDropship) return 999
+  const total = lista.reduce((acc, item) => {
+    const dep = item.deposito ?? item
+    return acc + Number(dep.saldo ?? dep.quantidade ?? 0)
+  }, 0)
+  return Math.max(0, total)
+}
+
+/**
+ * DELTA ESTOQUE — consome a fila de atualizações de estoque do Tiny
+ * Atualiza somente os produtos cujo estoque mudou desde dataAlteracao.
+ * Se não passar dataAlteracao, usa os últimos 2 dias.
+ */
+export async function syncDeltaEstoque(diasAtras = 2): Promise<{
+  atualizados: number
+  naoBanco: number
+  paginas: number
+}> {
+  const dataAlteracao = dataDiasAtras(diasAtras)
+  let pagina = 1
+  let totalPaginas = 1
+  let atualizados = 0
+  let naoBanco = 0
+
+  while (pagina <= totalPaginas) {
+    const { produtos, totalPaginas: tp } = await fetchTinyEstoqueDelta(dataAlteracao, pagina)
+    totalPaginas = tp
+
+    for (const p of produtos) {
+      const tinyId = String(p.id ?? '').trim()
+      if (!tinyId) continue
+
+      const depositos = p.depositos ?? []
+      const estoque = depositos.length > 0
+        ? calcularEstoqueDepositos(depositos)
+        : Math.max(0, Number(p.saldo ?? 0))
+
+      const result = await prisma.product.updateMany({
+        where: { tinyId },
+        data: { estoque },
+      })
+
+      if (result.count > 0) {
+        atualizados += result.count
+      } else {
+        naoBanco++
+      }
+    }
+
+    if (pagina >= totalPaginas || produtos.length === 0) break
+    pagina++
+    await new Promise(r => setTimeout(r, 200))
+  }
+
+  return { atualizados, naoBanco, paginas: totalPaginas }
+}
+
+/**
+ * DELTA PRODUTOS — consome a fila de produtos alterados do Tiny
+ * Atualiza nome, preço e situação dos produtos que mudaram.
+ * Cria o produto no banco se ainda não existir.
+ * Se não passar diasAtras, usa os últimos 2 dias.
+ */
+export async function syncDeltaProdutos(diasAtras = 2): Promise<{
+  atualizados: number
+  criados: number
+  naoBanco: number
+  paginas: number
+}> {
+  const dataAlteracao = dataDiasAtras(diasAtras)
+  let pagina = 1
+  let totalPaginas = 1
+  let atualizados = 0
+  let criados = 0
+  let naoBanco = 0
+
+  while (pagina <= totalPaginas) {
+    const { produtos, totalPaginas: tp } = await fetchTinyProdutosDelta(dataAlteracao, pagina)
+    totalPaginas = tp
+
+    for (const p of produtos) {
+      const d = mapearListagem(p)
+      if (!d.sku) { naoBanco++; continue }
+
+      // Tenta atualizar pelo sku primeiro, depois pelo tinyId
+      let updated = await prisma.product.updateMany({
+        where: { sku: d.sku },
+        data: {
+          nome: d.nome,
+          preco: d.preco,
+          precoPromocional: d.precoPromocional ?? undefined,
+          ativo: d.ativo,
+          tinyId: d.tinyId,
+          categoria: d.categoria || undefined,
+          marca: d.marca || undefined,
+        },
+      })
+
+      if (updated.count === 0) {
+        // Tenta pelo tinyId
+        updated = await prisma.product.updateMany({
+          where: { tinyId: d.tinyId },
+          data: {
+            nome: d.nome,
+            preco: d.preco,
+            precoPromocional: d.precoPromocional ?? undefined,
+            ativo: d.ativo,
+            categoria: d.categoria || undefined,
+            marca: d.marca || undefined,
+          },
+        })
+      }
+
+      if (updated.count > 0) {
+        atualizados += updated.count
+      } else {
+        // Produto novo — cria no banco
+        try {
+          let slug = gerarSlug(d.nome)
+          const slugExists = await prisma.product.findUnique({ where: { slug } })
+          if (slugExists) slug = `${slug}-${d.sku}`
+          await prisma.product.create({
+            data: { ...d, slug, descricao: '', imagens: [], compatibilidadeMotos: [] },
+          })
+          criados++
+        } catch {
+          naoBanco++
+        }
+      }
+    }
+
+    if (pagina >= totalPaginas || produtos.length === 0) break
+    pagina++
+    await new Promise(r => setTimeout(r, 200))
+  }
+
+  return { atualizados, criados, naoBanco, paginas: totalPaginas }
 }

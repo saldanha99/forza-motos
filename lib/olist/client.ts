@@ -76,6 +76,48 @@ export async function fetchTinyProductPage(pagina: number): Promise<{ produtos: 
 }
 
 /**
+ * Busca atualizações de ESTOQUE da fila delta (extensão "API para estoque em tempo real")
+ * Retorna só os produtos cujo estoque mudou desde dataAlteracao.
+ * IMPORTANTE: registros lidos são removidos da fila automaticamente.
+ */
+export async function fetchTinyEstoqueDelta(
+  dataAlteracao: string,
+  pagina = 1
+): Promise<{ produtos: any[]; totalPaginas: number }> {
+  const data = await tinyFetch('lista.atualizacoes.estoque', { dataAlteracao, pagina }, 0)
+  const produtos = (data.retorno?.produtos ?? []).map((p: any) => p.produto ?? p)
+  const totalPaginas = Number(data.retorno?.numero_paginas ?? data.retorno?.paginas ?? 1)
+  return { produtos, totalPaginas }
+}
+
+/**
+ * Busca produtos ALTERADOS da fila delta (extensão "API para estoque em tempo real")
+ * Retorna produtos com qualquer mudança (preço, nome, situação) desde dataAlteracao.
+ * IMPORTANTE: registros lidos são removidos da fila automaticamente.
+ */
+export async function fetchTinyProdutosDelta(
+  dataAlteracao: string,
+  pagina = 1
+): Promise<{ produtos: any[]; totalPaginas: number }> {
+  const data = await tinyFetch('lista.atualizacoes.produtos', { dataAlteracao, pagina }, 0)
+  const produtos = (data.retorno?.produtos ?? []).map((p: any) => p.produto ?? p)
+  const totalPaginas = Number(data.retorno?.numero_paginas ?? data.retorno?.paginas ?? 1)
+  return { produtos, totalPaginas }
+}
+
+/** Helper: retorna data formatada dd/mm/yyyy HH:MM:SS para N dias atrás */
+export function dataDiasAtras(dias: number): string {
+  const d = new Date(Date.now() - dias * 24 * 60 * 60 * 1000)
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mi = String(d.getMinutes()).padStart(2, '0')
+  const ss = String(d.getSeconds()).padStart(2, '0')
+  return `${dd}/${mm}/${yyyy} ${hh}:${mi}:${ss}`
+}
+
+/**
  * Busca detalhes completos de 1 produto (inclui fotos/imagens)
  * Só use para produtos sem imagem — delay alto para não bloquear
  */

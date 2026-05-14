@@ -1,10 +1,16 @@
 /**
- * Cron diário às 6h: sincroniza estoque e preços de todos os produtos
- * Usa apenas a listagem do Tiny (sem chamada individual por produto = sem rate limit)
+ * Cron diário às 6h: sync delta de estoque e produtos alterados
+ *
+ * Usa as APIs de fila do Tiny (extensão "API para estoque em tempo real"):
+ *   - lista.atualizacoes.estoque  → só produtos cujo estoque mudou
+ *   - lista.atualizacoes.produtos → só produtos cujo preço/nome/situação mudou
+ *
+ * Muito mais rápido que varrer todas as 29 páginas.
+ * Registros lidos são consumidos da fila automaticamente pelo Tiny.
  */
 
 import { NextResponse } from 'next/server'
-import { syncEstoquePrecos } from '@/lib/olist/sync-products'
+import { syncDeltaEstoque, syncDeltaProdutos } from '@/lib/olist/sync-products'
 
 export const maxDuration = 60
 
@@ -17,8 +23,18 @@ export async function GET(req: Request) {
   }
 
   try {
-    console.log('[cron] Iniciando sync diário de estoque e preços...')
-    const result = await syncEstoquePrecos()
+    console.log('[cron] Iniciando sync delta (estoque + produtos alterados)...')
+
+    const [estoque, produtos] = await Promise.allSettled([
+      syncDeltaEstoque(1),   // últimas 24h
+      syncDeltaProdutos(1),
+    ])
+
+    const result = {
+      estoque:  estoque.status  === 'fulfilled' ? estoque.value  : { erro: (estoque  as any).reason?.message },
+      produtos: produtos.status === 'fulfilled' ? produtos.value : { erro: (produtos as any).reason?.message },
+    }
+
     console.log('[cron] Concluído:', result)
     return NextResponse.json({ ok: true, ...result })
   } catch (e: any) {

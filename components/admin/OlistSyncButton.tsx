@@ -95,6 +95,23 @@ export function OlistSyncButton() {
   const [fantasmasResult, setFantasmasResult] = useState<any>(null)
   const [fantasmasError, setFantasmasError] = useState('')
 
+  // ── Delta sync ───────────────────────────────────────────────────────────────
+  const [loadingDelta, setLoadingDelta] = useState(false)
+  const [deltaResult, setDeltaResult] = useState<any>(null)
+
+  async function handleSyncDelta() {
+    setLoadingDelta(true); setDeltaResult(null)
+    try {
+      const res = await fetch('/api/olist/sync-delta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ diasAtras: 2 }),
+      })
+      setDeltaResult(await res.json())
+    } catch { setDeltaResult({ error: 'Erro de conexão' }) }
+    finally { setLoadingDelta(false); fetchDiag() }
+  }
+
   // ── Outros cleanups ──────────────────────────────────────────────────────────
   const [loadingCleanup, setLoadingCleanup] = useState(false)
   const [cleanupResult, setCleanupResult] = useState<any>(null)
@@ -450,6 +467,30 @@ export function OlistSyncButton() {
           <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${syncError ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'}`}>
             {syncError ? <AlertCircle size={12} /> : <CheckCircle2 size={12} />}
             <span>{syncError || `${syncAcum.criados} criados · ${syncAcum.atualizados} atualizados`}</span>
+          </div>
+        )}
+
+        {/* Delta sync */}
+        <div className="flex items-center justify-between pt-1 border-t border-zinc-800/60">
+          <div>
+            <p className="text-[11px] text-zinc-400 font-medium flex items-center gap-1">
+              <Activity size={10} className="text-green-500" />
+              Sync Delta (estoque + preço)
+            </p>
+            <p className="text-[10px] text-zinc-600">Atualiza só os produtos que mudaram · usa fila do Tiny</p>
+          </div>
+          <button onClick={handleSyncDelta} disabled={loadingDelta || loadingSync}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-800/50 hover:bg-green-700/60 disabled:opacity-50 text-green-300 text-xs font-medium rounded-md transition-colors">
+            {loadingDelta ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+            {loadingDelta ? 'Processando…' : 'Sync rápido'}
+          </button>
+        </div>
+        {!loadingDelta && deltaResult && (
+          <div className={`text-xs px-3 py-2 rounded-md ${deltaResult.error ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'}`}>
+            {deltaResult.error
+              ? deltaResult.error
+              : `Estoque: ${deltaResult.estoque?.atualizados ?? 0} atualizados · Produtos: ${deltaResult.produtos?.atualizados ?? 0} atualizados, ${deltaResult.produtos?.criados ?? 0} criados`
+            }
           </div>
         )}
       </div>
