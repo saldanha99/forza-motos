@@ -42,8 +42,8 @@ export function ReviewsSection() {
       />
 
       <section
+        className="bg-[#fafafa]"
         style={{
-          background: '#fafafa',
           borderTop: '1px solid #eee',
           borderBottom: '1px solid #eee',
           padding: '56px 0',

@@ -186,7 +186,7 @@ export default async function HomePage() {
 
       {/* ── Mais Vendidos ────────────────────────────────────────────────── */}
       {maisVendidos.length > 0 && (
-        <div style={{ background: '#fff', borderBottom: '1px solid #eee', padding: '52px 0' }}>
+        <div className="bg-white border-b border-[#eee]" style={{ padding: '52px 0' }}>
           <div className="max-w-[1280px] mx-auto px-6 md:px-12">
             <ScrollReveal type="blur-up">
               <div className="flex items-end justify-between mb-7">
@@ -238,7 +238,7 @@ export default async function HomePage() {
       )}
 
       {/* ── Serviços Box Rápido ───────────────────────────────────────────── */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #eee', padding: '52px 0' }}>
+      <div className="bg-white border-b border-[#eee]" style={{ padding: '52px 0' }}>
         <div className="max-w-[1280px] mx-auto px-6 md:px-12">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
             <div>
@@ -348,7 +348,7 @@ export default async function HomePage() {
       )}
 
       {/* ── CategoriesSection ─────────────────────────────────────────────── */}
-      <div style={{ background: '#f5f5f5', borderTop: '1px solid #eee', borderBottom: '1px solid #eee', padding: '44px 0' }}>
+      <div className="bg-[#f5f5f5] border-t border-b border-[#eee]" style={{ padding: '44px 0' }}>
         <div className="max-w-[1280px] mx-auto px-6 md:px-12">
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-barlow font-bold text-[26px] text-[#111] tracking-[-0.3px]">Categorias Populares</h2>

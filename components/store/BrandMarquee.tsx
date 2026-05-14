@@ -16,141 +16,116 @@ interface BrandItem {
   key: string
   Logo: React.ComponentType<{ height?: number; className?: string }>
   h: number
-  bg?: string
+  bg?: string   // fundo customizado (ex: Motul vermelho)
 }
 
 const BRANDS: BrandItem[] = [
-  { key: 'pirelli',     Logo: LogoPirelli,     h: 30 },
-  { key: 'michelin',    Logo: LogoMichelin,    h: 32 },
-  { key: 'metzeler',   Logo: LogoMetzeler,    h: 22 },
-  { key: 'bridgestone', Logo: LogoBridgestone, h: 22 },
-  { key: 'motul',       Logo: LogoMotul,       h: 34, bg: '#EE1C25' },
-  { key: 'ebc',         Logo: LogoEBC,         h: 34 },
-  { key: 'did',         Logo: LogoDID,         h: 30 },
+  { key: 'pirelli',     Logo: LogoPirelli,     h: 28 },
+  { key: 'michelin',    Logo: LogoMichelin,    h: 30 },
+  { key: 'metzeler',    Logo: LogoMetzeler,    h: 20 },
+  { key: 'bridgestone', Logo: LogoBridgestone, h: 20 },
+  { key: 'motul',       Logo: LogoMotul,       h: 32, bg: '#EE1C25' },
+  { key: 'ebc',         Logo: LogoEBC,         h: 32 },
+  { key: 'did',         Logo: LogoDID,         h: 28 },
 ]
-
-// Faixa 2 usa as marcas em ordem diferente para não espelhar
-const BRANDS_REVERSE = [...BRANDS].reverse()
-
-function LogoCard({ brand, dark }: { brand: BrandItem; dark?: boolean }) {
-  const { Logo, h, bg } = brand
-  const cardBg = bg
-    ? bg
-    : dark
-    ? '#1e1e1e'
-    : '#ffffff'
-  const borderColor = bg ? 'transparent' : dark ? '#2e2e2e' : '#e8e8e8'
-
-  return (
-    <div
-      style={{
-        background: cardBg,
-        border: `1.5px solid ${borderColor}`,
-        borderRadius: 12,
-        padding: '18px 24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: 80,
-        width: '100%',
-        boxSizing: 'border-box',
-      }}
-    >
-      <Logo height={h} />
-    </div>
-  )
-}
 
 export function BrandMarquee() {
   const { resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
   const dark = mounted && resolvedTheme === 'dark'
-  // Duplicamos as listas para criar o loop sem salto visível
-  const col1 = [...BRANDS, ...BRANDS]
-  const col2 = [...BRANDS_REVERSE, ...BRANDS_REVERSE]
+
+  // Triplicamos para garantir loop suave sem gaps
+  const track = [...BRANDS, ...BRANDS, ...BRANDS]
+
+  const sectionBg  = dark ? '#0a0a0a' : '#f5f5f5'
+  const borderCol  = dark ? '#1e1e1e' : '#e8e8e8'
+  const cardBg     = (bg?: string) => bg ? bg : dark ? '#1a1a1a' : '#ffffff'
+  const cardBorder = (bg?: string) => bg ? 'transparent' : dark ? '#2a2a2a' : '#e8e8e8'
+  const titleCol   = dark ? '#f0f0f0' : '#111111'
+  const subtitleCol = dark ? '#555' : '#999'
 
   return (
     <section
       style={{
-        background: dark ? '#0f0f0f' : '#f5f5f5',
-        borderTop: `1px solid ${dark ? '#2a2a2a' : '#eeeeee'}`,
-        borderBottom: `1px solid ${dark ? '#2a2a2a' : '#eeeeee'}`,
-        padding: '52px 0',
+        background: sectionBg,
+        borderTop:    `1px solid ${borderCol}`,
+        borderBottom: `1px solid ${borderCol}`,
+        padding: '48px 0',
         overflow: 'hidden',
       }}
     >
       <style>{`
-        @keyframes brand-scroll-up {
-          0%   { transform: translateY(0); }
-          100% { transform: translateY(-50%); }
-        }
-        @keyframes brand-scroll-down {
-          0%   { transform: translateY(-50%); }
-          100% { transform: translateY(0); }
+        @keyframes ticker-left {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-33.333%); }
         }
       `}</style>
 
-      <div className="max-w-[1280px] mx-auto px-6 md:px-12">
-        {/* Título */}
-        <div className="mb-10">
-          <h2
-            className="font-barlow font-bold text-[26px] tracking-[-0.3px]"
-            style={{ color: dark ? '#f0f0f0' : '#111' }}
-          >
-            Marcas Parceiras
-          </h2>
-          <p
-            className="font-inter text-[13px] mt-1"
-            style={{ color: dark ? '#666' : '#888' }}
-          >
-            Distribuidor autorizado das principais marcas do mundo
-          </p>
-        </div>
+      {/* Título */}
+      <div className="max-w-[1280px] mx-auto px-6 md:px-12 mb-8">
+        <h2
+          className="font-barlow font-bold text-[26px] tracking-[-0.3px]"
+          style={{ color: titleCol }}
+        >
+          Marcas Parceiras
+        </h2>
+        <p className="font-inter text-[13px] mt-0.5" style={{ color: subtitleCol }}>
+          Distribuidor autorizado das principais marcas do mundo
+        </p>
+      </div>
 
-        {/* Duas colunas com scroll vertical */}
+      {/* Ticker horizontal */}
+      <div
+        style={{
+          position: 'relative',
+          overflow: 'hidden',
+          /* Ofusca as bordas esquerda e direita */
+          maskImage: `linear-gradient(
+            to right,
+            transparent 0%,
+            black 8%,
+            black 92%,
+            transparent 100%
+          )`,
+          WebkitMaskImage: `linear-gradient(
+            to right,
+            transparent 0%,
+            black 8%,
+            black 92%,
+            transparent 100%
+          )`,
+        }}
+      >
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
+            display: 'flex',
             gap: 16,
-            height: 380,
-            overflow: 'hidden',
-            maskImage:
-              'linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%)',
-            WebkitMaskImage:
-              'linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%)',
+            width: 'max-content',
+            animation: 'ticker-left 35s linear infinite',
+            willChange: 'transform',
           }}
         >
-          {/* Coluna A — sobe */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
-              animation: 'brand-scroll-up 20s linear infinite',
-              willChange: 'transform',
-            }}
-          >
-            {col1.map((brand, i) => (
-              <LogoCard key={`a-${brand.key}-${i}`} brand={brand} dark={dark} />
-            ))}
-          </div>
-
-          {/* Coluna B — desce */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
-              animation: 'brand-scroll-down 24s linear infinite',
-              willChange: 'transform',
-            }}
-          >
-            {col2.map((brand, i) => (
-              <LogoCard key={`b-${brand.key}-${i}`} brand={brand} dark={dark} />
-            ))}
-          </div>
+          {track.map((brand, i) => (
+            <div
+              key={`${brand.key}-${i}`}
+              style={{
+                background:   cardBg(brand.bg),
+                border:       `1.5px solid ${cardBorder(brand.bg)}`,
+                borderRadius: 10,
+                padding:      '14px 28px',
+                display:      'flex',
+                alignItems:   'center',
+                justifyContent: 'center',
+                height:       72,
+                minWidth:     140,
+                flexShrink:   0,
+                boxSizing:    'border-box',
+              }}
+            >
+              <brand.Logo height={brand.h} />
+            </div>
+          ))}
         </div>
       </div>
     </section>

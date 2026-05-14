@@ -4,6 +4,10 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  LogoPirelli, LogoMichelin, LogoMetzeler,
+  LogoBridgestone, LogoMotul, LogoEBC, LogoDID,
+} from './BrandLogo'
 
 // ── Tire SVG animado ──────────────────────────────────────────────────────────
 function AnimatedTire({ size = 260 }: { size?: number }) {
@@ -114,7 +118,14 @@ const SERVICE_CARDS = [
   { img: '/images/services/card-corrente.jpg',label: 'Corrente',time: '~30min' },
 ]
 
-const BRAND_NAMES = ['PIRELLI', 'METZELER', 'MICHELIN', 'MOTUL', 'EBC', 'DID']
+const HERO_BRANDS = [
+  { key: 'pirelli',     Logo: LogoPirelli,     h: 22, bg: false },
+  { key: 'metzeler',    Logo: LogoMetzeler,    h: 14, bg: false },
+  { key: 'michelin',    Logo: LogoMichelin,    h: 22, bg: false },
+  { key: 'motul',       Logo: LogoMotul,       h: 22, bg: true  }, // bg vermelho próprio
+  { key: 'ebc',         Logo: LogoEBC,         h: 24, bg: false },
+  { key: 'did',         Logo: LogoDID,         h: 20, bg: false },
+]
 
 // ── Visual right panel ────────────────────────────────────────────────────────
 function SlideVisual({ type, active }: { type: string; active: boolean }) {
@@ -199,37 +210,43 @@ function SlideVisual({ type, active }: { type: string; active: boolean }) {
     </div>
   )
 
-  // brands
+  // brands — logos reais SVG em grid
   return (
     <div className="flex items-center justify-center h-full px-4">
-      <div className="w-full max-w-[280px]">
+      <div className="w-full max-w-[300px]">
         <div className="grid grid-cols-2 gap-2.5">
-          {BRAND_NAMES.map((brand, i) => (
+          {HERO_BRANDS.map((brand, i) => (
             <div
-              key={brand}
+              key={brand.key}
               style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
+                background: brand.bg ? 'rgba(238,28,37,0.18)' : 'rgba(255,255,255,0.05)',
+                border: brand.bg
+                  ? '1px solid rgba(238,28,37,0.35)'
+                  : '1px solid rgba(255,255,255,0.1)',
                 borderRadius: 8,
-                padding: '14px 10px',
-                textAlign: 'center',
+                padding: '12px 10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: 54,
+                backdropFilter: 'blur(4px)',
                 animation: active ? `fade-up 0.5s ease ${i * 0.08 + 0.15}s both` : 'none',
               }}
             >
-              <span className="font-barlow font-black text-[16px] text-white tracking-[1.5px]">{brand}</span>
+              <brand.Logo height={brand.h} />
             </div>
           ))}
         </div>
         <div
           style={{
-            marginTop: 14, textAlign: 'center',
-            padding: '12px', background: 'rgba(212,43,43,0.1)',
+            marginTop: 12, textAlign: 'center',
+            padding: '10px 12px', background: 'rgba(212,43,43,0.1)',
             border: '1px solid rgba(212,43,43,0.25)', borderRadius: 8,
             animation: active ? 'fade-up 0.5s ease 0.6s both' : 'none',
           }}
         >
           <span className="text-[#d42b2b] font-barlow font-bold text-[13px] tracking-[0.5px]">
-            + 2.800 PRODUTOS
+            + 2.800 PRODUTOS EM ESTOQUE
           </span>
         </div>
       </div>
