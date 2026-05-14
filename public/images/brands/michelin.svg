@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100">
+  <!-- Blue background -->
+  <rect x="0" y="0" width="400" height="100" fill="#009BDB"/>
+  <!-- Yellow stripe bottom -->
+  <rect x="0" y="88" width="400" height="12" fill="#FFCF00"/>
+  <!-- MICHELIN white bold italic -->
+  <text x="16" y="75" fill="white" font-family="'Arial Black','Impact',sans-serif" font-weight="900" font-size="58" font-style="italic" letter-spacing="-1">MICHELIN</text>
+</svg>

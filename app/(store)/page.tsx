@@ -215,22 +215,44 @@ export default async function HomePage() {
               </div>
             </ScrollReveal>
 
-            {/* Grid 2→4→6 colunas */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-              {maisVendidos.slice(0, 12).map((p: any, i: number) => (
-                <ScrollReveal key={p.id} type="scale" delay={i * 50}>
-                  <ProductCard produto={p} />
-                </ScrollReveal>
-              ))}
+            {/* Carrossel horizontal — 5 cards visíveis, blur nas laterais */}
+            <div
+              style={{
+                position: 'relative',
+                maskImage: 'linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)',
+              }}
+            >
+              <div
+                className="flex gap-4 overflow-x-auto pb-2"
+                style={{
+                  scrollSnapType: 'x mandatory',
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                }}
+              >
+                {maisVendidos.slice(0, 12).map((p: any) => (
+                  <div
+                    key={p.id}
+                    style={{
+                      flex: '0 0 calc(20% - 13px)',
+                      minWidth: 200,
+                      scrollSnapAlign: 'start',
+                    }}
+                  >
+                    <ProductCard produto={p} />
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="mt-6 flex justify-center md:hidden">
+            <div className="mt-6 flex justify-center">
               <Link
                 href="/produtos"
-                className="flex items-center gap-2 font-barlow font-bold text-[15px] uppercase tracking-[0.5px] text-white px-7 py-3 bg-[#d42b2b] hover:bg-[#b82222] transition-colors"
+                className="flex items-center gap-2 font-barlow font-bold text-[14px] uppercase tracking-[0.5px] text-[#d42b2b] hover:text-white hover:bg-[#d42b2b] border border-[#d42b2b] px-8 py-3 transition-all duration-200"
                 style={{ borderRadius: 4 }}
               >
-                Ver todos os produtos <ArrowRight size={15} />
+                Ver catálogo completo <ArrowRight size={14} />
               </Link>
             </div>
           </div>

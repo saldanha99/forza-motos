@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 120">
+  <!-- D.I.D. red bold -->
+  <text x="0" y="78" fill="#CC0000" font-family="'Arial Black','Impact',sans-serif" font-weight="900" font-size="80" letter-spacing="2">D.I.D.</text>
+  <!-- Racing Chain italic dark -->
+  <text x="6" y="100" fill="#1a1a1a" font-family="Georgia,'Times New Roman',serif" font-style="italic" font-size="20" letter-spacing="1">Racing Chain</text>
+  <!-- Powered by Technology red -->
+  <text x="6" y="116" fill="#CC0000" font-family="Arial,sans-serif" font-weight="700" font-style="italic" font-size="12" letter-spacing="0.5">Powered by Technology</text>
+</svg>

@@ -93,6 +93,10 @@
 /* ── Hover shadow ── */
 [data-theme='dark'] .card-lift:hover { box-shadow: 0 12px 32px rgba(0,0,0,0.4); }
 
+/* ── Esconder scrollbar nos carrosséis horizontais ── */
+.overflow-x-auto::-webkit-scrollbar { display: none; }
+.overflow-x-auto { scrollbar-width: none; }
+
 @layer base {
   * {
     box-sizing: border-box;
