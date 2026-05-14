@@ -11,10 +11,7 @@ import type { Metadata } from 'next'
 import { getLocalBusinessSchema } from '@/lib/schema'
 import { ReviewsSection } from '@/components/store/ReviewsSection'
 import { TrustBar } from '@/components/store/TrustBar'
-import {
-  LogoPirelli, LogoMetzeler, LogoMichelin,
-  LogoBridgestone, LogoMotul, LogoEBC, LogoDID,
-} from '@/components/store/BrandLogo'
+import { BrandMarquee } from '@/components/store/BrandMarquee'
 
 export const metadata: Metadata = {
   title: 'Forza Motos — Pneus e Peças para Moto em Campinas/SP',
@@ -137,16 +134,6 @@ const POP_CATS = [
   { id: 'Freios',        label: 'Freios e Segurança',     sub: 'EBC · Brembo · ATE',              img: '/images/categories/freios.jpg',      href: '/produtos?categoria=Freios' },
   { id: 'Transmissão',   label: 'Transmissão',            sub: 'DID · RK · Regina',               img: '/images/categories/transmissao.jpg', href: '/produtos?categoria=Transmissão' },
   { id: 'Capacetes',     label: 'Capacetes e EPI',        sub: 'AGV · HJC · Shoei',               img: '/images/categories/capacetes.jpg',   href: '/produtos?categoria=Capacetes' },
-]
-
-const BRAND_LOGOS = [
-  { key: 'pirelli',     Logo: LogoPirelli,     h: 28 },
-  { key: 'metzeler',    Logo: LogoMetzeler,    h: 28 },
-  { key: 'michelin',    Logo: LogoMichelin,    h: 28 },
-  { key: 'bridgestone', Logo: LogoBridgestone, h: 24 },
-  { key: 'motul',       Logo: LogoMotul,       h: 28 },
-  { key: 'ebc',         Logo: LogoEBC,         h: 32 },
-  { key: 'did',         Logo: LogoDID,         h: 32 },
 ]
 
 // Serviços do box rápido (extraído do áudio do Vinícius)
@@ -459,24 +446,8 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {/* ── MarcasSection ─────────────────────────────────────────────────── */}
-      <div style={{ background: '#f5f5f5', borderTop: '1px solid #eee', padding: '44px 0' }}>
-        <div className="max-w-[1280px] mx-auto px-6 md:px-12">
-          <ScrollReveal type="blur-up">
-            <h2 className="font-barlow font-bold text-[26px] text-[#111] mb-2 tracking-[-0.3px]">Marcas Parceiras</h2>
-            <p className="font-inter text-[13px] text-[#888] mb-6">Distribuidora autorizada das principais marcas do mundo</p>
-          </ScrollReveal>
-          <div className="flex gap-3 flex-wrap items-center justify-between">
-            {BRAND_LOGOS.map(({ key, Logo, h }, i) => (
-              <ScrollReveal key={key} type="blur" delay={i * 70}>
-                <div className="bg-white border border-[#eee] rounded-xl px-6 py-5 flex items-center justify-center cursor-pointer hover:border-[#d42b2b] hover:shadow-md transition-all duration-200 group card-lift min-w-[120px] h-[76px]">
-                  <Logo height={h} className="opacity-80 group-hover:opacity-100 transition-opacity" />
-                </div>
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </div>
+      {/* ── Marcas Parceiras — Carrossel Vertical ──────────────────────── */}
+      <BrandMarquee />
 
       {/* ── Reviews / Depoimentos ────────────────────────────────────────── */}
       <ReviewsSection />

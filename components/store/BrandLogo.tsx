@@ -1,5 +1,5 @@
 /**
- * SVG logos das marcas parceiras
+ * SVG logos das marcas parceiras — fiéis às logos reais
  */
 
 interface LogoProps {
@@ -7,81 +7,154 @@ interface LogoProps {
   className?: string
 }
 
-export function LogoPirelli({ height = 36, className = '' }: LogoProps) {
-  const w = Math.round(height * (120 / 36))
+/* ─────────────────────────────────────────
+   PIRELLI — arco vermelho icônico + IRELLI
+───────────────────────────────────────── */
+export function LogoPirelli({ height = 40, className = '' }: LogoProps) {
+  const w = Math.round(height * (300 / 130))
   return (
-    <svg height={height} width={w} viewBox="0 0 120 36" fill="none" className={className}>
-      <rect x="0" y="0" width="36" height="36" rx="4" fill="#F5C800"/>
-      <text x="18" y="26" textAnchor="middle" fill="#000" fontSize="24" fontWeight="900" fontFamily="Arial Black, Arial" letterSpacing="-1">P</text>
-      <text x="44" y="25" fill="#1a1a1a" fontSize="17" fontWeight="900" fontFamily="Arial Black, Arial" letterSpacing="1.5">PIRELLI</text>
+    <svg height={height} width={w} viewBox="0 0 300 130" fill="none" className={className}>
+      {/* Barra vertical esquerda — estende toda a altura */}
+      <rect x="0" y="0" width="20" height="80" fill="#CC0000" />
+      {/* Arco superior: retângulo + semicírculo direito */}
+      <path
+        d="M 0,0 L 240,0 Q 278,0 278,37 Q 278,76 240,76 L 0,76 Z"
+        fill="#CC0000"
+      />
+      {/* Espaço interno branco (abertura do arco) */}
+      <path
+        d="M 20,18 L 222,18 Q 250,18 250,37 Q 250,58 222,58 L 20,58 Z"
+        fill="white"
+      />
+      {/* Fenda horizontal branca que atravessa o arco — sinal característico */}
+      <rect x="0" y="34" width="240" height="7" rx="3.5" fill="white" />
+      {/* IRELLI abaixo */}
+      <text
+        x="2" y="124"
+        fill="#CC0000"
+        fontSize="50"
+        fontWeight="900"
+        fontFamily="Impact, Arial Black, sans-serif"
+        letterSpacing="4"
+      >IRELLI</text>
     </svg>
   )
 }
 
+/* ─────────────────────────────────────────
+   MICHELIN — retângulo azul + MICHELIN branco
+───────────────────────────────────────── */
 export function LogoMichelin({ height = 36, className = '' }: LogoProps) {
-  const w = Math.round(height * (160 / 36))
+  const w = Math.round(height * (420 / 100))
   return (
-    <svg height={height} width={w} viewBox="0 0 160 36" fill="none" className={className}>
-      <rect x="0" y="4" width="36" height="28" rx="3" fill="#003189"/>
-      <text x="18" y="23" textAnchor="middle" fill="#fff" fontSize="11" fontWeight="900" fontFamily="Arial Black, Arial">MAN</text>
-      <text x="44" y="25" fill="#003189" fontSize="17" fontWeight="900" fontFamily="Arial Black, Arial" letterSpacing="0.5">MICHELIN</text>
+    <svg height={height} width={w} viewBox="0 0 420 100" fill="none" className={className}>
+      {/* Fundo azul */}
+      <rect x="0" y="0" width="420" height="100" rx="4" fill="#009BDB" />
+      {/* Linha amarela inferior — característica da logo */}
+      <rect x="0" y="88" width="420" height="8" fill="#FFCF00" />
+      {/* MICHELIN em branco itálico */}
+      <text
+        x="20" y="72"
+        fill="white"
+        fontSize="56"
+        fontWeight="900"
+        fontFamily="Impact, Arial Black, sans-serif"
+        fontStyle="italic"
+        letterSpacing="-1"
+      >MICHELIN</text>
     </svg>
   )
 }
 
+/* ─────────────────────────────────────────
+   METZELER — navy METZELER + "SHARING INDEPENDENCE"
+───────────────────────────────────────── */
 export function LogoMetzeler({ height = 36, className = '' }: LogoProps) {
-  const w = Math.round(height * (155 / 36))
+  const w = Math.round(height * (380 / 80))
   return (
-    <svg height={height} width={w} viewBox="0 0 155 36" fill="none" className={className}>
-      <polygon points="18,2 34,18 18,34 2,18" fill="#CC0000"/>
-      <text x="18" y="23" textAnchor="middle" fill="#fff" fontSize="14" fontWeight="900" fontFamily="Arial Black, Arial">M</text>
-      <text x="42" y="25" fill="#1a1a1a" fontSize="17" fontWeight="900" fontFamily="Arial Black, Arial" letterSpacing="0.5">METZELER</text>
+    <svg height={height} width={w} viewBox="0 0 380 80" fill="none" className={className}>
+      {/* METZELER em azul marinho bold */}
+      <text
+        x="0" y="52"
+        fill="#0D1B4B"
+        fontSize="52"
+        fontWeight="900"
+        fontFamily="Arial Black, Impact, sans-serif"
+        letterSpacing="0.5"
+      >METZELER</text>
+      {/* SHARING INDEPENDENCE — texto secundário */}
+      <text
+        x="2" y="72"
+        fill="#0D1B4B"
+        fontSize="15"
+        fontWeight="700"
+        fontFamily="Arial, sans-serif"
+        letterSpacing="4"
+      >SHARING INDEPENDENCE</text>
+      {/* Círculo com elefante estilizado à direita */}
+      <circle cx="360" cy="38" r="26" stroke="#0D1B4B" strokeWidth="2.5" fill="none" />
+      {/* Elefante mínimo: cabeça + tromba + orelha */}
+      <ellipse cx="358" cy="36" rx="12" ry="11" fill="#0D1B4B" />
+      <ellipse cx="348" cy="32" rx="6" ry="8" fill="#0D1B4B" />
+      <path d="M 353,46 Q 350,54 355,56 Q 360,58 358,50" stroke="#0D1B4B" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <circle cx="364" cy="33" r="2" fill="white" />
     </svg>
   )
 }
 
+/* ─────────────────────────────────────────
+   BRIDGESTONE — preto bold + B vermelho
+───────────────────────────────────────── */
 export function LogoBridgestone({ height = 36, className = '' }: LogoProps) {
-  const w = Math.round(height * (190 / 36))
+  const w = Math.round(height * (500 / 80))
   return (
-    <svg height={height} width={w} viewBox="0 0 190 36" fill="none" className={className}>
-      <rect x="0" y="2" width="32" height="32" rx="3" fill="#E3000F"/>
-      <text x="16" y="24" textAnchor="middle" fill="#fff" fontSize="22" fontWeight="900" fontFamily="Arial Black, Arial">B</text>
-      <text x="40" y="25" fill="#1a1a1a" fontSize="15" fontWeight="900" fontFamily="Arial Black, Arial" letterSpacing="0.3">BRIDGESTONE</text>
+    <svg height={height} width={w} viewBox="0 0 500 80" fill="none" className={className}>
+      {/* Triângulo vermelho no topo-esquerdo do B — característica icônica */}
+      <polygon points="0,0 40,0 0,42" fill="#E3000F" />
+      {/* BRIDGESTONE em preto negrito itálico */}
+      <text
+        x="6" y="72"
+        fill="#1a1a1a"
+        fontSize="68"
+        fontWeight="900"
+        fontFamily="Impact, Arial Black, sans-serif"
+        fontStyle="italic"
+        letterSpacing="-2"
+      >BRIDGESTONE</text>
     </svg>
   )
 }
 
-export function LogoRinaldi({ height = 36, className = '' }: LogoProps) {
-  const w = Math.round(height * (140 / 36))
-  return (
-    <svg height={height} width={w} viewBox="0 0 140 36" fill="none" className={className}>
-      <rect x="0" y="2" width="32" height="32" rx="3" fill="#1a1a1a"/>
-      <text x="16" y="24" textAnchor="middle" fill="#fff" fontSize="18" fontWeight="900" fontFamily="Arial Black, Arial">R</text>
-      <text x="40" y="25" fill="#1a1a1a" fontSize="17" fontWeight="900" fontFamily="Arial Black, Arial" letterSpacing="0.5">RINALDI</text>
-    </svg>
-  )
-}
-
+/* ─────────────────────────────────────────
+   MOTUL — retângulo vermelho + MOTUL branco
+───────────────────────────────────────── */
 export function LogoMotul({ height = 36, className = '' }: LogoProps) {
-  const w = Math.round(height * (115 / 36))
+  const w = Math.round(height * (280 / 90))
   return (
-    <svg height={height} width={w} viewBox="0 0 115 36" fill="none" className={className}>
-      {/* Red left block */}
-      <rect x="0" y="0" width="36" height="36" rx="3" fill="#CC0000"/>
-      {/* M letter */}
-      <text x="18" y="25" textAnchor="middle" fill="#fff" fontSize="20" fontWeight="900" fontFamily="Arial Black, Arial">M</text>
-      {/* OTUL */}
-      <text x="44" y="25" fill="#CC0000" fontSize="19" fontWeight="900" fontFamily="Arial Black, Arial" letterSpacing="0.5">OTUL</text>
+    <svg height={height} width={w} viewBox="0 0 280 90" fill="none" className={className}>
+      {/* Fundo vermelho sólido */}
+      <rect x="0" y="0" width="280" height="90" fill="#EE1C25" />
+      {/* MOTUL branco bold itálico */}
+      <text
+        x="12" y="74"
+        fill="white"
+        fontSize="70"
+        fontWeight="900"
+        fontFamily="Impact, Arial Black, sans-serif"
+        fontStyle="italic"
+        letterSpacing="-2"
+      >MOTUL</text>
     </svg>
   )
 }
 
-export function LogoEBC({ height = 36, className = '' }: LogoProps) {
-  // Proporção real: ~500x265 → ~1.89:1
+/* ─────────────────────────────────────────
+   EBC BRAKES — azul marinho + vermelho
+───────────────────────────────────────── */
+export function LogoEBC({ height = 40, className = '' }: LogoProps) {
   const w = Math.round(height * 1.9)
   return (
     <svg height={height} width={w} viewBox="0 0 190 100" fill="none" className={className}>
-      {/* EBC — letras sólidas azul marinho, estilo real */}
       <text
         x="4" y="72"
         fill="#1B3A8C"
@@ -90,7 +163,6 @@ export function LogoEBC({ height = 36, className = '' }: LogoProps) {
         fontFamily="Impact, Arial Black, sans-serif"
         letterSpacing="-2"
       >EBC</text>
-      {/* BRAKES — vermelho abaixo, alinhado à direita do EBC */}
       <text
         x="4" y="95"
         fill="#E63228"
@@ -103,12 +175,13 @@ export function LogoEBC({ height = 36, className = '' }: LogoProps) {
   )
 }
 
-export function LogoDID({ height = 36, className = '' }: LogoProps) {
-  // Proporção real: ~575x265 → ~2.17:1
+/* ─────────────────────────────────────────
+   D.I.D. RACING CHAIN — vermelho + cursivo
+───────────────────────────────────────── */
+export function LogoDID({ height = 40, className = '' }: LogoProps) {
   const w = Math.round(height * 2.2)
   return (
     <svg height={height} width={w} viewBox="0 0 220 100" fill="none" className={className}>
-      {/* D.I.D. — vermelho bold, estilo bloco real */}
       <text
         x="2" y="62"
         fill="#CC0000"
@@ -117,17 +190,14 @@ export function LogoDID({ height = 36, className = '' }: LogoProps) {
         fontFamily="Impact, Arial Black, sans-serif"
         letterSpacing="2"
       >D.I.D.</text>
-      {/* Racing Chain — cursive escuro */}
       <text
         x="6" y="82"
         fill="#1a1a1a"
         fontSize="18"
-        fontWeight="400"
         fontFamily="Georgia, 'Times New Roman', serif"
         fontStyle="italic"
         letterSpacing="1"
       >Racing Chain</text>
-      {/* Powered by Technology — vermelho pequeno */}
       <text
         x="6" y="97"
         fill="#CC0000"
