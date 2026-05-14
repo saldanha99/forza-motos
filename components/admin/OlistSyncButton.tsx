@@ -412,6 +412,12 @@ export function OlistSyncButton() {
           </button>
         </div>
 
+        <button onClick={() => handleCleanup('inativos')} disabled={loadingCleanup}
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-red-900/40 hover:bg-red-900/60 disabled:opacity-40 text-red-300 text-[11px] font-medium rounded transition-colors">
+          {loadingCleanup ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+          Excluir inativos (fantasmas sem Tiny)
+        </button>
+
         <button onClick={() => handleCleanup('sync_tiny')} disabled={loadingCleanup}
           className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-red-900/30 hover:bg-red-900/50 disabled:opacity-40 text-red-300 text-[11px] font-medium rounded transition-colors">
           {loadingCleanup ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}

@@ -20,6 +20,15 @@ export async function POST(req: Request) {
 
   let removidos = 0
 
+  if (tipo === 'inativos') {
+    // Remove produtos marcados como ativo=false (fantasmas confirmados pelo sync de imagens)
+    const r = await prisma.product.deleteMany({
+      where: { ativo: false },
+    })
+    removidos = r.count
+    return NextResponse.json({ ok: true, removidos, tipo: 'inativos' })
+  }
+
   if (tipo === 'preco_zero') {
     // Remove produtos com preco=0 E sem estoque
     const r = await prisma.product.deleteMany({
