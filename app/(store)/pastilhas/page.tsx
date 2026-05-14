@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import type { Metadata } from 'next'
 import { CategoryLanding } from '@/components/store/CategoryLanding'
 import { SITE_URL } from '@/lib/schema'

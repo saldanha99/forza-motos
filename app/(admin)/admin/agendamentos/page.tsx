@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { prisma } from '@/lib/prisma'
 import { formatDate } from '@/lib/utils'
 import { statusBadge } from '@/components/ui/Badge'
