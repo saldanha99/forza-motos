@@ -166,7 +166,7 @@ export function OlistSyncButton() {
     // ── Fase A: Coletar todos os SKUs do Tiny em blocos ──────────────────────
     while (proximaPagina !== null) {
       try {
-        const res = await fetch('/api/admin/marcar-fantasmas', {
+        const res: Response = await fetch('/api/admin/marcar-fantasmas', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ fase: 'coletar', pagina: proximaPagina }),
         })
@@ -188,7 +188,7 @@ export function OlistSyncButton() {
     // ── Fase B: Marcar fantasmas no banco ────────────────────────────────────
     setFantasmasStep('marcando')
     try {
-      const res = await fetch('/api/admin/marcar-fantasmas', {
+      const res: Response = await fetch('/api/admin/marcar-fantasmas', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fase: 'marcar', skusTiny: todosSkus }),
       })
