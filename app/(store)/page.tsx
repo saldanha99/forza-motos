@@ -187,7 +187,7 @@ export default async function HomePage() {
       {maisVendidos.length > 0 && (
         <div style={{ background: '#fff', borderBottom: '1px solid #eee', padding: '52px 0' }}>
           <div className="max-w-[1280px] mx-auto px-6 md:px-12">
-            <ScrollReveal>
+            <ScrollReveal type="blur-up">
               <div className="flex items-end justify-between mb-7">
                 <div>
                   <div className="flex items-center gap-2 mb-1.5">
@@ -217,7 +217,7 @@ export default async function HomePage() {
             {/* Grid 2→4→6 colunas */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
               {maisVendidos.slice(0, 12).map((p: any, i: number) => (
-                <ScrollReveal key={p.id} delay={i * 40}>
+                <ScrollReveal key={p.id} type="scale" delay={i * 50}>
                   <ProductCard produto={p} />
                 </ScrollReveal>
               ))}
@@ -263,7 +263,7 @@ export default async function HomePage() {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4" id="servicos">
             {SERVICOS.map((s, i) => (
-              <ScrollReveal key={s.titulo} delay={i * 90}>
+              <ScrollReveal key={s.titulo} type="scale" delay={i * 100}>
                 <Link href="/agendar">
                   <div className="bg-white border border-[#eee] hover:border-[#d42b2b] hover:shadow-lg rounded-xl p-5 transition-all cursor-pointer group card-lift h-full">
                     <div className="text-3xl mb-3 transition-transform duration-300 group-hover:scale-110 inline-block">{s.icon}</div>
@@ -305,7 +305,7 @@ export default async function HomePage() {
       {/* ── PromosSection ─────────────────────────────────────────────────── */}
       {promos.length > 0 && (
         <div className="max-w-[1280px] mx-auto px-6 md:px-12 py-11">
-          <ScrollReveal>
+          <ScrollReveal type="blur-up">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <p className="text-[#d42b2b] font-barlow font-bold text-[12px] uppercase tracking-[1.5px] mb-1">Ofertas especiais</p>
@@ -318,7 +318,7 @@ export default async function HomePage() {
           </ScrollReveal>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
             {promos.map((p, i) => (
-              <ScrollReveal key={p.id} delay={i * 60}>
+              <ScrollReveal key={p.id} type="scale" delay={i * 80}>
                 <ProductCard produto={p} />
               </ScrollReveal>
             ))}
@@ -337,7 +337,7 @@ export default async function HomePage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {POP_CATS.map((cat, i) => (
-              <ScrollReveal key={cat.id} delay={i * 70}>
+              <ScrollReveal key={cat.id} type="scale" delay={i * 80}>
                 <Link href={cat.href}>
                   <div
                     className="cat-card overflow-hidden cursor-pointer flex flex-col justify-end relative"
@@ -396,13 +396,13 @@ export default async function HomePage() {
       {/* ── MarcasSection ─────────────────────────────────────────────────── */}
       <div style={{ background: '#f5f5f5', borderTop: '1px solid #eee', padding: '44px 0' }}>
         <div className="max-w-[1280px] mx-auto px-6 md:px-12">
-          <ScrollReveal>
+          <ScrollReveal type="blur-up">
             <h2 className="font-barlow font-bold text-[26px] text-[#111] mb-2 tracking-[-0.3px]">Marcas Parceiras</h2>
             <p className="font-inter text-[13px] text-[#888] mb-6">Distribuidora autorizada das principais marcas do mundo</p>
           </ScrollReveal>
           <div className="flex gap-2.5 flex-wrap items-center justify-between">
             {BRANDS.map((brand, i) => (
-              <ScrollReveal key={brand} delay={i * 60}>
+              <ScrollReveal key={brand} type="blur" delay={i * 70}>
                 <div className="bg-white border border-[#eee] rounded-xl px-7 py-5 flex items-center justify-center cursor-pointer hover:border-[#d42b2b] hover:shadow-md transition-all duration-200 group card-lift min-w-[110px]">
                   <span className="font-barlow font-black text-[22px] md:text-[26px] text-[#444] tracking-[2px] group-hover:text-[#d42b2b] transition-colors">
                     {brand}

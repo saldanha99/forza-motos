@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import { LogoSVG } from '@/components/store/LogoSVG'
 import { useSession } from 'next-auth/react'
 import { useCartStore } from '@/store/cart'
 import { Search, User, ShoppingCart, Menu, X } from 'lucide-react'
@@ -132,16 +132,8 @@ export function Header() {
 
         {/* Logo */}
         <Link href="/" className="shrink-0">
-          <div className="bg-white rounded-[5px] px-2 py-[5px] flex items-center justify-center" style={{ minWidth: 52 }}>
-            <Image
-              src="/logo.png"
-              alt="Forza Motos"
-              width={120}
-              height={44}
-              className="h-[36px] md:h-[42px] w-auto object-contain"
-              priority
-            />
-          </div>
+          <LogoSVG dark height={40} className="hidden md:block" />
+          <LogoSVG dark height={32} className="md:hidden" />
         </Link>
 
         {/* Search */}

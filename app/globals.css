@@ -49,24 +49,70 @@
   .bg-vermelho     { background-color: #d42b2b; }
   .border-vermelho { border-color: #d42b2b; }
 
-  /* ── Scroll-triggered fade-in ── */
+  /* ── Scroll-triggered reveals ── */
+
+  /* fade + slide up (default) */
   .reveal {
     opacity: 0;
-    transform: translateY(24px);
-    transition: opacity 0.6s ease, transform 0.6s ease;
+    transform: translateY(32px);
+    transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  .reveal.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* slide from left */
   .reveal-left {
     opacity: 0;
-    transform: translateX(-24px);
-    transition: opacity 0.6s ease, transform 0.6s ease;
+    transform: translateX(-32px);
+    transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  .reveal-left.visible {
-    opacity: 1;
-    transform: translateX(0);
+  .reveal-left.visible { opacity: 1; transform: translateX(0); }
+
+  /* slide from right */
+  .reveal-right {
+    opacity: 0;
+    transform: translateX(32px);
+    transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal-right.visible { opacity: 1; transform: translateX(0); }
+
+  /* scale up from 92% */
+  .reveal-scale {
+    opacity: 0;
+    transform: scale(0.92) translateY(16px);
+    transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal-scale.visible { opacity: 1; transform: scale(1) translateY(0); }
+
+  /* blur fade */
+  .reveal-blur {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(10px);
+    transition: opacity 0.85s ease,
+                filter 0.85s ease,
+                transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal-blur.visible { opacity: 1; filter: blur(0px); transform: translateY(0); }
+
+  /* blur + slide up (headings) */
+  .reveal-blur-up {
+    opacity: 0;
+    filter: blur(12px);
+    transform: translateY(28px);
+    transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+                filter 0.9s ease,
+                transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal-blur-up.visible { opacity: 1; filter: blur(0px); transform: translateY(0); }
+
+  /* Lenis velocity micro-squeeze on cards while scrolling */
+  html.lenis-scrolling .card-lift {
+    transform: scale(0.9975);
+    transition: transform 0.3s ease !important;
   }
 
   /* ── Shimmer skeleton ── */

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import Image from 'next/image'
+import { LogoSVG } from '@/components/store/LogoSVG'
 
 const COLS = [
   {
@@ -50,14 +50,8 @@ export function Footer() {
 
         {/* Brand column */}
         <div>
-          <div className="bg-white rounded-[5px] px-2 py-[6px] inline-flex mb-5">
-            <Image
-              src="/logo.png"
-              alt="Forza Motos"
-              width={120}
-              height={44}
-              className="h-[40px] w-auto object-contain"
-            />
+          <div className="mb-5">
+            <LogoSVG dark height={38} />
           </div>
 
           <p className="text-[13px] text-[#777] leading-[1.7] mb-4">
