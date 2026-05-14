@@ -414,20 +414,37 @@ export default async function HomePage() {
       {destaque.length > 0 && <FeaturedCarousel produtos={destaque} />}
 
       {/* ── RedBanner ─────────────────────────────────────────────────────── */}
-      <div style={{ background: '#d42b2b', padding: '44px 48px', textAlign: 'center' }}>
-        <div className="font-barlow font-black text-[32px] md:text-[38px] text-white tracking-[-0.5px] leading-[1.1]">
-          PEÇAS ORIGINAIS PARA SUA MOTO
+      <div className="relative overflow-hidden" style={{ minHeight: 220 }}>
+        {/* Imagem de fundo */}
+        <Image
+          src="/images/cta-banner.jpg"
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover object-center"
+          priority={false}
+        />
+        {/* Overlay vermelho semitransparente */}
+        <div
+          className="absolute inset-0"
+          style={{ background: 'rgba(180,20,20,0.82)' }}
+        />
+        {/* Conteúdo */}
+        <div className="relative z-10 flex flex-col items-center justify-center text-center px-6 py-14">
+          <div className="font-barlow font-black text-[32px] md:text-[44px] text-white tracking-[-0.5px] leading-[1.1] drop-shadow-lg">
+            PEÇAS ORIGINAIS PARA SUA MOTO
+          </div>
+          <div className="font-barlow font-bold text-[18px] md:text-[22px] mt-2 tracking-[2.5px] uppercase drop-shadow" style={{ color: 'rgba(255,255,255,0.88)' }}>
+            ENTREGA EM TODO O BRASIL
+          </div>
+          <Link
+            href="/produtos"
+            className="inline-block mt-7 bg-white text-[#d42b2b] font-barlow font-black text-[18px] uppercase tracking-[0.5px] px-10 py-[14px] hover:bg-[#fff0f0] transition-all hover:scale-[1.02] active:scale-[0.98]"
+            style={{ borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.25)' }}
+          >
+            VER CATÁLOGO COMPLETO
+          </Link>
         </div>
-        <div className="font-barlow font-bold text-[20px] md:text-[22px] mt-1.5 tracking-[2px] uppercase" style={{ color: 'rgba(255,255,255,0.82)' }}>
-          ENTREGA EM TODO O BRASIL
-        </div>
-        <Link
-          href="/produtos"
-          className="inline-block mt-[22px] bg-white text-[#d42b2b] font-barlow font-black text-[18px] uppercase tracking-[0.5px] px-9 py-[13px] hover:bg-[#ffe5e5] transition-colors"
-          style={{ borderRadius: 3 }}
-        >
-          VER CATÁLOGO COMPLETO
-        </Link>
       </div>
 
       {/* ── MarcasSection ─────────────────────────────────────────────────── */}
