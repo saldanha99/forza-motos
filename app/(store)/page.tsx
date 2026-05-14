@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 import Link from 'next/link'
+import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/store/ProductCard'
 import { FeaturedCarousel } from '@/components/store/FeaturedCarousel'
@@ -127,11 +128,11 @@ function TireArt() {
 }
 
 const POP_CATS = [
-  { id: 'Pneus',       label: 'Pneus Premium',        sub: 'Pirelli · Michelin · Bridgestone', bg: 'linear-gradient(145deg,#1a1a2e,#2a2a44)', href: '/produtos?categoria=Pneus' },
-  { id: 'Lubrificantes', label: 'Óleos e Lubrificantes', sub: 'Motul · Castrol · Shell',        bg: 'linear-gradient(145deg,#1e1008,#321a0e)', href: '/produtos?categoria=Lubrificantes' },
-  { id: 'Freios',      label: 'Freios e Segurança',    sub: 'EBC · Brembo · ATE',              bg: 'linear-gradient(145deg,#1e0808,#321010)', href: '/produtos?categoria=Freios' },
-  { id: 'Transmissão', label: 'Transmissão',           sub: 'DID · RK · Regina',               bg: 'linear-gradient(145deg,#08121e,#102030)', href: '/produtos?categoria=Transmissão' },
-  { id: 'Capacetes',   label: 'Capacetes e EPI',       sub: 'AGV · HJC · Shoei',               bg: 'linear-gradient(145deg,#0a0a1e,#14143a)', href: '/produtos?categoria=Capacetes' },
+  { id: 'Pneus',         label: 'Pneus Premium',          sub: 'Pirelli · Michelin · Bridgestone', img: '/images/categories/pneus.jpg',       href: '/produtos?categoria=Pneus' },
+  { id: 'Lubrificantes', label: 'Óleos e Lubrificantes',  sub: 'Motul · Castrol · Shell',          img: '/images/categories/oleos.jpg',       href: '/produtos?categoria=Lubrificantes' },
+  { id: 'Freios',        label: 'Freios e Segurança',     sub: 'EBC · Brembo · ATE',              img: '/images/categories/freios.jpg',      href: '/produtos?categoria=Freios' },
+  { id: 'Transmissão',   label: 'Transmissão',            sub: 'DID · RK · Regina',               img: '/images/categories/transmissao.jpg', href: '/produtos?categoria=Transmissão' },
+  { id: 'Capacetes',     label: 'Capacetes e EPI',        sub: 'AGV · HJC · Shoei',               img: '/images/categories/capacetes.jpg',   href: '/produtos?categoria=Capacetes' },
 ]
 
 const BRANDS = ['PIRELLI', 'METZELER', 'MICHELIN', 'MOTUL', 'EBC', 'DID']
@@ -341,26 +342,41 @@ export default async function HomePage() {
               <ScrollReveal key={cat.id} type="scale" delay={i * 80}>
                 <Link href={cat.href}>
                   <div
-                    className="cat-card overflow-hidden cursor-pointer flex flex-col justify-end relative"
+                    className="cat-card overflow-hidden cursor-pointer flex flex-col justify-end relative group"
                     style={{
-                      background: cat.bg,
                       borderRadius: 10,
                       aspectRatio: '3/4',
-                      padding: '20px 16px',
-                      boxShadow: '0 2px 12px rgba(0,0,0,0.2)',
+                      boxShadow: '0 2px 20px rgba(0,0,0,0.3)',
                     }}
                   >
+                    {/* Imagem de fundo gerada por IA */}
+                    <Image
+                      src={cat.img}
+                      alt={cat.label}
+                      fill
+                      sizes="(max-width: 768px) 50vw, 20vw"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      priority={i < 2}
+                    />
+
+                    {/* Overlay escuro gradiente */}
                     <div
+                      className="absolute inset-0 transition-opacity duration-300 group-hover:opacity-80"
                       style={{
-                        position: 'absolute', inset: 0,
-                        background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 60%, transparent 100%)',
+                        background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.3) 55%, rgba(0,0,0,0.1) 100%)',
                       }}
                     />
-                    <div className="relative z-10">
-                      <div className="font-barlow font-bold text-[16px] text-white leading-[1.2] mb-1">{cat.label}</div>
-                      <div className="font-inter text-[10px] leading-[1.4]" style={{ color: 'rgba(255,255,255,0.55)' }}>{cat.sub}</div>
+
+                    {/* Conteúdo */}
+                    <div className="relative z-10 p-4">
+                      <div className="font-barlow font-bold text-[15px] text-white leading-[1.2] mb-1 group-hover:text-[#ff6060] transition-colors">
+                        {cat.label}
+                      </div>
+                      <div className="font-inter text-[10px] leading-[1.4]" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                        {cat.sub}
+                      </div>
                       <div
-                        className="mt-3 text-white text-[10px] font-barlow font-bold px-2.5 py-1 inline-flex items-center gap-1 uppercase tracking-[0.5px]"
+                        className="mt-3 text-white text-[10px] font-barlow font-bold px-2.5 py-1 inline-flex items-center gap-1 uppercase tracking-[0.5px] transition-all group-hover:gap-2"
                         style={{ background: '#d42b2b', borderRadius: 3 }}
                       >
                         Explorar <ArrowRight size={10} />
