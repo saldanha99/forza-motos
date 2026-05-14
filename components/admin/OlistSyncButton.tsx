@@ -21,6 +21,7 @@ export function OlistSyncButton() {
   const [imagensRestantes, setImagensRestantes] = useState<number | null>(null)
   const [imagensNaoVerificadas, setImagensNaoVerificadas] = useState<number | null>(null)
   const [imagensAcum, setImagensAcum] = useState(0)
+  const [imagensDesativados, setImagensDesativados] = useState(0)
   const [imagensError, setImagensError] = useState('')
   const [imagensDone, setImagensDone] = useState(false)
 
@@ -90,6 +91,7 @@ export function OlistSyncButton() {
     setImagensDone(false)
     setImagensError('')
     let totalAcum = 0
+    let desativadosAcum = 0
 
     while (true) {
       try {
@@ -98,12 +100,14 @@ export function OlistSyncButton() {
         if (data.error) { setImagensError(data.error); break }
 
         totalAcum += data.atualizados ?? 0
+        desativadosAcum += data.naoEncontradosNoTiny ?? 0
         setImagensAcum(totalAcum)
+        setImagensDesativados(desativadosAcum)
         setImagensRestantes(data.restantes ?? 0)
         setImagensNaoVerificadas(data.naoVerificados ?? 0)
 
         if (!data.hasMore) { setImagensDone(true); break }
-        await new Promise(r => setTimeout(r, 3000))
+        await new Promise(r => setTimeout(r, 2000))
       } catch {
         setImagensError('Erro de conexão')
         break
@@ -261,7 +265,7 @@ export function OlistSyncButton() {
             <ImageIcon size={14} className="text-zinc-500" />
             <div>
               <span>Passo 2 — Imagens</span>
-              <p className="text-[11px] text-zinc-600">Busca fotos dos produtos (3 por vez)</p>
+              <p className="text-[11px] text-zinc-600">Busca fotos dos produtos (15 por vez)</p>
             </div>
           </div>
           <button onClick={handleBuscarImagens} disabled={loadingImagens}
@@ -280,7 +284,13 @@ export function OlistSyncButton() {
         {!loadingImagens && (imagensDone || imagensError) && (
           <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${imagensError ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'}`}>
             {imagensError ? <AlertCircle size={12} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={12} className="mt-0.5 shrink-0" />}
-            <span>{imagensError || `${imagensAcum} imagens encontradas · ${imagensRestantes ?? 0} sem foto no Tiny`}</span>
+            <span>
+              {imagensError || (
+                `${imagensAcum} imagens salvas` +
+                (imagensDesativados > 0 ? ` · ${imagensDesativados} removidos (não existem no Tiny)` : '') +
+                ` · ${imagensRestantes ?? 0} ainda sem foto`
+              )}
+            </span>
           </div>
         )}
 

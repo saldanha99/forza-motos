@@ -187,11 +187,22 @@ export async function syncImagensLote(limite = 10) {
   let atualizados = 0
   let erros = 0
   let semImagemNoTiny = 0
+  let naoEncontradosNoTiny = 0
 
   for (const produto of precisam) {
     try {
       const detalhe = await fetchTinyProduct(produto.tinyId!)
-      if (!detalhe) { erros++; continue }
+      if (!detalhe) {
+        // Produto não existe mais no Tiny → marca como verificado e inativo
+        // para não poluir os próximos lotes
+        await prisma.product.update({
+          where: { id: produto.id },
+          data: { imagensVerificadas: true, ativo: false },
+        })
+        naoEncontradosNoTiny++
+        erros++
+        continue
+      }
 
       const imagens = extrairImagensTiny(detalhe)
       const descricao = detalhe.descricao_complementar || detalhe.obs || detalhe.descricao_curta || ''
@@ -240,6 +251,7 @@ export async function syncImagensLote(limite = 10) {
     erros,
     semImagem: precisam.length,
     semImagemNoTiny,
+    naoEncontradosNoTiny,
     restantes,
     naoVerificados,
     hasMore: naoVerificados > 0,
