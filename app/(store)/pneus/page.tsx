@@ -68,7 +68,7 @@ async function getDadosPneus() {
       where: {
         ativo: true,
         estoque: { gt: 0 },
-        temImagem: true,
+        
         OR: [
           { categoria: { contains: 'pneu', mode: 'insensitive' } },
           { nome: { contains: 'pneu', mode: 'insensitive' } },
@@ -81,7 +81,7 @@ async function getDadosPneus() {
       where: {
         ativo: true,
         estoque: { gt: 0 },
-        temImagem: true,
+        
         OR: [
           { categoria: { contains: 'pneu', mode: 'insensitive' } },
           { nome: { contains: 'pneu', mode: 'insensitive' } },

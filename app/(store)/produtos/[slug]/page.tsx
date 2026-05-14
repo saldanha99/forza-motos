@@ -53,7 +53,7 @@ export default async function ProdutoPage({ params }: Props) {
       categoria: produto.categoria,
       ativo: true,
       estoque: { gt: 0 },
-      temImagem: true,
+      
       id: { not: produto.id },
     },
     take: 4,
