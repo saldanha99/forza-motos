@@ -143,28 +143,28 @@ const SERVICOS = [
     titulo: 'Troca de Pneu',
     sub: 'Pirelli · Metzeler · Michelin',
     tempo: '~20 min',
-    icon: '🏍️',
+    img: '/images/services/pneu.jpg',
     cor: '#d42b2b',
   },
   {
     titulo: 'Pastilha de Freio',
     sub: 'Peças originais e homologadas',
     tempo: '~15 min',
-    icon: '🛑',
+    img: '/images/services/freio.jpg',
     cor: '#e05a00',
   },
   {
     titulo: 'Troca de Óleo',
     sub: 'Óleos certificados para motos',
     tempo: '~20 min',
-    icon: '🔧',
+    img: '/images/services/oleo.jpg',
     cor: '#0077cc',
   },
   {
     titulo: 'Kit Transmissão',
     sub: 'Corrente · Pinhão · Coroa',
     tempo: '~30 min',
-    icon: '⚙️',
+    img: '/images/services/transmissao.jpg',
     cor: '#1a7a2e',
   },
 ]
@@ -267,17 +267,37 @@ export default async function HomePage() {
             {SERVICOS.map((s, i) => (
               <ScrollReveal key={s.titulo} type="scale" delay={i * 100}>
                 <Link href="/agendar">
-                  <div className="bg-white border border-[#eee] hover:border-[#d42b2b] hover:shadow-lg rounded-xl p-5 transition-all cursor-pointer group card-lift h-full">
-                    <div className="text-3xl mb-3 transition-transform duration-300 group-hover:scale-110 inline-block">{s.icon}</div>
-                    <div className="font-barlow font-bold text-[18px] text-[#111] leading-[1.2] mb-1 group-hover:text-[#d42b2b] transition-colors">
-                      {s.titulo}
-                    </div>
-                    <div className="font-inter text-[12px] text-[#888] mb-3">{s.sub}</div>
-                    <div
-                      className="inline-flex items-center gap-1 text-[11px] font-barlow font-bold px-2.5 py-1 rounded-sm uppercase tracking-[0.5px] text-white"
-                      style={{ background: s.cor }}
-                    >
-                      ⏱ {s.tempo}
+                  <div className="overflow-hidden rounded-xl cursor-pointer group card-lift h-full relative" style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.15)' }}>
+                    {/* Imagem de fundo */}
+                    <div className="relative w-full" style={{ aspectRatio: '1/1' }}>
+                      <Image
+                        src={s.img}
+                        alt={s.titulo}
+                        fill
+                        sizes="(max-width: 768px) 50vw, 25vw"
+                        className="object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                      {/* Overlay escuro */}
+                      <div
+                        className="absolute inset-0 transition-opacity duration-300 group-hover:opacity-90"
+                        style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0.1) 100%)' }}
+                      />
+                      {/* Badge tempo */}
+                      <div className="absolute top-3 right-3">
+                        <span
+                          className="text-[11px] font-barlow font-bold px-2 py-1 text-white uppercase tracking-wide"
+                          style={{ background: s.cor, borderRadius: 3 }}
+                        >
+                          ⏱ {s.tempo}
+                        </span>
+                      </div>
+                      {/* Texto inferior */}
+                      <div className="absolute bottom-0 left-0 right-0 p-4">
+                        <div className="font-barlow font-bold text-[17px] text-white leading-[1.2] mb-0.5 group-hover:text-[#ff6060] transition-colors">
+                          {s.titulo}
+                        </div>
+                        <div className="font-inter text-[11px]" style={{ color: 'rgba(255,255,255,0.6)' }}>{s.sub}</div>
+                      </div>
                     </div>
                   </div>
                 </Link>

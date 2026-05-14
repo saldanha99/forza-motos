@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 // ── Tire SVG animado ──────────────────────────────────────────────────────────
@@ -72,7 +73,7 @@ const SLIDES = [
     cta: { label: 'VER PRODUTOS', href: '/produtos' },
     ctaSecond: { label: 'AGENDAR SERVIÇO', href: '/agendar' },
     visual: 'tire',
-    bg: 'linear-gradient(135deg,#0c0c0c 0%,#181818 55%,#0c0c0c 100%)',
+    bgImg: '/images/hero/slide-pneus.jpg',
     accent1: { label: 'Credenciada', value: 'PIRELLI · MICHELIN' },
     accent2: { label: 'Box rápido', value: '30 MINUTOS' },
   },
@@ -86,7 +87,7 @@ const SLIDES = [
     cta: { label: 'AGENDAR AGORA', href: '/agendar' },
     ctaSecond: { label: 'VER SERVIÇOS', href: '/#servicos' },
     visual: 'services',
-    bg: 'linear-gradient(135deg,#0a0a0a 0%,#151515 50%,#0a0a0a 100%)',
+    bgImg: '/images/hero/slide-servicos.jpg',
     accent1: { label: '+10 anos', value: 'EXPERIÊNCIA' },
     accent2: { label: 'Tempo médio', value: '~20 MIN' },
   },
@@ -100,7 +101,7 @@ const SLIDES = [
     cta: { label: 'COMPRAR AGORA', href: '/produtos' },
     ctaSecond: { label: 'VER PROMOÇÕES', href: '/produtos?promo=1' },
     visual: 'brands',
-    bg: 'linear-gradient(135deg,#0d0a08 0%,#1a1208 50%,#0d0a08 100%)',
+    bgImg: '/images/hero/slide-entrega.jpg',
     accent1: { label: 'Frete grátis', value: 'ACIMA R$299' },
     accent2: { label: 'Parcelas', value: 'ATÉ 12×' },
   },
@@ -278,32 +279,60 @@ export function HeroCarousel() {
 
       <div
         style={{
-          background: slide.bg,
           position: 'relative',
           overflow: 'hidden',
           minHeight: 480,
-          transition: 'background 0.8s ease',
         }}
       >
+        {/* Background image com transição */}
+        {SLIDES.map((s, i) => (
+          <div
+            key={s.id}
+            style={{
+              position: 'absolute', inset: 0,
+              opacity: i === current ? 1 : 0,
+              transition: 'opacity 0.8s ease',
+              zIndex: 0,
+            }}
+          >
+            <Image
+              src={s.bgImg}
+              alt=""
+              fill
+              sizes="100vw"
+              className="object-cover object-center"
+              priority={i === 0}
+            />
+          </div>
+        ))}
+
+        {/* Overlay escuro para legibilidade do texto */}
+        <div
+          style={{
+            position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none',
+            background: 'linear-gradient(90deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.3) 100%)',
+          }}
+        />
+
         {/* Grid texture */}
         <div
           style={{
-            position: 'absolute', inset: 0, pointerEvents: 'none',
+            position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2,
             backgroundImage:
-              'linear-gradient(rgba(255,255,255,0.018) 1px,transparent 1px),' +
-              'linear-gradient(90deg,rgba(255,255,255,0.018) 1px,transparent 1px)',
+              'linear-gradient(rgba(255,255,255,0.012) 1px,transparent 1px),' +
+              'linear-gradient(90deg,rgba(255,255,255,0.012) 1px,transparent 1px)',
             backgroundSize: '64px 64px',
           }}
         />
 
         {/* Red accent line top */}
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: '#d42b2b', opacity: 0.9 }} />
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: '#d42b2b', opacity: 0.9, zIndex: 3 }} />
 
         {/* Content */}
         <div
           key={current}
-          className={`hero-content-enter max-w-[1280px] mx-auto grid md:grid-cols-2 px-6 md:px-12 relative z-10`}
-          style={{ minHeight: 460 }}
+          className={`hero-content-enter max-w-[1280px] mx-auto grid md:grid-cols-2 px-6 md:px-12`}
+          style={{ minHeight: 460, position: 'relative', zIndex: 10 }}
         >
           {/* LEFT */}
           <div className="py-12 flex flex-col justify-center gap-5">
@@ -373,7 +402,7 @@ export function HeroCarousel() {
         {/* Prev / Next arrows */}
         <button
           onClick={prev}
-          className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+          className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95"
           style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)' }}
           aria-label="Anterior"
         >
@@ -381,7 +410,7 @@ export function HeroCarousel() {
         </button>
         <button
           onClick={next}
-          className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+          className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95"
           style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)' }}
           aria-label="Próximo"
         >
@@ -389,7 +418,7 @@ export function HeroCarousel() {
         </button>
 
         {/* Dots + progress */}
-        <div className="relative z-10 flex flex-col items-center gap-2 pb-5">
+        <div className="relative z-30 flex flex-col items-center gap-2 pb-5">
           <div className="flex gap-2 items-center">
             {SLIDES.map((s, i) => (
               <button
