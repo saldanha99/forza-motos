@@ -9,7 +9,7 @@ import { FAQSection } from '@/components/store/FAQSection'
 import { MODELOS_MOTOS, getModelosPorMarca } from '@/lib/motos-modelos'
 import { CheckCircle2, Wrench, Clock, Shield, Award, Zap } from 'lucide-react'
 import { SITE_URL } from '@/lib/schema'
-import { LogoPirelli, LogoMichelin, LogoMetzeler, LogoBridgestone, LogoRinaldi } from '@/components/store/BrandLogo'
+import { LogoPirelli, LogoMichelin, LogoMetzeler, LogoBridgestone } from '@/components/store/BrandLogo'
 
 export const metadata: Metadata = {
   title: 'Pneus de Moto em Campinas — Credenciada Pirelli, Metzeler e Michelin',
@@ -209,9 +209,6 @@ export default async function PneusPage() {
             </div>
             <div className="opacity-80 hover:opacity-100 transition-opacity">
               <LogoBridgestone height={28} />
-            </div>
-            <div className="opacity-80 hover:opacity-100 transition-opacity">
-              <LogoRinaldi height={28} />
             </div>
           </div>
           <p className="text-center text-[12px] text-[#aaa] mt-6 font-inter">
