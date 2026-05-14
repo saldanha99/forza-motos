@@ -40,6 +40,10 @@ export function OlistSyncButton() {
   const [loadingRecon, setLoadingRecon] = useState(false)
   const [reconResult, setReconResult] = useState<any>(null)
 
+  // ── Limpeza de produtos ───────────────────────────────────────────────────
+  const [loadingCleanup, setLoadingCleanup] = useState(false)
+  const [cleanupResult, setCleanupResult] = useState<any>(null)
+
   // ── Handlers ──────────────────────────────────────────────────────────────
   async function handleSyncMetadados() {
     setLoadingSync(true)
@@ -146,6 +150,23 @@ export function OlistSyncButton() {
       }
     }
     setLoadingEstoque(false)
+  }
+
+  async function handleCleanup(tipo: string) {
+    setLoadingCleanup(true)
+    setCleanupResult(null)
+    try {
+      const res = await fetch('/api/admin/cleanup-produtos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo }),
+      })
+      setCleanupResult(await res.json())
+    } catch {
+      setCleanupResult({ error: 'Erro de conexão' })
+    } finally {
+      setLoadingCleanup(false)
+    }
   }
 
   async function handleReconciliar() {
@@ -357,6 +378,49 @@ export function OlistSyncButton() {
                 }
               </span>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Limpeza de Banco ── */}
+      <div className="border-t border-zinc-800 pt-4 space-y-3">
+        <div>
+          <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">Limpeza de banco</p>
+          <p className="text-[10px] text-zinc-600">Remova produtos inválidos ou que já não existem no Tiny</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={() => handleCleanup('preco_zero')} disabled={loadingCleanup}
+            className="flex items-center justify-center gap-1.5 px-2 py-2 bg-orange-900/40 hover:bg-orange-900/60 disabled:opacity-40 text-orange-300 text-[11px] font-medium rounded transition-colors">
+            {loadingCleanup ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+            Remover R$0,00
+          </button>
+          <button onClick={() => handleCleanup('duplicados')} disabled={loadingCleanup}
+            className="flex items-center justify-center gap-1.5 px-2 py-2 bg-zinc-700/60 hover:bg-zinc-700 disabled:opacity-40 text-zinc-300 text-[11px] font-medium rounded transition-colors">
+            {loadingCleanup ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+            Remover duplicados
+          </button>
+        </div>
+
+        <button onClick={() => handleCleanup('sync_tiny')} disabled={loadingCleanup}
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-red-900/30 hover:bg-red-900/50 disabled:opacity-40 text-red-300 text-[11px] font-medium rounded transition-colors">
+          {loadingCleanup ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+          Sync completo com Tiny — remove SKUs ausentes (lento)
+        </button>
+
+        {!loadingCleanup && cleanupResult && (
+          <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${cleanupResult.error ? 'bg-red-900/30 text-red-400' : 'bg-zinc-800 text-zinc-300'}`}>
+            {cleanupResult.error
+              ? <AlertCircle size={12} className="shrink-0 mt-0.5" />
+              : <CheckCircle2 size={12} className="shrink-0 mt-0.5 text-green-400" />
+            }
+            <span>
+              {cleanupResult.error || (
+                cleanupResult.tipo === 'sync_tiny'
+                  ? `${cleanupResult.removidos} removidos · Tiny: ${cleanupResult.skusTiny} SKUs · Banco era: ${cleanupResult.totalBanco}`
+                  : `${cleanupResult.removidos} produtos removidos`
+              )}
+            </span>
           </div>
         )}
       </div>

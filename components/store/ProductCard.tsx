@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useState } from 'react'
+import { ShoppingCart } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { useCartStore } from '@/store/cart'
 import toast from 'react-hot-toast'
@@ -28,103 +29,130 @@ export function ProductCard({ produto }: { produto: Produto }) {
   const preco = Number(produto.preco)
   const precoPromo = produto.precoPromocional ? Number(produto.precoPromocional) : null
   const disc = precoPromo ? Math.round((1 - precoPromo / preco) * 100) : null
+  const precoFinal = precoPromo ?? preco
 
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault()
-    adicionarItem({
-      id: produto.id,
-      nome: produto.nome,
-      slug: produto.slug,
-      preco: precoPromo ?? preco,
-      imagem,
-    })
+    adicionarItem({ id: produto.id, nome: produto.nome, slug: produto.slug, preco: precoFinal, imagem })
     toast.success('Adicionado ao carrinho!')
   }
 
+  const esgotado = produto.estoque === 0
+
   return (
-    <Link href={`/produtos/${produto.slug}`}>
+    <Link href={`/produtos/${produto.slug}`} className="group block">
       <div
         onMouseEnter={() => setHov(true)}
         onMouseLeave={() => setHov(false)}
-        className="bg-white overflow-hidden transition-all duration-[180ms] cursor-pointer"
+        className="bg-white rounded-lg overflow-hidden flex flex-col h-full transition-all duration-200"
         style={{
-          borderRadius: '6px',
-          border: `1.5px solid ${hov ? '#d42b2b' : '#eee'}`,
-          boxShadow: hov ? '0 4px 18px rgba(212,43,43,0.12)' : '0 1px 4px rgba(0,0,0,0.06)',
+          border: `1.5px solid ${hov ? '#d42b2b' : '#e8e8e8'}`,
+          boxShadow: hov
+            ? '0 8px 28px rgba(212,43,43,0.13), 0 2px 8px rgba(0,0,0,0.06)'
+            : '0 1px 4px rgba(0,0,0,0.05)',
         }}
       >
-        {/* Image */}
-        <div className="relative w-full" style={{ paddingBottom: '85%', background: 'radial-gradient(circle at 55% 45%, #fff 0%, #f4f4f4 100%)' }}>
-          <div className="absolute inset-0 flex items-center justify-center">
-            {imagem ? (
-              <Image
-                src={imagem}
-                alt={produto.nome}
-                fill
-                className="object-cover"
-                style={{ transition: 'transform 0.3s', transform: hov ? 'scale(1.05)' : 'scale(1)' }}
-              />
-            ) : (
-              <svg viewBox="0 0 120 120" fill="none" width="90" height="90">
-                <circle cx="60" cy="60" r="50" stroke="#ddd" strokeWidth="11"/>
-                {Array.from({ length: 8 }).map((_, i) => {
-                  const a = (i / 8) * Math.PI * 2
-                  return <line key={i} x1={60 + 32 * Math.cos(a)} y1={60 + 32 * Math.sin(a)} x2={60 + 40 * Math.cos(a)} y2={60 + 40 * Math.sin(a)} stroke="#ccc" strokeWidth="4.5" strokeLinecap="round"/>
-                })}
-                <circle cx="60" cy="60" r="28" stroke="#e0e0e0" strokeWidth="8"/>
-                <circle cx="60" cy="60" r="18" fill="#f0f0f0" stroke="#e0e0e0" strokeWidth="2"/>
-                <circle cx="60" cy="60" r="8" fill="#d42b2b" opacity="0.55"/>
-              </svg>
-            )}
-          </div>
-          {disc && (
-            <span
-              className="absolute top-2.5 left-2.5 text-white text-[11px] font-barlow font-bold px-2 py-[3px]"
-              style={{ background: '#d42b2b', borderRadius: '2px' }}
-            >
+        {/* Image container — square */}
+        <div className="relative w-full aspect-square overflow-hidden bg-[#f7f7f7]">
+          {imagem ? (
+            <Image
+              src={imagem}
+              alt={produto.nome}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#f2f2f2] to-[#ebebeb]">
+              <TirePlaceholder />
+            </div>
+          )}
+
+          {/* Badges */}
+          {disc && disc >= 5 && (
+            <span className="absolute top-2 left-2 bg-[#d42b2b] text-white text-[11px] font-bold px-2 py-0.5 rounded-sm tracking-wide">
               -{disc}%
             </span>
           )}
-          {produto.estoque === 0 && (
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-              <span className="text-xs text-white font-semibold bg-black/70 px-2 py-1 rounded">ESGOTADO</span>
+          {esgotado && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <span className="text-xs text-white font-bold bg-black/60 px-3 py-1.5 rounded uppercase tracking-widest">
+                Esgotado
+              </span>
             </div>
           )}
         </div>
 
-        {/* Info */}
-        <div className="px-[14px] pb-[16px] pt-3">
-          <div className="text-[10px] text-[#aaa] font-inter mb-1 tracking-[0.3px]">{produto.marca}</div>
-          <div className="text-[13.5px] font-inter font-medium text-[#222] leading-[1.4] mb-2.5 min-h-[38px] line-clamp-2">
-            {produto.nome}
-          </div>
-          {precoPromo && (
-            <div className="text-[12px] font-inter text-[#bbb] line-through mb-0.5">
-              {formatPrice(preco)}
-            </div>
+        {/* Content */}
+        <div className="flex flex-col flex-1 p-3">
+          {/* Brand */}
+          {produto.marca && (
+            <span className="text-[10px] font-semibold text-[#999] uppercase tracking-[0.8px] mb-1 truncate">
+              {produto.marca}
+            </span>
           )}
-          <div
-            className="font-barlow font-bold text-[22px] leading-none tracking-[-0.3px]"
-            style={{ color: '#d42b2b' }}
-          >
-            {formatPrice(precoPromo ?? preco)}
+
+          {/* Name */}
+          <p className="text-[12.5px] font-medium text-[#1a1a1a] leading-[1.35] mb-2 line-clamp-2 flex-1">
+            {produto.nome}
+          </p>
+
+          {/* Price */}
+          <div className="mt-auto">
+            {precoPromo && (
+              <span className="block text-[11px] text-[#bbb] line-through leading-none mb-0.5">
+                {formatPrice(preco)}
+              </span>
+            )}
+            <span className="block font-black text-[20px] leading-none text-[#d42b2b] tracking-tight">
+              {formatPrice(precoFinal)}
+            </span>
+            <span className="text-[10px] text-[#aaa] mt-0.5 block">
+              ou {formatPrice(precoFinal / 12)}/mês no cartão
+            </span>
           </div>
-          {produto.estoque > 0 && (
+
+          {/* CTA */}
+          {!esgotado && (
             <button
               onClick={handleAddToCart}
-              className="w-full mt-2.5 py-2 font-barlow font-bold text-[14px] tracking-[0.3px] uppercase transition-all duration-[180ms]"
+              className="mt-2.5 w-full flex items-center justify-center gap-1.5 py-2 rounded text-[12px] font-bold uppercase tracking-[0.4px] transition-all duration-200"
               style={{
-                border: '1.5px solid #d42b2b',
-                borderRadius: '3px',
-                background: hov ? '#d42b2b' : '#fff',
+                background: hov ? '#d42b2b' : 'transparent',
                 color: hov ? '#fff' : '#d42b2b',
+                border: '1.5px solid #d42b2b',
               }}
             >
-              Adicionar ao Carrinho
+              <ShoppingCart size={13} strokeWidth={2.5} />
+              Comprar
             </button>
           )}
         </div>
       </div>
     </Link>
+  )
+}
+
+/** Placeholder SVG estilo pneu — menor, mais elegante */
+function TirePlaceholder() {
+  return (
+    <svg viewBox="0 0 100 100" width="68" height="68" fill="none">
+      <circle cx="50" cy="50" r="44" stroke="#ddd" strokeWidth="9" />
+      {Array.from({ length: 10 }).map((_, i) => {
+        const a = (i / 10) * Math.PI * 2
+        const r1 = 28, r2 = 35
+        return (
+          <line
+            key={i}
+            x1={50 + r1 * Math.cos(a)} y1={50 + r1 * Math.sin(a)}
+            x2={50 + r2 * Math.cos(a)} y2={50 + r2 * Math.sin(a)}
+            stroke="#ccc" strokeWidth="3.5" strokeLinecap="round"
+          />
+        )
+      })}
+      <circle cx="50" cy="50" r="22" stroke="#e0e0e0" strokeWidth="7" />
+      <circle cx="50" cy="50" r="9" fill="#eee" />
+      <circle cx="50" cy="50" r="5" fill="#d42b2b" opacity="0.4" />
+    </svg>
   )
 }

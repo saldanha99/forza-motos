@@ -6,13 +6,14 @@ import { ProductCard } from '@/components/store/ProductCard'
 import { Breadcrumb } from '@/components/store/Breadcrumb'
 import { FAQSection } from '@/components/store/FAQSection'
 import { MODELOS_MOTOS, getModelosPorMarca } from '@/lib/motos-modelos'
-import { CheckCircle2, Wrench, Clock, Shield } from 'lucide-react'
+import { CheckCircle2, Wrench, Clock, Shield, Award, Zap } from 'lucide-react'
 import { SITE_URL } from '@/lib/schema'
+import { LogoPirelli, LogoMichelin, LogoMetzeler, LogoBridgestone, LogoRinaldi } from '@/components/store/BrandLogo'
 
 export const metadata: Metadata = {
-  title: 'Pneus de Moto em Campinas — Instalação Inclusa na Loja',
+  title: 'Pneus de Moto em Campinas — Credenciada Pirelli, Metzeler e Michelin',
   description:
-    'Compre pneus de moto em Campinas/SP com instalação inclusa. Credenciada Pirelli, Metzeler, Michelin e Bridgestone. Retire e já saia rodando. (19) 97404-9445.',
+    'Revenda oficial Pirelli, Metzeler e Michelin em Campinas/SP. Instalação inclusa, troca em 30min, sem agendamento. Mais de 400 modelos em estoque. (19) 97404-9445.',
   keywords: [
     'pneu moto Campinas',
     'pneu Pirelli moto',
@@ -119,33 +120,42 @@ export default async function PneusPage() {
       >
         <div className="max-w-[1280px] mx-auto px-6 md:px-12 grid md:grid-cols-2 gap-10 items-center">
           <div>
+            {/* Badge credenciada */}
+            <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-1.5 mb-5">
+              <Award size={13} className="text-yellow-400" />
+              <span className="text-[12px] font-semibold text-white/90 tracking-wider uppercase">
+                Revenda Oficial Pirelli · Metzeler · Michelin
+              </span>
+            </div>
             <h1
-              className="font-barlow font-black text-4xl md:text-5xl lg:text-6xl leading-[1.05] mb-4"
-              style={{ letterSpacing: '-1px' }}
+              className="font-barlow font-black text-4xl md:text-5xl lg:text-[58px] leading-[1.02] mb-4"
+              style={{ letterSpacing: '-1.5px' }}
             >
-              Pneus de Moto em Campinas
+              Pneus de Moto<br />
+              <span className="text-[#d42b2b]">em Campinas</span>
             </h1>
-            <p className="text-[#cbd] text-lg md:text-xl font-inter leading-relaxed mb-6 max-w-[480px]">
-              Credenciada Pirelli, Metzeler e Michelin. Troca em 30 minutos, sem agendamento. Instalação inclusa.
+            <p className="text-white/75 text-lg md:text-xl font-inter leading-relaxed mb-6 max-w-[500px]">
+              A única loja em Campinas credenciada oficialmente por <strong className="text-white">Pirelli</strong>, <strong className="text-white">Metzeler</strong> e <strong className="text-white">Michelin</strong>. Troca em 30 minutos, instalação inclusa no preço.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link
                 href="/produtos?categoria=Pneus"
-                className="bg-[#d42b2b] hover:bg-red-700 text-white font-barlow font-bold uppercase px-7 py-3 rounded text-sm tracking-wider transition-colors"
+                className="bg-[#d42b2b] hover:bg-red-700 text-white font-barlow font-bold uppercase px-8 py-3.5 rounded text-sm tracking-wider transition-colors"
               >
-                Comprar online
+                Ver todos os pneus
               </Link>
               <Link
-                href="/agendar"
-                className="border border-white/30 hover:border-white text-white font-barlow font-bold uppercase px-7 py-3 rounded text-sm tracking-wider transition-colors"
+                href="/agendamentos"
+                className="border border-white/30 hover:border-white/70 hover:bg-white/5 text-white font-barlow font-bold uppercase px-8 py-3.5 rounded text-sm tracking-wider transition-colors"
               >
-                Agendar troca
+                Agendar troca grátis
               </Link>
             </div>
-            <div className="flex flex-wrap gap-5 mt-8 text-sm text-[#cbd] font-inter">
-              <span className="flex items-center gap-1.5"><CheckCircle2 size={14} className="text-green-400" /> Instalação inclusa</span>
-              <span className="flex items-center gap-1.5"><Clock size={14} className="text-green-400" /> 30 minutos</span>
-              <span className="flex items-center gap-1.5"><Shield size={14} className="text-green-400" /> Garantia 60 dias</span>
+            <div className="flex flex-wrap gap-5 mt-8 text-[13px] text-white/70 font-inter">
+              <span className="flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-400" /> Instalação inclusa</span>
+              <span className="flex items-center gap-1.5"><Zap size={14} className="text-emerald-400" /> Troca em 30 min</span>
+              <span className="flex items-center gap-1.5"><Shield size={14} className="text-emerald-400" /> Garantia de fábrica</span>
+              <span className="flex items-center gap-1.5"><Clock size={14} className="text-emerald-400" /> Sem agendamento</span>
             </div>
           </div>
           <div className="hidden md:flex justify-center">
@@ -184,22 +194,32 @@ export default async function PneusPage() {
         </div>
       </section>
 
-      {/* Marcas credenciadas */}
-      <section className="py-10 bg-[#fafafa] border-b border-[#eee]">
+      {/* Marcas credenciadas — logos reais */}
+      <section className="py-10 bg-white border-b border-[#f0f0f0]">
         <div className="max-w-[1280px] mx-auto px-6 md:px-12">
-          <p className="text-center text-xs font-inter tracking-[2px] text-[#888] uppercase mb-5">
-            Marcas credenciadas
+          <p className="text-center text-[11px] font-semibold tracking-[2.5px] text-[#999] uppercase mb-8">
+            Marcas credenciadas oficialmente
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-8 md:gap-14">
-            {['Pirelli', 'Metzeler', 'Michelin', 'Bridgestone', 'Rinaldi'].map((b) => (
-              <span
-                key={b}
-                className="font-barlow font-black text-2xl text-[#444] tracking-[2px]"
-              >
-                {b}
-              </span>
-            ))}
+          <div className="flex flex-wrap items-center justify-center gap-10 md:gap-16">
+            <div className="opacity-80 hover:opacity-100 transition-opacity">
+              <LogoPirelli height={30} />
+            </div>
+            <div className="opacity-80 hover:opacity-100 transition-opacity">
+              <LogoMetzeler height={30} />
+            </div>
+            <div className="opacity-80 hover:opacity-100 transition-opacity">
+              <LogoMichelin height={30} />
+            </div>
+            <div className="opacity-80 hover:opacity-100 transition-opacity">
+              <LogoBridgestone height={28} />
+            </div>
+            <div className="opacity-80 hover:opacity-100 transition-opacity">
+              <LogoRinaldi height={28} />
+            </div>
           </div>
+          <p className="text-center text-[12px] text-[#aaa] mt-6 font-inter">
+            Garantia oficial de fábrica em todos os pneus
+          </p>
         </div>
       </section>
 

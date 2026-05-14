@@ -15,7 +15,7 @@ interface SearchParams {
 }
 
 async function getProdutos(params: SearchParams) {
-  const where: any = { ativo: true, estoque: { gt: 0 } }
+  const where: any = { ativo: true, estoque: { gt: 0 }, preco: { gt: 0 } }
 
   if (params.busca) {
     where.OR = [
@@ -44,7 +44,7 @@ async function getProdutos(params: SearchParams) {
 }
 
 async function getFiltrosDisponiveis() {
-  const filtroBase = { ativo: true, estoque: { gt: 0 } }
+  const filtroBase = { ativo: true, estoque: { gt: 0 }, preco: { gt: 0 } }
   const [categorias, marcas] = await Promise.all([
     prisma.product.findMany({ where: filtroBase, select: { categoria: true }, distinct: ['categoria'] }),
     prisma.product.findMany({ where: filtroBase, select: { marca: true }, distinct: ['marca'] }),
