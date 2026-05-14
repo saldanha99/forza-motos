@@ -77,29 +77,66 @@ export function LogoMotul({ height = 36, className = '' }: LogoProps) {
 }
 
 export function LogoEBC({ height = 36, className = '' }: LogoProps) {
-  const w = Math.round(height * (90 / 36))
+  // Proporção real: ~500x265 → ~1.89:1
+  const w = Math.round(height * 1.9)
   return (
-    <svg height={height} width={w} viewBox="0 0 90 36" fill="none" className={className}>
-      {/* Orange background */}
-      <rect x="0" y="0" width="90" height="36" rx="4" fill="#FF6B00"/>
-      {/* EBC text */}
-      <text x="45" y="26" textAnchor="middle" fill="#fff" fontSize="20" fontWeight="900" fontFamily="Arial Black, Arial" letterSpacing="2">EBC</text>
-      {/* BRAKES subtext */}
-      <text x="45" y="34" textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize="7" fontWeight="700" fontFamily="Arial, sans-serif" letterSpacing="2">BRAKES</text>
+    <svg height={height} width={w} viewBox="0 0 190 100" fill="none" className={className}>
+      {/* EBC — letras sólidas azul marinho, estilo real */}
+      <text
+        x="4" y="72"
+        fill="#1B3A8C"
+        fontSize="78"
+        fontWeight="900"
+        fontFamily="Impact, Arial Black, sans-serif"
+        letterSpacing="-2"
+      >EBC</text>
+      {/* BRAKES — vermelho abaixo, alinhado à direita do EBC */}
+      <text
+        x="4" y="95"
+        fill="#E63228"
+        fontSize="22"
+        fontWeight="900"
+        fontFamily="Impact, Arial Black, sans-serif"
+        letterSpacing="6"
+      >BRAKES</text>
     </svg>
   )
 }
 
 export function LogoDID({ height = 36, className = '' }: LogoProps) {
-  const w = Math.round(height * (90 / 36))
+  // Proporção real: ~575x265 → ~2.17:1
+  const w = Math.round(height * 2.2)
   return (
-    <svg height={height} width={w} viewBox="0 0 90 36" fill="none" className={className}>
-      {/* Dark background */}
-      <rect x="0" y="0" width="90" height="36" rx="4" fill="#1a1a1a"/>
-      {/* DID text in gold */}
-      <text x="45" y="26" textAnchor="middle" fill="#C9A84C" fontSize="22" fontWeight="900" fontFamily="Arial Black, Arial" letterSpacing="3">DID</text>
-      {/* chain subtext */}
-      <text x="45" y="34" textAnchor="middle" fill="rgba(201,168,76,0.6)" fontSize="6" fontWeight="700" fontFamily="Arial, sans-serif" letterSpacing="2">CHAIN</text>
+    <svg height={height} width={w} viewBox="0 0 220 100" fill="none" className={className}>
+      {/* D.I.D. — vermelho bold, estilo bloco real */}
+      <text
+        x="2" y="62"
+        fill="#CC0000"
+        fontSize="66"
+        fontWeight="900"
+        fontFamily="Impact, Arial Black, sans-serif"
+        letterSpacing="2"
+      >D.I.D.</text>
+      {/* Racing Chain — cursive escuro */}
+      <text
+        x="6" y="82"
+        fill="#1a1a1a"
+        fontSize="18"
+        fontWeight="400"
+        fontFamily="Georgia, 'Times New Roman', serif"
+        fontStyle="italic"
+        letterSpacing="1"
+      >Racing Chain</text>
+      {/* Powered by Technology — vermelho pequeno */}
+      <text
+        x="6" y="97"
+        fill="#CC0000"
+        fontSize="11"
+        fontWeight="700"
+        fontFamily="Arial, sans-serif"
+        fontStyle="italic"
+        letterSpacing="0.5"
+      >Powered by Technology</text>
     </svg>
   )
 }

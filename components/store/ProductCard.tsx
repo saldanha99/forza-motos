@@ -7,6 +7,7 @@ import { ShoppingCart } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { useCartStore } from '@/store/cart'
 import toast from 'react-hot-toast'
+import { useTheme } from 'next-themes'
 
 interface Produto {
   id: string
@@ -23,6 +24,8 @@ interface Produto {
 export function ProductCard({ produto }: { produto: Produto }) {
   const adicionarItem = useCartStore((s) => s.adicionarItem)
   const [hov, setHov] = useState(false)
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
   const imagens = Array.isArray(produto.imagens) ? produto.imagens : []
   const imagem = imagens[0] || null
 
@@ -44,16 +47,24 @@ export function ProductCard({ produto }: { produto: Produto }) {
       <div
         onMouseEnter={() => setHov(true)}
         onMouseLeave={() => setHov(false)}
-        className="bg-white rounded-lg overflow-hidden flex flex-col h-full transition-all duration-200"
+        className="rounded-lg overflow-hidden flex flex-col h-full transition-all duration-200"
         style={{
-          border: `1.5px solid ${hov ? '#d42b2b' : '#e8e8e8'}`,
+          backgroundColor: isDark ? '#1e1e1e' : '#ffffff',
+          border: `1.5px solid ${hov ? '#d42b2b' : isDark ? '#2e2e2e' : '#e8e8e8'}`,
           boxShadow: hov
-            ? '0 8px 28px rgba(212,43,43,0.13), 0 2px 8px rgba(0,0,0,0.06)'
-            : '0 1px 4px rgba(0,0,0,0.05)',
+            ? isDark
+              ? '0 8px 28px rgba(212,43,43,0.2), 0 2px 8px rgba(0,0,0,0.3)'
+              : '0 8px 28px rgba(212,43,43,0.13), 0 2px 8px rgba(0,0,0,0.06)'
+            : isDark
+              ? '0 1px 4px rgba(0,0,0,0.3)'
+              : '0 1px 4px rgba(0,0,0,0.05)',
         }}
       >
         {/* Image container — square */}
-        <div className="relative w-full aspect-square overflow-hidden bg-[#f7f7f7]">
+        <div
+          className="relative w-full aspect-square overflow-hidden"
+          style={{ backgroundColor: isDark ? '#252525' : '#f7f7f7' }}
+        >
           {imagem ? (
             <Image
               src={imagem}
@@ -63,8 +74,15 @@ export function ProductCard({ produto }: { produto: Produto }) {
               className="object-cover transition-transform duration-300 group-hover:scale-[1.04]"
             />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#f2f2f2] to-[#ebebeb]">
-              <TirePlaceholder />
+            <div
+              className="absolute inset-0 flex items-center justify-center"
+              style={{
+                background: isDark
+                  ? 'linear-gradient(135deg, #242424 0%, #1c1c1c 100%)'
+                  : 'linear-gradient(135deg, #f2f2f2 0%, #ebebeb 100%)',
+              }}
+            >
+              <TirePlaceholder dark={isDark} />
             </div>
           )}
 
@@ -87,27 +105,39 @@ export function ProductCard({ produto }: { produto: Produto }) {
         <div className="flex flex-col flex-1 p-3">
           {/* Brand */}
           {produto.marca && (
-            <span className="text-[10px] font-semibold text-[#999] uppercase tracking-[0.8px] mb-1 truncate">
+            <span
+              className="text-[10px] font-semibold uppercase tracking-[0.8px] mb-1 truncate"
+              style={{ color: isDark ? '#666' : '#999' }}
+            >
               {produto.marca}
             </span>
           )}
 
           {/* Name */}
-          <p className="text-[12.5px] font-medium text-[#1a1a1a] leading-[1.35] mb-2 line-clamp-2 flex-1">
+          <p
+            className="text-[12.5px] font-medium leading-[1.35] mb-2 line-clamp-2 flex-1"
+            style={{ color: isDark ? '#e0e0e0' : '#1a1a1a' }}
+          >
             {produto.nome}
           </p>
 
           {/* Price */}
           <div className="mt-auto">
             {precoPromo && (
-              <span className="block text-[11px] text-[#bbb] line-through leading-none mb-0.5">
+              <span
+                className="block text-[11px] line-through leading-none mb-0.5"
+                style={{ color: isDark ? '#555' : '#bbb' }}
+              >
                 {formatPrice(preco)}
               </span>
             )}
             <span className="block font-black text-[20px] leading-none text-[#d42b2b] tracking-tight">
               {formatPrice(precoFinal)}
             </span>
-            <span className="text-[10px] text-[#aaa] mt-0.5 block">
+            <span
+              className="text-[10px] mt-0.5 block"
+              style={{ color: isDark ? '#555' : '#aaa' }}
+            >
               ou {formatPrice(precoFinal / 12)}/mês no cartão
             </span>
           </div>
@@ -120,7 +150,7 @@ export function ProductCard({ produto }: { produto: Produto }) {
               style={{
                 background: hov ? '#d42b2b' : 'transparent',
                 color: hov ? '#fff' : '#d42b2b',
-                border: '1.5px solid #d42b2b',
+                border: `1.5px solid ${isDark ? '#e03333' : '#d42b2b'}`,
               }}
             >
               <ShoppingCart size={13} strokeWidth={2.5} />
@@ -134,10 +164,14 @@ export function ProductCard({ produto }: { produto: Produto }) {
 }
 
 /** Placeholder SVG estilo pneu — menor, mais elegante */
-function TirePlaceholder() {
+function TirePlaceholder({ dark = false }: { dark?: boolean }) {
+  const ring = dark ? '#3a3a3a' : '#ddd'
+  const spoke = dark ? '#333' : '#ccc'
+  const hub = dark ? '#2e2e2e' : '#e0e0e0'
+  const center = dark ? '#2a2a2a' : '#eee'
   return (
     <svg viewBox="0 0 100 100" width="68" height="68" fill="none">
-      <circle cx="50" cy="50" r="44" stroke="#ddd" strokeWidth="9" />
+      <circle cx="50" cy="50" r="44" stroke={ring} strokeWidth="9" />
       {Array.from({ length: 10 }).map((_, i) => {
         const a = (i / 10) * Math.PI * 2
         const r1 = 28, r2 = 35
@@ -146,12 +180,12 @@ function TirePlaceholder() {
             key={i}
             x1={50 + r1 * Math.cos(a)} y1={50 + r1 * Math.sin(a)}
             x2={50 + r2 * Math.cos(a)} y2={50 + r2 * Math.sin(a)}
-            stroke="#ccc" strokeWidth="3.5" strokeLinecap="round"
+            stroke={spoke} strokeWidth="3.5" strokeLinecap="round"
           />
         )
       })}
-      <circle cx="50" cy="50" r="22" stroke="#e0e0e0" strokeWidth="7" />
-      <circle cx="50" cy="50" r="9" fill="#eee" />
+      <circle cx="50" cy="50" r="22" stroke={hub} strokeWidth="7" />
+      <circle cx="50" cy="50" r="9" fill={center} />
       <circle cx="50" cy="50" r="5" fill="#d42b2b" opacity="0.4" />
     </svg>
   )
