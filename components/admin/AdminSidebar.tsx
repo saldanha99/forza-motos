@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import {
-  LayoutDashboard, ShoppingBag, Package, Users, Calendar, FileText, LogOut, Menu, X, ImagePlus
+  LayoutDashboard, ShoppingBag, Package, Users, Calendar, FileText, LogOut, Menu, X, ImagePlus, RefreshCw
 } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
@@ -14,6 +14,7 @@ const nav = [
   { href: '/admin/pedidos', label: 'Pedidos', icon: ShoppingBag },
   { href: '/admin/produtos', label: 'Produtos', icon: Package },
   { href: '/admin/fotos', label: 'Fotos', icon: ImagePlus },
+  { href: '/admin/sync-categoria', label: 'Sync Categoria', icon: RefreshCw },
   { href: '/admin/clientes', label: 'CRM Clientes', icon: Users },
   { href: '/admin/agendamentos', label: 'Agendamentos', icon: Calendar },
   { href: '/admin/blog', label: 'Blog / CMS', icon: FileText },

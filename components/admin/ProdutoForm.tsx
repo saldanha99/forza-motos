@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/Input'
 import { gerarSlug } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Upload } from 'lucide-react'
+import { Plus, X, Upload, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react'
 
 interface Produto {
   id?: string
@@ -45,6 +45,8 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
   const [compatibilidade, setCompatibilidade] = useState<string[]>(produto?.compatibilidadeMotos ?? [])
   const [imagens, setImagens] = useState<string[]>(produto?.imagens ?? [])
   const [novaCompat, setNovaCompat] = useState('')
+  const [syncLoading, setSyncLoading] = useState(false)
+  const [syncResult, setSyncResult] = useState<any>(null)
 
   function update(field: string, value: any) {
     setForm((f) => ({ ...f, [field]: value }))
@@ -67,6 +69,31 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
       toast.error('Erro ao enviar imagem')
     } finally {
       setUploadLoading(false)
+    }
+  }
+
+  async function handleSyncTiny() {
+    if (!produto?.id) return
+    setSyncLoading(true)
+    setSyncResult(null)
+    try {
+      const res = await fetch(`/api/admin/produtos/${produto.id}/sync`, { method: 'POST' })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setSyncResult(data)
+      // Atualiza campos no form com os dados retornados
+      if (data.campos.nome)  update('nome', data.campos.nome)
+      if (data.campos.preco) update('preco', data.campos.preco)
+      if (data.campos.estoque !== undefined) update('estoque', data.campos.estoque)
+      if (data.campos.categoria) update('categoria', data.campos.categoria)
+      if (data.campos.marca) update('marca', data.campos.marca)
+      toast.success('Sincronizado com Tiny!')
+      router.refresh()
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao sincronizar')
+      setSyncResult({ error: e.message })
+    } finally {
+      setSyncLoading(false)
     }
   }
 
@@ -97,6 +124,42 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+
+      {/* ── Sync Tiny (só aparece em produtos existentes com tinyId) ── */}
+      {produto?.id && (
+        <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-white font-medium text-sm flex items-center gap-2">
+              <RefreshCw size={14} className="text-blue-400" />
+              Sincronizar com Tiny
+            </p>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              Atualiza nome, preço, estoque, imagens, descrição, categoria e marca
+            </p>
+            {syncResult && !syncResult.error && (
+              <p className="text-xs text-green-400 mt-1 flex items-center gap-1">
+                <CheckCircle2 size={11} />
+                {syncResult.aviso || `${syncResult.campos?.imagens ?? 0} imagens · preço R$${syncResult.campos?.preco?.toFixed(2)} · estoque ${syncResult.campos?.estoque}`}
+              </p>
+            )}
+            {syncResult?.error && (
+              <p className="text-xs text-red-400 mt-1 flex items-center gap-1">
+                <AlertCircle size={11} /> {syncResult.error}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={handleSyncTiny}
+            disabled={syncLoading}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors shrink-0"
+          >
+            <RefreshCw size={13} className={syncLoading ? 'animate-spin' : ''} />
+            {syncLoading ? 'Sincronizando…' : 'Sync agora'}
+          </button>
+        </div>
+      )}
+
       <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 space-y-4">
         <h2 className="font-rajdhani font-semibold text-lg text-white">Informações básicas</h2>
         <Input label="Nome *" value={form.nome} onChange={(e) => update('nome', e.target.value)} required />

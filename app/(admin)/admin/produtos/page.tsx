@@ -4,6 +4,7 @@ import { formatPrice } from '@/lib/utils'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/Badge'
 import { Plus } from 'lucide-react'
+import { SyncProdutoButton } from '@/components/admin/SyncProdutoButton'
 
 export const metadata = { title: 'Produtos Admin' }
 
@@ -73,9 +74,12 @@ export default async function ProdutosAdminPage({ searchParams }: { searchParams
                     </div>
                   </td>
                   <td className="px-5 py-3">
-                    <Link href={`/admin/produtos/${p.id}`} className="text-xs text-zinc-500 hover:text-white">
-                      Editar →
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <SyncProdutoButton produtoId={p.id} hasTinyId={!!p.tinyId} />
+                      <Link href={`/admin/produtos/${p.id}`} className="text-xs text-zinc-500 hover:text-white">
+                        Editar →
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
