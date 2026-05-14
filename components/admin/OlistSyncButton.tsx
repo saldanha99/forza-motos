@@ -198,20 +198,28 @@ export function OlistSyncButton() {
       if (data.marcados > 0) {
         // ── Fase C: Deletar os marcados ────────────────────────────────────
         setFantasmasStep('deletando')
-        const resDel = await fetch('/api/admin/cleanup-produtos', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tipo: 'inativos' }),
-        })
-        const dataDel = await resDel.json()
-        setFantasmasResult({
-          ...data,
-          deletados: dataDel.removidos ?? data.marcados,
-        })
+        try {
+          const resDel: Response = await fetch('/api/admin/cleanup-produtos', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tipo: 'inativos' }),
+          })
+          const textDel = await resDel.text()
+          let dataDel: any = {}
+          try { dataDel = JSON.parse(textDel) } catch { /* body inválido */ }
+          setFantasmasResult({
+            ...data,
+            deletados: dataDel.removidos ?? 0,
+            msg: dataDel.msg ?? data.msg,
+          })
+        } catch {
+          // Mesmo se o delete falhar, mostra que marcou os fantasmas
+          setFantasmasResult({ ...data, deletados: 0 })
+        }
       } else {
         setFantasmasResult(data)
       }
     } catch (e: any) {
-      setFantasmasError('Erro ao marcar: ' + e.message)
+      setFantasmasError('Erro na limpeza: ' + e.message)
     }
 
     setLoadingFantasmas(false)

@@ -22,11 +22,32 @@ export async function POST(req: Request) {
 
   if (tipo === 'inativos') {
     // Remove produtos marcados como ativo=false (fantasmas confirmados pelo sync de imagens)
+    // Exclui produtos que têm OrderItems para evitar violação de FK
+
+    // Busca IDs de inativos que têm pedidos vinculados
+    const comPedidos = await prisma.orderItem.findMany({
+      where: { product: { ativo: false } },
+      select: { productId: true },
+      distinct: ['productId'],
+    })
+    const idsComPedidos = comPedidos.map((p) => p.productId)
+
     const r = await prisma.product.deleteMany({
-      where: { ativo: false },
+      where: {
+        ativo: false,
+        ...(idsComPedidos.length > 0 ? { id: { notIn: idsComPedidos } } : {}),
+      },
     })
     removidos = r.count
-    return NextResponse.json({ ok: true, removidos, tipo: 'inativos' })
+    return NextResponse.json({
+      ok: true,
+      removidos,
+      tipo: 'inativos',
+      pulados: idsComPedidos.length,
+      msg: idsComPedidos.length > 0
+        ? `${removidos} deletados, ${idsComPedidos.length} mantidos (têm pedidos vinculados)`
+        : `${removidos} produtos deletados`,
+    })
   }
 
   if (tipo === 'preco_zero') {
