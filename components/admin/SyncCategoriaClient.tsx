@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { RefreshCw, ChevronDown, CheckCircle2, AlertCircle, Loader2, Play, StopCircle, Tag } from 'lucide-react'
+import { ChevronDown, CheckCircle2, AlertCircle, Loader2, Play, StopCircle, Tag } from 'lucide-react'
 
 interface CatInfo {
   categoria: string
@@ -43,7 +43,7 @@ export function SyncCategoriaClient() {
     setProgress({ processados: 0, total: 0, atualizados: 0, erros: 0 })
 
     let offset = 0
-    let totalAcum = { atualizados: 0, erros: 0 }
+    const totalAcum = { atualizados: 0, erros: 0 }
 
     while (true) {
       if (cancelRef.current) {
