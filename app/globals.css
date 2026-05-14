@@ -5,33 +5,61 @@
 @tailwind utilities;
 
 :root {
-  --surface: #f5f5f5;
-  --surface-dim: #f9f9f9;
-  --card: #ffffff;
-  --card-hi: #f0f0f0;
-  --line: #eeeeee;
-  --line-hi: #e0e0e0;
-  --ink: #111111;
-  --dim: #555555;
-  --faint: #888888;
-  --vermelho: #d42b2b;
+  --surface:      #f5f5f5;
+  --surface-dim:  #f9f9f9;
+  --card:         #ffffff;
+  --card-hi:      #f0f0f0;
+  --line:         #eeeeee;
+  --line-hi:      #e0e0e0;
+  --ink:          #111111;
+  --ink-2:        #1a1a1a;
+  --dim:          #555555;
+  --faint:        #888888;
+  --faint-2:      #999999;
+  --muted:        #aaaaaa;
+  --muted-2:      #bbbbbb;
+  --vermelho:     #d42b2b;
   --vermelho-light: #ffeaea;
+  /* ── Card tokens ── */
+  --card-bg:        #ffffff;
+  --card-img-bg:    #f7f7f7;
+  --card-border:    #e8e8e8;
+  --card-text:      #1a1a1a;
+  --card-brand:     #999999;
+  --card-old-price: #bbbbbb;
+  --card-installment: #aaaaaa;
+  --card-placeholder-from: #f2f2f2;
+  --card-placeholder-to:   #ebebeb;
   color-scheme: light;
 }
 
 /* ── Dark mode ──────────────────────────────────────────────── */
 [data-theme='dark'] {
-  --surface: #0f0f0f;
-  --surface-dim: #141414;
-  --card: #1a1a1a;
-  --card-hi: #242424;
-  --line: #2a2a2a;
-  --line-hi: #333333;
-  --ink: #f0f0f0;
-  --dim: #aaaaaa;
-  --faint: #666666;
-  --vermelho: #e03333;
+  --surface:      #0a0a0a;
+  --surface-dim:  #0d0d0d;
+  --card:         #141414;
+  --card-hi:      #1e1e1e;
+  --line:         #222222;
+  --line-hi:      #2e2e2e;
+  --ink:          #f0f0f0;
+  --ink-2:        #e0e0e0;
+  --dim:          #aaaaaa;
+  --faint:        #777777;
+  --faint-2:      #666666;
+  --muted:        #555555;
+  --muted-2:      #4a4a4a;
+  --vermelho:     #e03333;
   --vermelho-light: #2a0a0a;
+  /* ── Card tokens ── */
+  --card-bg:        #1a1a1a;
+  --card-img-bg:    #222222;
+  --card-border:    #2a2a2a;
+  --card-text:      #e0e0e0;
+  --card-brand:     #555555;
+  --card-old-price: #444444;
+  --card-installment: #4a4a4a;
+  --card-placeholder-from: #1e1e1e;
+  --card-placeholder-to:   #181818;
   color-scheme: dark;
 }
 

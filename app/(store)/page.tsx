@@ -215,30 +215,34 @@ export default async function HomePage() {
               </div>
             </ScrollReveal>
 
-            {/* Carrossel horizontal — 5 cards visíveis, blur nas laterais */}
+            {/* Carrossel horizontal loop infinito — blur nas laterais */}
+            <style>{`
+              @keyframes products-scroll {
+                0%   { transform: translateX(0); }
+                100% { transform: translateX(-50%); }
+              }
+            `}</style>
             <div
               style={{
-                position: 'relative',
-                maskImage: 'linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)',
-                WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)',
+                overflow: 'hidden',
+                maskImage: 'linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%)',
               }}
             >
+              {/* Track duplicado para loop sem salto */}
               <div
-                className="flex gap-4 overflow-x-auto pb-2"
                 style={{
-                  scrollSnapType: 'x mandatory',
-                  scrollbarWidth: 'none',
-                  msOverflowStyle: 'none',
+                  display: 'flex',
+                  gap: 16,
+                  width: 'max-content',
+                  animation: 'products-scroll 28s linear infinite',
+                  willChange: 'transform',
                 }}
               >
-                {maisVendidos.slice(0, 12).map((p: any) => (
+                {[...maisVendidos.slice(0, 10), ...maisVendidos.slice(0, 10)].map((p: any, i: number) => (
                   <div
-                    key={p.id}
-                    style={{
-                      flex: '0 0 calc(20% - 13px)',
-                      minWidth: 200,
-                      scrollSnapAlign: 'start',
-                    }}
+                    key={`${p.id}-${i}`}
+                    style={{ width: 240, flexShrink: 0 }}
                   >
                     <ProductCard produto={p} />
                   </div>
@@ -246,7 +250,7 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <div className="mt-6 flex justify-center">
+            <div className="mt-8 flex justify-center">
               <Link
                 href="/produtos"
                 className="flex items-center gap-2 font-barlow font-bold text-[14px] uppercase tracking-[0.5px] text-[#d42b2b] hover:text-white hover:bg-[#d42b2b] border border-[#d42b2b] px-8 py-3 transition-all duration-200"
