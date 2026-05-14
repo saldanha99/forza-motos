@@ -16,7 +16,46 @@
   --faint: #888888;
   --vermelho: #d42b2b;
   --vermelho-light: #ffeaea;
+  color-scheme: light;
 }
+
+/* ── Dark mode ──────────────────────────────────────────────── */
+[data-theme='dark'] {
+  --surface: #0f0f0f;
+  --surface-dim: #141414;
+  --card: #1a1a1a;
+  --card-hi: #242424;
+  --line: #2a2a2a;
+  --line-hi: #333333;
+  --ink: #f0f0f0;
+  --dim: #aaaaaa;
+  --faint: #666666;
+  --vermelho: #e03333;
+  --vermelho-light: #2a0a0a;
+  color-scheme: dark;
+}
+
+[data-theme='dark'] body {
+  background-color: #0f0f0f;
+  color: #f0f0f0;
+}
+
+[data-theme='dark'] .bg-white { background-color: #1a1a1a !important; }
+[data-theme='dark'] .bg-\[\#f5f5f5\] { background-color: #0f0f0f !important; }
+[data-theme='dark'] .bg-\[\#fafafa\] { background-color: #141414 !important; }
+[data-theme='dark'] .bg-\[\#f9f9f9\] { background-color: #141414 !important; }
+[data-theme='dark'] .border-\[\#eee\] { border-color: #2a2a2a !important; }
+[data-theme='dark'] .text-\[\#111\] { color: #f0f0f0 !important; }
+[data-theme='dark'] .text-\[\#333\] { color: #dddddd !important; }
+[data-theme='dark'] .text-\[\#555\] { color: #aaaaaa !important; }
+[data-theme='dark'] .text-\[\#666\] { color: #999999 !important; }
+[data-theme='dark'] .text-\[\#888\] { color: #777777 !important; }
+[data-theme='dark'] .text-\[\#999\] { color: #666666 !important; }
+[data-theme='dark'] .skeleton {
+  background: linear-gradient(90deg, #1e1e1e 25%, #2a2a2a 50%, #1e1e1e 75%);
+  background-size: 800px 100%;
+}
+[data-theme='dark'] .card-lift:hover { box-shadow: 0 12px 32px rgba(0,0,0,0.4); }
 
 @layer base {
   * {

@@ -11,6 +11,10 @@ import type { Metadata } from 'next'
 import { getLocalBusinessSchema } from '@/lib/schema'
 import { ReviewsSection } from '@/components/store/ReviewsSection'
 import { TrustBar } from '@/components/store/TrustBar'
+import {
+  LogoPirelli, LogoMetzeler, LogoMichelin,
+  LogoBridgestone, LogoMotul, LogoEBC, LogoDID,
+} from '@/components/store/BrandLogo'
 
 export const metadata: Metadata = {
   title: 'Forza Motos — Pneus e Peças para Moto em Campinas/SP',
@@ -135,7 +139,15 @@ const POP_CATS = [
   { id: 'Capacetes',     label: 'Capacetes e EPI',        sub: 'AGV · HJC · Shoei',               img: '/images/categories/capacetes.jpg',   href: '/produtos?categoria=Capacetes' },
 ]
 
-const BRANDS = ['PIRELLI', 'METZELER', 'MICHELIN', 'MOTUL', 'EBC', 'DID']
+const BRAND_LOGOS = [
+  { key: 'pirelli',     Logo: LogoPirelli,     h: 28 },
+  { key: 'metzeler',    Logo: LogoMetzeler,    h: 28 },
+  { key: 'michelin',    Logo: LogoMichelin,    h: 28 },
+  { key: 'bridgestone', Logo: LogoBridgestone, h: 24 },
+  { key: 'motul',       Logo: LogoMotul,       h: 28 },
+  { key: 'ebc',         Logo: LogoEBC,         h: 32 },
+  { key: 'did',         Logo: LogoDID,         h: 32 },
+]
 
 // Serviços do box rápido (extraído do áudio do Vinícius)
 const SERVICOS = [
@@ -454,13 +466,11 @@ export default async function HomePage() {
             <h2 className="font-barlow font-bold text-[26px] text-[#111] mb-2 tracking-[-0.3px]">Marcas Parceiras</h2>
             <p className="font-inter text-[13px] text-[#888] mb-6">Distribuidora autorizada das principais marcas do mundo</p>
           </ScrollReveal>
-          <div className="flex gap-2.5 flex-wrap items-center justify-between">
-            {BRANDS.map((brand, i) => (
-              <ScrollReveal key={brand} type="blur" delay={i * 70}>
-                <div className="bg-white border border-[#eee] rounded-xl px-7 py-5 flex items-center justify-center cursor-pointer hover:border-[#d42b2b] hover:shadow-md transition-all duration-200 group card-lift min-w-[110px]">
-                  <span className="font-barlow font-black text-[22px] md:text-[26px] text-[#444] tracking-[2px] group-hover:text-[#d42b2b] transition-colors">
-                    {brand}
-                  </span>
+          <div className="flex gap-3 flex-wrap items-center justify-between">
+            {BRAND_LOGOS.map(({ key, Logo, h }, i) => (
+              <ScrollReveal key={key} type="blur" delay={i * 70}>
+                <div className="bg-white border border-[#eee] rounded-xl px-6 py-5 flex items-center justify-center cursor-pointer hover:border-[#d42b2b] hover:shadow-md transition-all duration-200 group card-lift min-w-[120px] h-[76px]">
+                  <Logo height={h} className="opacity-80 group-hover:opacity-100 transition-opacity" />
                 </div>
               </ScrollReveal>
             ))}

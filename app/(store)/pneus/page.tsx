@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/store/ProductCard'
 import { Breadcrumb } from '@/components/store/Breadcrumb'
@@ -111,14 +112,10 @@ export default async function PneusPage() {
       </div>
 
       {/* Hero */}
-      <section
-        style={{
-          background: 'linear-gradient(135deg, #1a1a2e 0%, #2a2a44 100%)',
-          color: '#fff',
-          padding: '64px 0 56px',
-        }}
-      >
-        <div className="max-w-[1280px] mx-auto px-6 md:px-12 grid md:grid-cols-2 gap-10 items-center">
+      <section className="relative overflow-hidden" style={{ color: '#fff', padding: '64px 0 56px' }}>
+        <Image src="/images/hero/hero-pneus-bg.jpg" alt="" fill sizes="100vw" className="object-cover object-center" priority />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(15,15,35,0.92) 0%, rgba(25,25,55,0.88) 100%)' }} />
+        <div className="relative z-10 max-w-[1280px] mx-auto px-6 md:px-12 grid md:grid-cols-2 gap-10 items-center">
           <div>
             {/* Badge credenciada */}
             <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-1.5 mb-5">

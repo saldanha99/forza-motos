@@ -56,6 +56,7 @@ export default function OleosPage() {
       termosBusca={['óleo', 'oleo', 'lubrificante']}
       heroFrom="#1a3a1a"
       heroTo="#0e2a0e"
+      heroBgImage="/images/hero/hero-oleos.jpg"
       bullets={[
         { titulo: 'Marcas premium', desc: 'Mobil, Motul, Castrol, Yamalube e Honda.' },
         { titulo: 'Troca rápida', desc: 'Em 20 minutos com filtro novo incluso.' },

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/store/ProductCard'
 import { Breadcrumb } from '@/components/store/Breadcrumb'
@@ -14,6 +15,8 @@ interface CategoryLandingProps {
   /** Cor do gradiente do hero */
   heroFrom?: string
   heroTo?: string
+  /** Imagem de fundo do hero (opcional) */
+  heroBgImage?: string
   /** Ícone SVG no hero */
   heroIcon?: React.ReactNode
   /** Bullets de venda */
@@ -28,6 +31,7 @@ export async function CategoryLanding({
   faqs,
   heroFrom = '#1a1a2e',
   heroTo = '#2a2a44',
+  heroBgImage,
   heroIcon,
   bullets,
 }: CategoryLandingProps) {
@@ -55,13 +59,32 @@ export async function CategoryLanding({
 
       {/* Hero */}
       <section
-        style={{
-          background: `linear-gradient(135deg, ${heroFrom} 0%, ${heroTo} 100%)`,
-          color: '#fff',
-          padding: '64px 0 56px',
-        }}
+        className="relative overflow-hidden"
+        style={{ color: '#fff', padding: '64px 0 56px' }}
       >
-        <div className="max-w-[1280px] mx-auto px-6 md:px-12 grid md:grid-cols-2 gap-8 items-center">
+        {/* Fundo: imagem IA ou gradiente fallback */}
+        {heroBgImage ? (
+          <>
+            <Image
+              src={heroBgImage}
+              alt=""
+              fill
+              sizes="100vw"
+              className="object-cover object-center"
+              priority
+            />
+            <div
+              className="absolute inset-0"
+              style={{ background: `linear-gradient(135deg, ${heroFrom}ee 0%, ${heroTo}cc 100%)` }}
+            />
+          </>
+        ) : (
+          <div
+            className="absolute inset-0"
+            style={{ background: `linear-gradient(135deg, ${heroFrom} 0%, ${heroTo} 100%)` }}
+          />
+        )}
+        <div className="relative z-10 max-w-[1280px] mx-auto px-6 md:px-12 grid md:grid-cols-2 gap-8 items-center">
           <div>
             <h1
               className="font-barlow font-black text-4xl md:text-5xl lg:text-6xl leading-[1.05] mb-4"

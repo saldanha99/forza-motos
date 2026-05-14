@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Breadcrumb } from '@/components/store/Breadcrumb'
 import { FAQSection } from '@/components/store/FAQSection'
 import {
@@ -149,14 +150,10 @@ export default function ServicosPage() {
       </div>
 
       {/* Hero */}
-      <section
-        style={{
-          background: 'linear-gradient(135deg, #d42b2b 0%, #a01818 100%)',
-          color: '#fff',
-          padding: '64px 0 56px',
-        }}
-      >
-        <div className="max-w-[1280px] mx-auto px-6 md:px-12">
+      <section className="relative overflow-hidden" style={{ color: '#fff', padding: '64px 0 56px' }}>
+        <Image src="/images/hero/hero-servicos.jpg" alt="" fill sizes="100vw" className="object-cover object-center" priority />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(180,20,20,0.9) 0%, rgba(100,10,10,0.85) 100%)' }} />
+        <div className="relative z-10 max-w-[1280px] mx-auto px-6 md:px-12">
           <h1
             className="font-barlow font-black text-4xl md:text-5xl lg:text-6xl leading-[1.05] mb-4 max-w-3xl"
             style={{ letterSpacing: '-1px' }}

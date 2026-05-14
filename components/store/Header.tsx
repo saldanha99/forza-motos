@@ -7,6 +7,7 @@ import { LogoSVG } from '@/components/store/LogoSVG'
 import { useSession } from 'next-auth/react'
 import { useCartStore } from '@/store/cart'
 import { Search, User, ShoppingCart, Menu, X } from 'lucide-react'
+import { ThemeToggle } from '@/components/store/ThemeToggle'
 
 const CATS = [
   { id: 'Pneus',       label: 'Pneus',       href: '/pneus' },
@@ -161,6 +162,8 @@ export function Header() {
             <User size={22} />
             <span className="text-[10px] font-inter opacity-65">Conta</span>
           </Link>
+
+          <ThemeToggle />
 
           <Link href="/carrinho" className="text-white flex flex-col items-center gap-0.5">
             <div className="relative">
