@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   RefreshCw, CheckCircle2, AlertCircle, Loader2,
   Package, Image as ImageIcon, Warehouse, Trash2,
-  RotateCcw, ArrowUpRight, Activity, Ghost,
+  RotateCcw, ArrowUpRight, Activity, Ghost, StopCircle, Play,
 } from 'lucide-react'
 
 // ── Diagnóstico ───────────────────────────────────────────────────────────────
@@ -72,6 +72,9 @@ export function OlistSyncButton() {
   const [imagensError, setImagensError] = useState('')
   const [imagensDone, setImagensDone] = useState(false)
   const [imagensTotal, setImagensTotal] = useState<number | null>(null)
+  const [imagensETA, setImagensETA] = useState<string>('')
+  const imagensStartRef = useRef<number>(0)
+  const imagensCancelRef = useRef(false)
 
   // ── Reset imagens ────────────────────────────────────────────────────────────
   const [loadingResetImgs, setLoadingResetImgs] = useState(false)
@@ -125,10 +128,14 @@ export function OlistSyncButton() {
   }
 
   async function handleBuscarImagens() {
-    setLoadingImagens(true); setImagensDone(false); setImagensError('')
+    imagensCancelRef.current = false
+    setLoadingImagens(true); setImagensDone(false); setImagensError(''); setImagensETA('')
+    imagensStartRef.current = Date.now()
     let totalAcum = 0, desativAcum = 0, totalInicial: number | null = null
 
     while (true) {
+      if (imagensCancelRef.current) break
+
       try {
         const res = await fetch('/api/olist/imagens', { method: 'POST' })
         const data = await res.json()
@@ -136,22 +143,41 @@ export function OlistSyncButton() {
 
         totalAcum += data.atualizados ?? 0
         desativAcum += data.naoEncontradosNoTiny ?? 0
+        const restantes = data.naoVerificados ?? data.restantes ?? 0
+
         setImagensAcum(totalAcum)
         setImagensDesativ(desativAcum)
-        setImagensRestantes(data.restantes ?? 0)
-        setImagensNaoVerif(data.naoVerificados ?? 0)
+        setImagensRestantes(restantes)
+        setImagensNaoVerif(restantes)
 
-        if (totalInicial === null && data.restantes != null) {
-          totalInicial = data.restantes + totalAcum
+        if (totalInicial === null) {
+          totalInicial = restantes + totalAcum
           setImagensTotal(totalInicial)
         }
 
-        if (!data.hasMore) { setImagensDone(true); break }
-        await new Promise(r => setTimeout(r, 1200)) // reduzido de 2s para 1.2s
+        // Calcula ETA baseado na velocidade real
+        if (totalAcum > 0 && restantes > 0) {
+          const elapsed = (Date.now() - imagensStartRef.current) / 1000
+          const rate = totalAcum / elapsed // produtos por segundo
+          const etaSecs = rate > 0 ? Math.round(restantes / rate) : null
+          if (etaSecs) {
+            const min = Math.floor(etaSecs / 60)
+            const sec = etaSecs % 60
+            setImagensETA(min > 0 ? `~${min}min ${sec}s restantes` : `~${sec}s restantes`)
+          }
+        }
+
+        if (!data.hasMore || restantes === 0) { setImagensDone(true); break }
+        await new Promise(r => setTimeout(r, 800))
       } catch { setImagensError('Erro de conexão'); break }
     }
     setLoadingImagens(false)
+    imagensCancelRef.current = false
     fetchDiag()
+  }
+
+  function handlePararImagens() {
+    imagensCancelRef.current = true
   }
 
   async function handleLimparFantasmas() {
@@ -430,44 +456,58 @@ export function OlistSyncButton() {
 
       {/* ── PASSO 2: Imagens ── */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-zinc-300">
-            <ImageIcon size={14} className="text-zinc-500" />
-            <div>
-              <span>Passo 2 — Importar imagens</span>
-              <p className="text-[11px] text-zinc-600">
-                Busca fotos no Tiny (20 por vez · automático)
-                {diag && diag.ativosSemImagem > 0 && (
-                  <span className="text-yellow-500"> · {diag.ativosSemImagem} pendentes</span>
-                )}
-              </p>
-            </div>
+        <div className="flex items-center gap-2 text-sm text-zinc-300">
+          <ImageIcon size={14} className="text-zinc-500" />
+          <div>
+            <span>Passo 2 — Importar imagens</span>
+            <p className="text-[11px] text-zinc-600">
+              Busca fotos no Tiny (20 por vez) · roda sozinho até terminar
+              {diag && diag.ativosSemImagem > 0 && (
+                <span className="text-yellow-500"> · {diag.ativosSemImagem} pendentes</span>
+              )}
+            </p>
           </div>
-          <button onClick={handleBuscarImagens} disabled={loadingImagens}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors">
-            {loadingImagens ? <Loader2 size={12} className="animate-spin" /> : <ImageIcon size={12} />}
-            {loadingImagens
-              ? `${imagensAcum} salvas · ${imagensNaoVerif ?? '?'} pendentes`
-              : 'Buscar imagens'
-            }
-          </button>
         </div>
 
-        {loadingImagens && imagensTotal && imagensTotal > 0 && (
-          <div>
-            <div className="flex justify-between text-xs text-zinc-500 mb-1">
-              <span>{imagensAcum}/{imagensTotal} imagens processadas</span>
-              <span>{pctImagens}%</span>
+        {/* Botão principal / parar */}
+        {!loadingImagens ? (
+          <button onClick={handleBuscarImagens}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-700 hover:bg-blue-600 text-white text-sm font-semibold rounded-md transition-colors">
+            <Play size={13} />
+            Importar TODAS as imagens automaticamente
+          </button>
+        ) : (
+          <button onClick={handlePararImagens}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-zinc-700 hover:bg-zinc-600 text-white text-sm font-semibold rounded-md transition-colors">
+            <StopCircle size={13} />
+            Parar importação
+          </button>
+        )}
+
+        {/* Progresso em tempo real */}
+        {loadingImagens && (
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-xs text-zinc-400">
+              <span className="flex items-center gap-1">
+                <Loader2 size={10} className="animate-spin text-blue-400" />
+                {imagensAcum} importadas · {imagensNaoVerif ?? '?'} restantes
+              </span>
+              <span className="text-blue-400">{pctImagens}%</span>
             </div>
-            <div className="w-full bg-zinc-800 rounded-full h-1">
-              <div className="bg-blue-500 h-1 rounded-full transition-all" style={{ width: `${pctImagens}%` }} />
+            <div className="w-full bg-zinc-800 rounded-full h-2">
+              <div className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                style={{ width: `${pctImagens}%` }} />
             </div>
+            {imagensETA && (
+              <p className="text-[10px] text-zinc-500 text-right">{imagensETA}</p>
+            )}
             {imagensDesativ > 0 && (
-              <p className="text-[10px] text-orange-400 mt-0.5">{imagensDesativ} fantasmas detectados e desativados durante o processo</p>
+              <p className="text-[10px] text-orange-400">{imagensDesativ} fantasmas detectados e desativados</p>
             )}
           </div>
         )}
 
+        {/* Resultado final */}
         {!loadingImagens && (imagensDone || imagensError) && (
           <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${imagensError ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'}`}>
             {imagensError ? <AlertCircle size={12} /> : <CheckCircle2 size={12} />}
@@ -475,19 +515,19 @@ export function OlistSyncButton() {
               {imagensError || (
                 `${imagensAcum} imagens importadas` +
                 (imagensDesativ > 0 ? ` · ${imagensDesativ} fantasmas desativados` : '') +
-                ` · ${imagensRestantes ?? 0} ainda sem foto`
+                ` · ${imagensRestantes ?? 0} ainda sem foto no Tiny`
               )}
             </span>
           </div>
         )}
 
-        {/* Reset imagens */}
+        {/* Reset verificação */}
         <div className="flex items-center justify-between pt-1 border-t border-zinc-800/60">
           <div>
             <p className="text-[11px] text-zinc-500">Resetar verificação</p>
-            <p className="text-[10px] text-zinc-700">Força re-busca de todos os produtos sem foto</p>
+            <p className="text-[10px] text-zinc-700">Re-tenta produtos que foram marcados como "sem foto"</p>
           </div>
-          <button onClick={handleResetImagens} disabled={loadingResetImgs}
+          <button onClick={handleResetImagens} disabled={loadingResetImgs || loadingImagens}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-700/50 hover:bg-blue-700 disabled:opacity-50 text-white text-xs rounded-md transition-colors">
             {loadingResetImgs ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
             Resetar

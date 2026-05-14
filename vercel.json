@@ -3,6 +3,10 @@
     {
       "path": "/api/olist/cron",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/olist/cron-imagens",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
