@@ -108,10 +108,10 @@ const SLIDES = [
 ]
 
 const SERVICE_CARDS = [
-  { icon: '🏍️', label: 'Pneu', time: '~20min' },
-  { icon: '🛑', label: 'Freio', time: '~15min' },
-  { icon: '🔧', label: 'Óleo', time: '~20min' },
-  { icon: '⚙️', label: 'Corrente', time: '~30min' },
+  { img: '/images/services/card-pneu.jpg',    label: 'Pneu',    time: '~20min' },
+  { img: '/images/services/card-freio.jpg',   label: 'Freio',   time: '~15min' },
+  { img: '/images/services/card-oleo.jpg',    label: 'Óleo',    time: '~20min' },
+  { img: '/images/services/card-corrente.jpg',label: 'Corrente',time: '~30min' },
 ]
 
 const BRAND_NAMES = ['PIRELLI', 'METZELER', 'MICHELIN', 'MOTUL', 'EBC', 'DID']
@@ -169,24 +169,29 @@ function SlideVisual({ type, active }: { type: string; active: boolean }) {
           <div
             key={s.label}
             style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              position: 'relative',
               borderRadius: 10,
-              padding: '18px 14px',
-              textAlign: 'center',
+              overflow: 'hidden',
+              aspectRatio: '1/1',
               animation: active ? `fade-up 0.5s ease ${i * 0.1 + 0.2}s both` : 'none',
+              border: '1px solid rgba(255,255,255,0.12)',
             }}
           >
-            <div style={{ fontSize: 30, marginBottom: 8 }}>{s.icon}</div>
-            <div className="text-white text-[13px] font-barlow font-bold">{s.label}</div>
-            <div
-              style={{
-                marginTop: 6, fontSize: 11, fontFamily: 'var(--font-inter)',
-                background: '#d42b2b', color: '#fff', borderRadius: 3,
-                padding: '2px 8px', display: 'inline-block', fontWeight: 600,
-              }}
-            >
-              {s.time}
+            <Image
+              src={s.img}
+              alt={s.label}
+              fill
+              sizes="140px"
+              className="object-cover"
+            />
+            {/* Overlay escuro */}
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)' }} />
+            {/* Texto */}
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '10px 8px', textAlign: 'center' }}>
+              <div className="text-white text-[13px] font-barlow font-bold leading-none mb-1">{s.label}</div>
+              <div style={{ fontSize: 10, fontFamily: 'var(--font-inter)', background: '#d42b2b', color: '#fff', borderRadius: 3, padding: '2px 6px', display: 'inline-block', fontWeight: 600 }}>
+                {s.time}
+              </div>
             </div>
           </div>
         ))}
