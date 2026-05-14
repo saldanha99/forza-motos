@@ -1,0 +1,125 @@
+/**
+ * Marca produtos fantasmas em blocos — sem timeout.
+ * Cada chamada processa um bloco de páginas do Tiny (ex: páginas 1-5),
+ * acumula os SKUs encontrados, e na chamada final marca no banco os ausentes.
+ *
+ * Fluxo do frontend:
+ *   1. POST { fase: 'coletar', pagina: 1 }  → retorna { skus: [...], totalPaginas, done: false }
+ *   2. POST { fase: 'coletar', pagina: 6 }  → retorna { skus: [...], totalPaginas, done: false }
+ *   3. ...
+ *   4. Quando done = true → POST { fase: 'marcar', skusTiny: [...] }
+ *   5. Depois → chamar /api/admin/cleanup-produtos com tipo=inativos para deletar
+ */
+import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { fetchTinyProductPage } from '@/lib/olist/client'
+
+const PAGINAS_POR_BLOCO = 5
+
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions)
+  if (!session || session.user.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
+  }
+
+  const body = await req.json().catch(() => ({}))
+  const { fase, pagina = 1, skusTiny = [] } = body
+
+  // ── Fase 1: coletar SKUs do Tiny em blocos ────────────────────────────────
+  if (fase === 'coletar') {
+    const skusBloco: string[] = []
+    let totalPaginas = 1
+    const paginaFim = pagina + PAGINAS_POR_BLOCO - 1
+
+    for (let p = pagina; p <= paginaFim; p++) {
+      try {
+        const { produtos, totalPaginas: tp } = await fetchTinyProductPage(p)
+        totalPaginas = tp
+
+        for (const prod of produtos) {
+          const sku = String(prod.codigo || prod.id || '').trim()
+          if (sku) skusBloco.push(sku)
+        }
+
+        if (p >= totalPaginas) {
+          return NextResponse.json({
+            skus: skusBloco,
+            totalPaginas,
+            proximaPagina: null,
+            done: true,
+          })
+        }
+
+        // Delay entre páginas para não sobrecarregar a API do Tiny
+        if (p < paginaFim && p < totalPaginas) {
+          await new Promise(r => setTimeout(r, 250))
+        }
+      } catch (err: any) {
+        return NextResponse.json({ error: `Erro na página ${p}: ${err.message}` }, { status: 500 })
+      }
+    }
+
+    return NextResponse.json({
+      skus: skusBloco,
+      totalPaginas,
+      proximaPagina: paginaFim + 1,
+      done: false,
+    })
+  }
+
+  // ── Fase 2: marcar fantasmas no banco ─────────────────────────────────────
+  if (fase === 'marcar') {
+    if (!Array.isArray(skusTiny) || skusTiny.length === 0) {
+      return NextResponse.json({ error: 'Lista de SKUs vazia' }, { status: 400 })
+    }
+
+    const skuSet = new Set<string>(skusTiny.map(String))
+
+    // Busca todos os produtos ativos do banco
+    const todosBanco = await prisma.product.findMany({
+      where: { ativo: true },
+      select: { id: true, sku: true, tinyId: true, nome: true },
+    })
+
+    const idsFantasma = todosBanco
+      .filter(p => {
+        const sku = (p.sku || p.tinyId || '').trim()
+        return sku && !skuSet.has(sku)
+      })
+      .map(p => p.id)
+
+    if (idsFantasma.length === 0) {
+      return NextResponse.json({
+        ok: true,
+        marcados: 0,
+        totalBanco: todosBanco.length,
+        totalTiny: skuSet.size,
+        msg: 'Nenhum fantasma encontrado — banco está sincronizado com o Tiny!',
+      })
+    }
+
+    // Marca como inativo em lotes de 500 (limite do Prisma)
+    let marcados = 0
+    const LOTE = 500
+    for (let i = 0; i < idsFantasma.length; i += LOTE) {
+      const lote = idsFantasma.slice(i, i + LOTE)
+      await prisma.product.updateMany({
+        where: { id: { in: lote } },
+        data: { ativo: false },
+      })
+      marcados += lote.length
+    }
+
+    return NextResponse.json({
+      ok: true,
+      marcados,
+      totalBanco: todosBanco.length,
+      totalTiny: skuSet.size,
+      msg: `${marcados} produtos marcados como inativos (não estão no Tiny). Use "Excluir inativos" para remover definitivamente.`,
+    })
+  }
+
+  return NextResponse.json({ error: 'Fase inválida. Use "coletar" ou "marcar".' }, { status: 400 })
+}

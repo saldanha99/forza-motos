@@ -1,14 +1,61 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   RefreshCw, CheckCircle2, AlertCircle, Loader2,
   Package, Image as ImageIcon, Warehouse, Trash2,
-  RotateCcw, ArrowUpRight,
+  RotateCcw, ArrowUpRight, Activity, Ghost,
 } from 'lucide-react'
 
+// ── Diagnóstico ───────────────────────────────────────────────────────────────
+interface Diag {
+  total: number
+  ativos: number
+  inativos: number
+  ativosComImagem: number
+  ativosSemImagem: number
+  naoVerificados: number
+  emEstoque: number
+  semEstoque: number
+  pctComImagem: number
+  pctEmEstoque: number
+}
+
+function StatBadge({ label, value, color = 'zinc' }: { label: string; value: number | string; color?: string }) {
+  const colors: Record<string, string> = {
+    zinc:   'bg-zinc-800 text-zinc-300',
+    green:  'bg-green-900/40 text-green-400',
+    red:    'bg-red-900/40 text-red-400',
+    yellow: 'bg-yellow-900/40 text-yellow-400',
+    blue:   'bg-blue-900/40 text-blue-400',
+  }
+  return (
+    <div className={`rounded-md px-3 py-2 ${colors[color] ?? colors.zinc}`}>
+      <div className="text-[18px] font-black leading-none">{value}</div>
+      <div className="text-[10px] mt-0.5 opacity-70">{label}</div>
+    </div>
+  )
+}
+
 export function OlistSyncButton() {
-  // ── Fase 1: Produtos ──────────────────────────────────────────────────────
+
+  // ── Diagnóstico ─────────────────────────────────────────────────────────────
+  const [diag, setDiag] = useState<Diag | null>(null)
+  const [loadingDiag, setLoadingDiag] = useState(false)
+
+  const fetchDiag = useCallback(async () => {
+    setLoadingDiag(true)
+    try {
+      const res = await fetch('/api/admin/diagnostico')
+      setDiag(await res.json())
+    } finally {
+      setLoadingDiag(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchDiag() }, [fetchDiag])
+
+  // ── Fase 1: Produtos ─────────────────────────────────────────────────────────
   const [loadingSync, setLoadingSync] = useState(false)
   const [syncPagina, setSyncPagina] = useState(0)
   const [syncTotal, setSyncTotal] = useState(0)
@@ -16,20 +63,21 @@ export function OlistSyncButton() {
   const [syncDone, setSyncDone] = useState(false)
   const [syncError, setSyncError] = useState('')
 
-  // ── Fase 2: Imagens ───────────────────────────────────────────────────────
+  // ── Fase 2: Imagens ──────────────────────────────────────────────────────────
   const [loadingImagens, setLoadingImagens] = useState(false)
   const [imagensRestantes, setImagensRestantes] = useState<number | null>(null)
-  const [imagensNaoVerificadas, setImagensNaoVerificadas] = useState<number | null>(null)
+  const [imagensNaoVerif, setImagensNaoVerif] = useState<number | null>(null)
   const [imagensAcum, setImagensAcum] = useState(0)
-  const [imagensDesativados, setImagensDesativados] = useState(0)
+  const [imagensDesativ, setImagensDesativ] = useState(0)
   const [imagensError, setImagensError] = useState('')
   const [imagensDone, setImagensDone] = useState(false)
+  const [imagensTotal, setImagensTotal] = useState<number | null>(null)
 
-  // ── Reset de imagens ──────────────────────────────────────────────────────
+  // ── Reset imagens ────────────────────────────────────────────────────────────
   const [loadingResetImgs, setLoadingResetImgs] = useState(false)
   const [resetImgsResult, setResetImgsResult] = useState<any>(null)
 
-  // ── Fase 3: Estoque físico ────────────────────────────────────────────────
+  // ── Fase 3: Estoque ──────────────────────────────────────────────────────────
   const [loadingEstoque, setLoadingEstoque] = useState(false)
   const [estoqueAcum, setEstoqueAcum] = useState(0)
   const [estoqueZerados, setEstoqueZerados] = useState<number | null>(null)
@@ -37,61 +85,48 @@ export function OlistSyncButton() {
   const [estoqueError, setEstoqueError] = useState('')
   const [estoqueDone, setEstoqueDone] = useState(false)
 
-  // ── Reconciliação ─────────────────────────────────────────────────────────
-  const [loadingRecon, setLoadingRecon] = useState(false)
-  const [reconResult, setReconResult] = useState<any>(null)
+  // ── Limpeza de fantasmas ─────────────────────────────────────────────────────
+  const [loadingFantasmas, setLoadingFantasmas] = useState(false)
+  const [fantasmasStep, setFantasmasStep] = useState<'idle' | 'coletando' | 'marcando' | 'deletando' | 'done'>('idle')
+  const [fantasmasProgresso, setFantasmasProgresso] = useState({ pagina: 0, totalPaginas: 0, skusColetados: 0 })
+  const [fantasmasResult, setFantasmasResult] = useState<any>(null)
+  const [fantasmasError, setFantasmasError] = useState('')
 
-  // ── Limpeza de produtos ───────────────────────────────────────────────────
+  // ── Outros cleanups ──────────────────────────────────────────────────────────
   const [loadingCleanup, setLoadingCleanup] = useState(false)
   const [cleanupResult, setCleanupResult] = useState<any>(null)
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
+  // ── Reconciliação ────────────────────────────────────────────────────────────
+  const [loadingRecon, setLoadingRecon] = useState(false)
+  const [reconResult, setReconResult] = useState<any>(null)
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
+
   async function handleSyncMetadados() {
-    setLoadingSync(true)
-    setSyncDone(false)
-    setSyncError('')
-    setSyncPagina(0)
-    setSyncTotal(0)
-    setSyncAcum({ criados: 0, atualizados: 0, erros: 0 })
-
-    let pagina = 1
-    let acum = { criados: 0, atualizados: 0, erros: 0 }
-
+    setLoadingSync(true); setSyncDone(false); setSyncError('')
+    setSyncPagina(0); setSyncTotal(0); setSyncAcum({ criados: 0, atualizados: 0, erros: 0 })
+    let pagina = 1, acum = { criados: 0, atualizados: 0, erros: 0 }
     while (true) {
       try {
         const res = await fetch('/api/olist/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pagina }),
         })
         const data = await res.json()
         if (data.error) { setSyncError(data.error); break }
-
-        acum = {
-          criados:     acum.criados     + (data.criados     ?? 0),
-          atualizados: acum.atualizados + (data.atualizados ?? 0),
-          erros:       acum.erros       + (data.erros       ?? 0),
-        }
-        setSyncAcum(acum)
-        setSyncPagina(data.paginaAtual ?? pagina)
-        setSyncTotal(data.totalPaginas ?? 1)
-
+        acum = { criados: acum.criados + (data.criados ?? 0), atualizados: acum.atualizados + (data.atualizados ?? 0), erros: acum.erros + (data.erros ?? 0) }
+        setSyncAcum(acum); setSyncPagina(data.paginaAtual ?? pagina); setSyncTotal(data.totalPaginas ?? 1)
         if (!data.hasMore) { setSyncDone(true); break }
         pagina++
-      } catch {
-        setSyncError('Erro de conexão com o servidor')
-        break
-      }
+      } catch { setSyncError('Erro de conexão'); break }
     }
     setLoadingSync(false)
+    fetchDiag()
   }
 
   async function handleBuscarImagens() {
-    setLoadingImagens(true)
-    setImagensDone(false)
-    setImagensError('')
-    let totalAcum = 0
-    let desativadosAcum = 0
+    setLoadingImagens(true); setImagensDone(false); setImagensError('')
+    let totalAcum = 0, desativAcum = 0, totalInicial: number | null = null
 
     while (true) {
       try {
@@ -100,222 +135,364 @@ export function OlistSyncButton() {
         if (data.error) { setImagensError(data.error); break }
 
         totalAcum += data.atualizados ?? 0
-        desativadosAcum += data.naoEncontradosNoTiny ?? 0
+        desativAcum += data.naoEncontradosNoTiny ?? 0
         setImagensAcum(totalAcum)
-        setImagensDesativados(desativadosAcum)
+        setImagensDesativ(desativAcum)
         setImagensRestantes(data.restantes ?? 0)
-        setImagensNaoVerificadas(data.naoVerificados ?? 0)
+        setImagensNaoVerif(data.naoVerificados ?? 0)
+
+        if (totalInicial === null && data.restantes != null) {
+          totalInicial = data.restantes + totalAcum
+          setImagensTotal(totalInicial)
+        }
 
         if (!data.hasMore) { setImagensDone(true); break }
-        await new Promise(r => setTimeout(r, 2000))
-      } catch {
-        setImagensError('Erro de conexão')
-        break
-      }
+        await new Promise(r => setTimeout(r, 1200)) // reduzido de 2s para 1.2s
+      } catch { setImagensError('Erro de conexão'); break }
     }
     setLoadingImagens(false)
+    fetchDiag()
+  }
+
+  async function handleLimparFantasmas() {
+    setLoadingFantasmas(true)
+    setFantasmasStep('coletando')
+    setFantasmasResult(null)
+    setFantasmasError('')
+    const todosSkus: string[] = []
+    let proximaPagina: number | null = 1
+    let totalPaginas = 0
+
+    // ── Fase A: Coletar todos os SKUs do Tiny em blocos ──────────────────────
+    while (proximaPagina !== null) {
+      try {
+        const res = await fetch('/api/admin/marcar-fantasmas', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fase: 'coletar', pagina: proximaPagina }),
+        })
+        const data = await res.json()
+        if (data.error) { setFantasmasError(data.error); setLoadingFantasmas(false); setFantasmasStep('idle'); return }
+
+        todosSkus.push(...(data.skus ?? []))
+        totalPaginas = data.totalPaginas ?? totalPaginas
+        setFantasmasProgresso({ pagina: proximaPagina, totalPaginas, skusColetados: todosSkus.length })
+
+        proximaPagina = data.done ? null : (data.proximaPagina ?? null)
+        if (proximaPagina !== null) await new Promise(r => setTimeout(r, 400))
+      } catch (e: any) {
+        setFantasmasError('Erro de conexão: ' + e.message)
+        setLoadingFantasmas(false); setFantasmasStep('idle'); return
+      }
+    }
+
+    // ── Fase B: Marcar fantasmas no banco ────────────────────────────────────
+    setFantasmasStep('marcando')
+    try {
+      const res = await fetch('/api/admin/marcar-fantasmas', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fase: 'marcar', skusTiny: todosSkus }),
+      })
+      const data = await res.json()
+      if (data.error) { setFantasmasError(data.error); setLoadingFantasmas(false); setFantasmasStep('idle'); return }
+
+      if (data.marcados > 0) {
+        // ── Fase C: Deletar os marcados ────────────────────────────────────
+        setFantasmasStep('deletando')
+        const resDel = await fetch('/api/admin/cleanup-produtos', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tipo: 'inativos' }),
+        })
+        const dataDel = await resDel.json()
+        setFantasmasResult({
+          ...data,
+          deletados: dataDel.removidos ?? data.marcados,
+        })
+      } else {
+        setFantasmasResult(data)
+      }
+    } catch (e: any) {
+      setFantasmasError('Erro ao marcar: ' + e.message)
+    }
+
+    setLoadingFantasmas(false)
+    setFantasmasStep('done')
+    fetchDiag()
   }
 
   async function handleResetImagens() {
-    setLoadingResetImgs(true)
-    setResetImgsResult(null)
+    setLoadingResetImgs(true); setResetImgsResult(null)
     try {
       const res = await fetch('/api/admin/reset-imgs', { method: 'POST' })
       setResetImgsResult(await res.json())
-    } catch {
-      setResetImgsResult({ error: 'Erro de conexão' })
-    } finally {
-      setLoadingResetImgs(false)
-    }
+    } catch { setResetImgsResult({ error: 'Erro de conexão' }) }
+    finally { setLoadingResetImgs(false) }
   }
 
   async function handleSyncEstoque() {
-    setLoadingEstoque(true)
-    setEstoqueDone(false)
-    setEstoqueError('')
-    let acum = 0
-
+    setLoadingEstoque(true); setEstoqueDone(false); setEstoqueError(''); let acum = 0
     while (true) {
       try {
         const res = await fetch('/api/olist/estoque', { method: 'POST' })
         const data = await res.json()
         if (data.error) { setEstoqueError(data.error); break }
-
-        acum += data.atualizados ?? 0
-        setEstoqueAcum(acum)
-        setEstoqueZerados(data.pendentes ?? 0)
-        setEstoqueTotal(data.total ?? null)
-
+        acum += data.atualizados ?? 0; setEstoqueAcum(acum)
+        setEstoqueZerados(data.pendentes ?? 0); setEstoqueTotal(data.total ?? null)
         if (!data.hasMore) { setEstoqueDone(true); break }
         await new Promise(r => setTimeout(r, 6000))
-      } catch {
-        setEstoqueError('Erro de conexão')
-        break
-      }
+      } catch { setEstoqueError('Erro de conexão'); break }
     }
     setLoadingEstoque(false)
+    fetchDiag()
   }
 
   async function handleCleanup(tipo: string) {
-    setLoadingCleanup(true)
-    setCleanupResult(null)
+    setLoadingCleanup(true); setCleanupResult(null)
     try {
       const res = await fetch('/api/admin/cleanup-produtos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo }),
       })
       setCleanupResult(await res.json())
-    } catch {
-      setCleanupResult({ error: 'Erro de conexão' })
-    } finally {
-      setLoadingCleanup(false)
-    }
+    } catch { setCleanupResult({ error: 'Erro de conexão' }) }
+    finally { setLoadingCleanup(false); fetchDiag() }
   }
 
   async function handleReconciliar() {
-    setLoadingRecon(true)
-    setReconResult(null)
+    setLoadingRecon(true); setReconResult(null)
     try {
       const res = await fetch('/api/olist/reconciliar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ minutosAtras: 90 }),
       })
       setReconResult(await res.json())
-    } catch {
-      setReconResult({ error: 'Erro de conexão' })
-    } finally {
-      setLoadingRecon(false)
-    }
+    } catch { setReconResult({ error: 'Erro de conexão' }) }
+    finally { setLoadingRecon(false); fetchDiag() }
   }
 
   const pctSync = syncTotal > 0 ? Math.round((syncPagina / syncTotal) * 100) : 0
-  const pctEstoque = estoqueTotal && estoqueZerados !== null
-    ? Math.round(((estoqueTotal - estoqueZerados) / estoqueTotal) * 100) : 0
+  const pctImagens = imagensTotal && imagensTotal > 0
+    ? Math.min(100, Math.round((imagensAcum / imagensTotal) * 100)) : 0
+  const pctFantasmas = fantasmasProgresso.totalPaginas > 0
+    ? Math.round((fantasmasProgresso.pagina / fantasmasProgresso.totalPaginas) * 100) : 0
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 space-y-5">
 
-      {/* Header */}
-      <div>
-        <h3 className="font-semibold text-white text-sm">Sincronização OLIST / Tiny</h3>
-        <p className="text-xs text-zinc-500 mt-0.5">Cron automático diário às 6h · Webhook em tempo real ativo</p>
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold text-white text-sm">Sincronização OLIST / Tiny</h3>
+          <p className="text-xs text-zinc-500 mt-0.5">Cron automático diário às 6h · Webhook ativo</p>
+        </div>
+        <button onClick={fetchDiag} disabled={loadingDiag}
+          className="flex items-center gap-1 px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-xs rounded transition-colors">
+          {loadingDiag ? <Loader2 size={11} className="animate-spin" /> : <Activity size={11} />}
+          Atualizar
+        </button>
       </div>
 
-      {/* Fluxo de dados — informativo */}
-      <div className="bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 flex flex-col gap-1.5">
-        <p className="text-[11px] text-zinc-500 font-medium uppercase tracking-wide mb-0.5">Arquitetura de dados</p>
-        <div className="flex items-center gap-2 text-[12px]">
-          <span className="text-blue-400 font-mono">Tiny</span>
-          <span className="text-zinc-600">→</span>
-          <span className="text-zinc-300">Produtos · Estoque · Imagens · Novos produtos</span>
+      {/* ── Diagnóstico ── */}
+      {diag && (
+        <div className="space-y-3">
+          <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+            Estado do banco agora
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            <StatBadge label="Total produtos" value={diag.total} color="zinc" />
+            <StatBadge label="Ativos" value={diag.ativos} color="green" />
+            <StatBadge label="Fantasmas (inativos)" value={diag.inativos} color={diag.inativos > 0 ? 'red' : 'zinc'} />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <StatBadge label="Com imagem" value={`${diag.ativosComImagem} (${diag.pctComImagem}%)`} color={diag.pctComImagem >= 80 ? 'green' : 'yellow'} />
+            <StatBadge label="Sem imagem" value={diag.ativosSemImagem} color={diag.ativosSemImagem > 200 ? 'red' : diag.ativosSemImagem > 0 ? 'yellow' : 'zinc'} />
+            <StatBadge label="Não verificados" value={diag.naoVerificados} color={diag.naoVerificados > 0 ? 'yellow' : 'zinc'} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <StatBadge label="Em estoque" value={`${diag.emEstoque} (${diag.pctEmEstoque}%)`} color="blue" />
+            <StatBadge label="Zerado" value={diag.semEstoque} color="zinc" />
+          </div>
+
+          {/* Barra de progresso de imagens */}
+          <div>
+            <div className="flex justify-between text-[10px] text-zinc-600 mb-1">
+              <span>Cobertura de imagens</span>
+              <span>{diag.pctComImagem}%</span>
+            </div>
+            <div className="w-full bg-zinc-800 rounded-full h-1.5">
+              <div
+                className="h-1.5 rounded-full transition-all duration-500"
+                style={{
+                  width: `${diag.pctComImagem}%`,
+                  background: diag.pctComImagem >= 80 ? '#22c55e' : diag.pctComImagem >= 50 ? '#eab308' : '#ef4444'
+                }}
+              />
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-[12px]">
-          <span className="text-green-400 font-mono">Nosso site</span>
-          <ArrowUpRight size={12} className="text-zinc-600" />
-          <span className="text-zinc-300">Pedidos enviados ao Tiny (automático)</span>
+      )}
+
+      <div className="border-t border-zinc-800" />
+
+      {/* ── PASSO 0: Limpar fantasmas ── */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-sm text-zinc-300">
+          <Ghost size={14} className="text-red-400" />
+          <div>
+            <span className="text-red-300 font-medium">Passo 0 — Limpar fantasmas</span>
+            <p className="text-[11px] text-zinc-600">
+              Compara TODOS os SKUs do banco com o Tiny e remove os que não existem mais
+            </p>
+          </div>
         </div>
-        <p className="text-[10px] text-zinc-600 mt-0.5">
-          Dados financeiros e retorno de pedidos ficam 100% no Tiny — não puxamos de lá.
-        </p>
+
+        <button
+          onClick={handleLimparFantasmas}
+          disabled={loadingFantasmas}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-900/50 hover:bg-red-900/80 disabled:opacity-50 text-red-300 text-sm font-semibold rounded-md border border-red-800/50 transition-all"
+        >
+          {loadingFantasmas ? <Loader2 size={13} className="animate-spin" /> : <Ghost size={13} />}
+          {loadingFantasmas
+            ? fantasmasStep === 'coletando'
+              ? `Coletando SKUs do Tiny… ${fantasmasProgresso.pagina}/${fantasmasProgresso.totalPaginas} páginas (${fantasmasProgresso.skusColetados} SKUs)`
+              : fantasmasStep === 'marcando'
+              ? 'Marcando fantasmas no banco…'
+              : 'Deletando fantasmas…'
+            : 'Limpar fantasmas automaticamente'
+          }
+        </button>
+
+        {loadingFantasmas && fantasmasProgresso.totalPaginas > 0 && (
+          <div>
+            <div className="flex justify-between text-xs text-zinc-500 mb-1">
+              <span>Páginas Tiny: {fantasmasProgresso.pagina}/{fantasmasProgresso.totalPaginas}</span>
+              <span>{pctFantasmas}%</span>
+            </div>
+            <div className="w-full bg-zinc-800 rounded-full h-1">
+              <div className="bg-red-500 h-1 rounded-full transition-all" style={{ width: `${pctFantasmas}%` }} />
+            </div>
+          </div>
+        )}
+
+        {!loadingFantasmas && (fantasmasResult || fantasmasError) && (
+          <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${fantasmasError ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'}`}>
+            {fantasmasError
+              ? <AlertCircle size={12} className="shrink-0 mt-0.5" />
+              : <CheckCircle2 size={12} className="shrink-0 mt-0.5" />
+            }
+            <span>{fantasmasError || fantasmasResult?.msg || (fantasmasResult?.deletados != null ? `${fantasmasResult.deletados} fantasmas deletados · Tiny: ${fantasmasResult.totalTiny} SKUs` : JSON.stringify(fantasmasResult))}</span>
+          </div>
+        )}
       </div>
 
-      {/* ── Passo 1: Produtos ── */}
+      <div className="border-t border-zinc-800" />
+
+      {/* ── PASSO 1: Produtos ── */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-zinc-300">
             <Package size={14} className="text-zinc-500" />
             <div>
-              <span>Passo 1 — Produtos</span>
-              <p className="text-[11px] text-zinc-600">Importa nome, preço e situação (rápido)</p>
+              <span>Passo 1 — Importar produtos</span>
+              <p className="text-[11px] text-zinc-600">Importa nome, preço e situação do Tiny</p>
             </div>
           </div>
           <button onClick={handleSyncMetadados} disabled={loadingSync}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-vermelho hover:bg-red-700 disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors">
             {loadingSync ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-            {loadingSync ? `Página ${syncPagina}/${syncTotal}…` : 'Sincronizar'}
+            {loadingSync ? `Pág. ${syncPagina}/${syncTotal}…` : 'Sincronizar'}
           </button>
         </div>
-
         {loadingSync && syncTotal > 0 && (
           <div>
             <div className="flex justify-between text-xs text-zinc-500 mb-1">
-              <span>Página {syncPagina} de {syncTotal}</span>
-              <span>{pctSync}%</span>
+              <span>Página {syncPagina} de {syncTotal}</span><span>{pctSync}%</span>
             </div>
             <div className="w-full bg-zinc-800 rounded-full h-1">
               <div className="bg-vermelho h-1 rounded-full transition-all" style={{ width: `${pctSync}%` }} />
             </div>
           </div>
         )}
-
         {!loadingSync && (syncDone || syncError) && (
           <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${syncError ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'}`}>
-            {syncError ? <AlertCircle size={12} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={12} className="mt-0.5 shrink-0" />}
-            <span>{syncError || `${syncAcum.criados} criados · ${syncAcum.atualizados} atualizados · ${syncAcum.erros} erros`}</span>
+            {syncError ? <AlertCircle size={12} /> : <CheckCircle2 size={12} />}
+            <span>{syncError || `${syncAcum.criados} criados · ${syncAcum.atualizados} atualizados`}</span>
           </div>
         )}
       </div>
 
-      {/* ── Passo 2: Imagens ── */}
+      {/* ── PASSO 2: Imagens ── */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-zinc-300">
             <ImageIcon size={14} className="text-zinc-500" />
             <div>
-              <span>Passo 2 — Imagens</span>
-              <p className="text-[11px] text-zinc-600">Busca fotos dos produtos (15 por vez)</p>
+              <span>Passo 2 — Importar imagens</span>
+              <p className="text-[11px] text-zinc-600">
+                Busca fotos no Tiny (20 por vez · automático)
+                {diag && diag.ativosSemImagem > 0 && (
+                  <span className="text-yellow-500"> · {diag.ativosSemImagem} pendentes</span>
+                )}
+              </p>
             </div>
           </div>
           <button onClick={handleBuscarImagens} disabled={loadingImagens}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors">
             {loadingImagens ? <Loader2 size={12} className="animate-spin" /> : <ImageIcon size={12} />}
-            {loadingImagens ? `${imagensAcum} foto(s) · ${imagensNaoVerificadas ?? '…'} pendentes` : 'Buscar imagens'}
+            {loadingImagens
+              ? `${imagensAcum} salvas · ${imagensNaoVerif ?? '?'} pendentes`
+              : 'Buscar imagens'
+            }
           </button>
         </div>
 
-        {!loadingImagens && imagensRestantes !== null && (
-          <p className="text-[11px] text-zinc-600">
-            {imagensRestantes > 0 ? `${imagensRestantes} produtos sem imagem no banco` : 'Todos os produtos têm imagem ✓'}
-          </p>
+        {loadingImagens && imagensTotal && imagensTotal > 0 && (
+          <div>
+            <div className="flex justify-between text-xs text-zinc-500 mb-1">
+              <span>{imagensAcum}/{imagensTotal} imagens processadas</span>
+              <span>{pctImagens}%</span>
+            </div>
+            <div className="w-full bg-zinc-800 rounded-full h-1">
+              <div className="bg-blue-500 h-1 rounded-full transition-all" style={{ width: `${pctImagens}%` }} />
+            </div>
+            {imagensDesativ > 0 && (
+              <p className="text-[10px] text-orange-400 mt-0.5">{imagensDesativ} fantasmas detectados e desativados durante o processo</p>
+            )}
+          </div>
         )}
 
         {!loadingImagens && (imagensDone || imagensError) && (
           <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${imagensError ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'}`}>
-            {imagensError ? <AlertCircle size={12} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={12} className="mt-0.5 shrink-0" />}
+            {imagensError ? <AlertCircle size={12} /> : <CheckCircle2 size={12} />}
             <span>
               {imagensError || (
-                `${imagensAcum} imagens salvas` +
-                (imagensDesativados > 0 ? ` · ${imagensDesativados} removidos (não existem no Tiny)` : '') +
+                `${imagensAcum} imagens importadas` +
+                (imagensDesativ > 0 ? ` · ${imagensDesativ} fantasmas desativados` : '') +
                 ` · ${imagensRestantes ?? 0} ainda sem foto`
               )}
             </span>
           </div>
         )}
 
-        {/* Reset imagens — forçar re-sincronização */}
+        {/* Reset imagens */}
         <div className="flex items-center justify-between pt-1 border-t border-zinc-800/60">
           <div>
-            <p className="text-[11px] text-zinc-500">Resetar verificação de imagens</p>
-            <p className="text-[10px] text-zinc-700">Use se imagens foram adicionadas no Tiny recentemente</p>
+            <p className="text-[11px] text-zinc-500">Resetar verificação</p>
+            <p className="text-[10px] text-zinc-700">Força re-busca de todos os produtos sem foto</p>
           </div>
           <button onClick={handleResetImagens} disabled={loadingResetImgs}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-700/60 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors">
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-700/50 hover:bg-blue-700 disabled:opacity-50 text-white text-xs rounded-md transition-colors">
             {loadingResetImgs ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
-            {loadingResetImgs ? 'Resetando…' : 'Resetar'}
+            Resetar
           </button>
         </div>
-
         {!loadingResetImgs && resetImgsResult && (
-          <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${resetImgsResult.error ? 'bg-red-900/30 text-red-400' : 'bg-blue-900/30 text-blue-400'}`}>
-            {resetImgsResult.error ? <AlertCircle size={12} className="shrink-0" /> : <RotateCcw size={12} className="shrink-0" />}
-            <span>{resetImgsResult.error || resetImgsResult.info}</span>
+          <div className={`text-xs px-3 py-2 rounded-md ${resetImgsResult.error ? 'bg-red-900/30 text-red-400' : 'bg-blue-900/30 text-blue-400'}`}>
+            {resetImgsResult.error || resetImgsResult.info}
           </div>
         )}
       </div>
 
-      {/* ── Passo 3: Estoque físico ── */}
+      {/* ── PASSO 3: Estoque ── */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-zinc-300">
@@ -326,130 +503,51 @@ export function OlistSyncButton() {
             </div>
           </div>
           <button onClick={handleSyncEstoque} disabled={loadingEstoque}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors">
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-white text-xs rounded-md transition-colors">
             {loadingEstoque ? <Loader2 size={12} className="animate-spin" /> : <Warehouse size={12} />}
             {loadingEstoque ? `${estoqueAcum} atualizados…` : 'Sync estoque'}
           </button>
         </div>
-
-        {loadingEstoque && estoqueTotal !== null && (
-          <div>
-            <div className="flex justify-between text-xs text-zinc-500 mb-1">
-              <span>{estoqueZerados} pendentes</span>
-              <span>{pctEstoque}% verificados</span>
-            </div>
-            <div className="w-full bg-zinc-800 rounded-full h-1">
-              <div className="bg-blue-500 h-1 rounded-full transition-all" style={{ width: `${pctEstoque}%` }} />
-            </div>
-          </div>
-        )}
-
         {!loadingEstoque && (estoqueDone || estoqueError) && (
-          <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${estoqueError ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'}`}>
-            {estoqueError ? <AlertCircle size={12} className="shrink-0" /> : <CheckCircle2 size={12} className="shrink-0" />}
-            <span>{estoqueError || `${estoqueAcum} verificados · ${estoqueZerados ?? 0} pendentes`}</span>
+          <div className={`text-xs px-3 py-2 rounded-md ${estoqueError ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'}`}>
+            {estoqueError || `${estoqueAcum} verificados`}
           </div>
         )}
-
-        <p className="text-[10px] text-zinc-700">
-          Webhook ativo — qualquer lançamento no Tiny atualiza o site automaticamente
-        </p>
       </div>
 
       <div className="border-t border-zinc-800" />
 
-      {/* ── Reconciliação ── */}
+      {/* ── Limpeza manual ── */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-zinc-300">
-            <Trash2 size={14} className="text-zinc-500" />
-            <div>
-              <span>Limpar fantasmas</span>
-              <p className="text-[11px] text-zinc-600">Desativa produtos removidos do Tiny</p>
-            </div>
-          </div>
-          <button onClick={handleReconciliar} disabled={loadingRecon}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors">
-            {loadingRecon ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-            {loadingRecon ? 'Verificando…' : 'Reconciliar'}
-          </button>
-        </div>
-
-        {!loadingRecon && reconResult && (
-          <div className={`flex flex-col gap-1 text-xs px-3 py-2 rounded-md ${reconResult.error ? 'bg-red-900/30 text-red-400' : reconResult.desativados > 0 ? 'bg-yellow-900/30 text-yellow-400' : 'bg-green-900/30 text-green-400'}`}>
-            <div className="flex items-center gap-2">
-              {reconResult.error ? <AlertCircle size={12} className="shrink-0" /> : reconResult.desativados > 0 ? <AlertCircle size={12} className="shrink-0" /> : <CheckCircle2 size={12} className="shrink-0" />}
-              <span>
-                {reconResult.error ||
-                  (reconResult.desativados > 0
-                    ? `${reconResult.desativados} fantasmas desativados`
-                    : `Nenhum fantasma · ${reconResult.totalAtivos ?? 0} produtos OK`
-                  )
-                }
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Limpeza de Banco ── */}
-      <div className="border-t border-zinc-800 pt-4 space-y-3">
-        <div>
-          <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">Limpeza de banco</p>
-          <p className="text-[10px] text-zinc-600">Remova produtos inválidos ou que já não existem no Tiny</p>
-        </div>
-
+        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Limpeza manual adicional</p>
         <div className="grid grid-cols-2 gap-2">
           <button onClick={() => handleCleanup('preco_zero')} disabled={loadingCleanup}
-            className="flex items-center justify-center gap-1.5 px-2 py-2 bg-orange-900/40 hover:bg-orange-900/60 disabled:opacity-40 text-orange-300 text-[11px] font-medium rounded transition-colors">
-            {loadingCleanup ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
-            Remover R$0,00
+            className="flex items-center justify-center gap-1.5 px-2 py-2 bg-orange-900/30 hover:bg-orange-900/50 disabled:opacity-40 text-orange-300 text-[11px] rounded transition-colors">
+            {loadingCleanup ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />} Remover R$0,00
           </button>
           <button onClick={() => handleCleanup('duplicados')} disabled={loadingCleanup}
-            className="flex items-center justify-center gap-1.5 px-2 py-2 bg-zinc-700/60 hover:bg-zinc-700 disabled:opacity-40 text-zinc-300 text-[11px] font-medium rounded transition-colors">
-            {loadingCleanup ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
-            Remover duplicados
+            className="flex items-center justify-center gap-1.5 px-2 py-2 bg-zinc-700/60 hover:bg-zinc-700 disabled:opacity-40 text-zinc-300 text-[11px] rounded transition-colors">
+            {loadingCleanup ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />} Duplicados
           </button>
         </div>
-
         <button onClick={() => handleCleanup('inativos')} disabled={loadingCleanup}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-red-900/40 hover:bg-red-900/60 disabled:opacity-40 text-red-300 text-[11px] font-medium rounded transition-colors">
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-red-900/30 hover:bg-red-900/50 disabled:opacity-40 text-red-300 text-[11px] rounded transition-colors">
           {loadingCleanup ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
-          Excluir inativos (fantasmas sem Tiny)
+          Excluir inativos já marcados
         </button>
-
-        <button onClick={() => handleCleanup('sync_tiny')} disabled={loadingCleanup}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-red-900/30 hover:bg-red-900/50 disabled:opacity-40 text-red-300 text-[11px] font-medium rounded transition-colors">
-          {loadingCleanup ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
-          Sync completo com Tiny — remove SKUs ausentes (lento)
-        </button>
-
         {!loadingCleanup && cleanupResult && (
-          <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-md ${cleanupResult.error ? 'bg-red-900/30 text-red-400' : 'bg-zinc-800 text-zinc-300'}`}>
-            {cleanupResult.error
-              ? <AlertCircle size={12} className="shrink-0 mt-0.5" />
-              : <CheckCircle2 size={12} className="shrink-0 mt-0.5 text-green-400" />
-            }
-            <span>
-              {cleanupResult.error || (
-                cleanupResult.tipo === 'sync_tiny'
-                  ? `${cleanupResult.removidos} removidos · Tiny: ${cleanupResult.skusTiny} SKUs · Banco era: ${cleanupResult.totalBanco}`
-                  : `${cleanupResult.removidos} produtos removidos`
-              )}
-            </span>
+          <div className={`text-xs px-3 py-2 rounded-md ${cleanupResult.error ? 'bg-red-900/30 text-red-400' : 'bg-zinc-800 text-zinc-300'}`}>
+            {cleanupResult.error || `${cleanupResult.removidos} removidos`}
           </div>
         )}
       </div>
 
-      {/* ── Info pedidos (apenas informativo) ── */}
       <div className="border-t border-zinc-800 pt-3">
         <p className="text-[11px] text-zinc-600 flex items-center gap-1.5">
           <ArrowUpRight size={11} className="text-green-500" />
-          Pedidos do site são enviados automaticamente ao Tiny no momento da compra.
-          Status e dados financeiros são gerenciados 100% dentro do Tiny.
+          Pedidos enviados automaticamente ao Tiny · Status financeiro gerenciado no Tiny.
         </p>
       </div>
-
     </div>
   )
 }

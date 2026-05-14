@@ -16,7 +16,7 @@ export async function POST(_req: Request) {
   }
 
   try {
-    const result = await syncImagensLote(15)
+    const result = await syncImagensLote(20)
     return NextResponse.json(result)
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
