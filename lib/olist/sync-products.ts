@@ -215,9 +215,10 @@ export async function syncImagensLote(limite = 10) {
         where: { id: produto.id },
         data: {
           imagens,
-          // Só marca como verificado quando TEM imagem
-          // Sem imagem → continua false para re-tentar na próxima rodada semanal
-          imagensVerificadas: imagens.length > 0,
+          // Marca como verificado sempre — evita loop infinito
+          // Produtos sem foto no Tiny serão re-tentados semanalmente
+          // pela condição: updatedAt < NOW() - INTERVAL '7 days'
+          imagensVerificadas: true,
           temImagem: imagens.length > 0,
           descricao: descricao || undefined,
           ...(categoria && { categoria }),
