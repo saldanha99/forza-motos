@@ -147,13 +147,18 @@ export async function syncPaginaListagem(pagina: number) {
 export async function syncImagensLote(limite = 10) {
   // Prioridade 1: produtos sem imagem E ainda não verificados
   // Prioridade 2: produtos sem imagem mas já verificados (talvez tenham sido adicionadas fotos)
+  // Prioridade 1: nunca verificados
+  // Prioridade 2: verificados há mais de 7 dias e ainda sem foto (re-tentativa semanal)
   const precisam = await prisma.$queryRaw<{ id: string; sku: string; tinyId: string; nome: string }[]>`
     SELECT id, sku, "tinyId", nome
     FROM "Product"
     WHERE "tinyId" IS NOT NULL
       AND (imagens::text = '[]' OR imagens IS NULL)
-      AND "imagensVerificadas" = false
-    ORDER BY "updatedAt" ASC
+      AND (
+        "imagensVerificadas" = false
+        OR "updatedAt" < NOW() - INTERVAL '7 days'
+      )
+    ORDER BY "imagensVerificadas" ASC, "updatedAt" ASC
     LIMIT ${limite}
   `
 
@@ -195,13 +200,13 @@ export async function syncImagensLote(limite = 10) {
 
       if (imagens.length === 0) semImagemNoTiny++
 
-      // Sempre marca imagensVerificadas=true, mesmo sem fotos
-      // Isso impede que o mesmo produto seja re-consultado em cada rodada
       await prisma.product.update({
         where: { id: produto.id },
         data: {
           imagens,
-          imagensVerificadas: true,
+          // Só marca como verificado quando TEM imagem
+          // Sem imagem → continua false para re-tentar na próxima rodada semanal
+          imagensVerificadas: imagens.length > 0,
           temImagem: imagens.length > 0,
           descricao: descricao || undefined,
           ...(categoria && { categoria }),
