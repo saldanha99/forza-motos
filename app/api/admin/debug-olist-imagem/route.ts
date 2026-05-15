@@ -24,85 +24,53 @@ export async function GET(req: Request) {
   const token = process.env.OLIST_TOKEN || ''
   const results: Record<string, any> = { token_presente: !!token }
 
-  // ─── Teste 1: Download direto do anexo com OLIST_TOKEN ───────────────────
+  // ─── Teste 1: GET real no download para ver o content-type e se é imagem ──
   const urlDownload = `https://erp.olist.com/download?idAnexo=${ID_ANEXO_TESTE}&nomeAnexo=${NOME_ANEXO_TESTE}`
-
-  // Tenta sem auth
   try {
-    const r = await fetch(urlDownload, { method: 'HEAD', redirect: 'follow' })
-    results.download_sem_auth = { status: r.status, ok: r.ok, contentType: r.headers.get('content-type') }
-  } catch (e: any) {
-    results.download_sem_auth = { error: e.message }
-  }
-
-  // Tenta com token como query param
-  try {
-    const r = await fetch(`${urlDownload}&token=${token}`, { method: 'HEAD', redirect: 'follow' })
-    results.download_com_token_query = { status: r.status, ok: r.ok, contentType: r.headers.get('content-type') }
-  } catch (e: any) {
-    results.download_com_token_query = { error: e.message }
-  }
-
-  // Tenta com Authorization Bearer
-  try {
-    const r = await fetch(urlDownload, {
-      method: 'HEAD',
-      redirect: 'follow',
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    results.download_com_bearer = { status: r.status, ok: r.ok, contentType: r.headers.get('content-type') }
-  } catch (e: any) {
-    results.download_com_bearer = { error: e.message }
-  }
-
-  // ─── Teste 2: API Olist ERP v1 ───────────────────────────────────────────
-  const endpoints = [
-    `https://erp.olist.com/api/v1/produtos?token=${token}&pagina=1`,
-    `https://erp.olist.com/api/v2/produtos?token=${token}&pagina=1`,
-  ]
-
-  for (const url of endpoints) {
-    const key = url.includes('v2') ? 'olist_erp_api_v2' : 'olist_erp_api_v1'
-    try {
-      const r = await fetch(url)
-      const body = await r.text()
-      results[key] = {
-        status: r.status,
-        bodySlice: body.slice(0, 300),
-      }
-    } catch (e: any) {
-      results[key] = { error: e.message }
+    const r = await fetch(urlDownload, { redirect: 'follow' })
+    const contentType = r.headers.get('content-type') ?? ''
+    const isImage = contentType.startsWith('image/')
+    results.download_get = {
+      status: r.status,
+      ok: r.ok,
+      contentType,
+      isImage,
+      finalUrl: r.url,
+      // Se for imagem, pega os primeiros bytes para confirmar
+      preview: isImage ? 'É uma imagem! URL direta funciona.' : (await r.text()).slice(0, 200),
     }
+  } catch (e: any) {
+    results.download_get = { error: e.message }
   }
 
-  // ─── Teste 3: Tiny API com produto.obter.php para o produto PAR TOURANCE ─
-  // Busca direto no Tiny pelo nome para confirmar se a imagem aparece lá
+  // ─── Teste 2: produto.obter.php do PAR TOURANCE (id=884628311) ───────────
+  // Esse produto foi encontrado no Tiny com foto no Olist
   try {
-    const body = new URLSearchParams({
-      token,
-      formato: 'JSON',
-      pesquisa: 'PAR PNEUS METZELER TOURANCE',
-      situacao: 'A',
-      pagina: '1',
-    })
-    const r = await fetch('https://api.tiny.com.br/api2/produtos.pesquisa.php', {
+    const body = new URLSearchParams({ token, formato: 'JSON', id: '884628311' })
+    const r = await fetch('https://api.tiny.com.br/api2/produto.obter.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body.toString(),
     })
     const data = await r.json()
-    const produtos = data.retorno?.produtos ?? []
-    results.tiny_busca_par_tourance = {
-      totalEncontrados: produtos.length,
-      primeiros: produtos.slice(0, 3).map((p: any) => ({
-        id: p.produto?.id,
-        nome: p.produto?.nome,
-        codigo: p.produto?.codigo,
-      })),
+    const produto = data.retorno?.produto ?? null
+    results.tiny_par_tourance = {
+      nome: produto?.nome,
+      anexos: produto?.anexos,
+      imagens_externas: produto?.imagens_externas,
+      fotos: produto?.fotos,
+      // Todos os campos de imagem possíveis
+      todosOsCampos: produto ? Object.keys(produto) : [],
     }
   } catch (e: any) {
-    results.tiny_busca_par_tourance = { error: e.message }
+    results.tiny_par_tourance = { error: e.message }
   }
+
+  // ─── Teste 3: Construir URL da imagem a partir do anexo ─────────────────
+  // Se o produto.obter.php retornar idAnexo no campo anexos, a URL fica:
+  // erp.olist.com/download?idAnexo={id}&nomeAnexo={nome}
+  // Este teste confirma se a URL é pública ou precisa de auth
+  results.url_formula = `https://erp.olist.com/download?idAnexo={idAnexo}&nomeAnexo={nomeAnexo}`
 
   return NextResponse.json(results, { status: 200 })
 }
