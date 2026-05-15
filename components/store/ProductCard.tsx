@@ -44,50 +44,83 @@ export function ProductCard({ produto }: { produto: Produto }) {
       <div
         onMouseEnter={() => setHov(true)}
         onMouseLeave={() => setHov(false)}
-        className="rounded-lg overflow-hidden flex flex-col h-full transition-all duration-200"
+        className="rounded-2xl overflow-hidden flex flex-col h-full transition-all duration-300"
         style={{
-          backgroundColor: 'var(--card-bg)',
-          border: `1.5px solid ${hov ? 'var(--vermelho)' : 'var(--card-border)'}`,
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          background: hov ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.60)',
+          border: hov
+            ? '1px solid rgba(212,43,43,0.40)'
+            : '1px solid rgba(255,255,255,0.40)',
           boxShadow: hov
-            ? '0 8px 28px rgba(212,43,43,0.18), 0 2px 8px rgba(0,0,0,0.15)'
-            : '0 1px 4px rgba(0,0,0,0.08)',
+            ? '0 12px 40px rgba(212,43,43,0.15), 0 4px 16px rgba(0,0,0,0.08)'
+            : '0 8px 32px rgba(0,0,0,0.08)',
+          transform: hov ? 'translateY(-4px)' : 'translateY(0)',
         }}
       >
         {/* ── Imagem ────────────────────────────────────────── */}
         <div
-          className="relative w-full aspect-square overflow-hidden"
-          style={{ backgroundColor: 'var(--card-img-bg)' }}
+          className="relative w-full overflow-hidden"
+          style={{
+            aspectRatio: '4/3',
+            background: 'linear-gradient(135deg, var(--card-placeholder-from, #f3f4f6) 0%, var(--card-placeholder-to, #e5e7eb) 100%)',
+          }}
         >
           {imagem ? (
             <Image
               src={imagem}
               alt={produto.nome}
               fill
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               className="object-cover transition-transform duration-300 group-hover:scale-[1.04]"
             />
           ) : (
-            <div
-              className="absolute inset-0 flex items-center justify-center"
-              style={{
-                background: 'linear-gradient(135deg, var(--card-placeholder-from) 0%, var(--card-placeholder-to) 100%)',
-              }}
-            >
+            <div className="absolute inset-0 flex items-center justify-center">
               <TirePlaceholder />
             </div>
           )}
 
-          {/* Desconto */}
+          {/* Brand pill badge — top right */}
+          {produto.marca && (
+            <span
+              className="absolute top-2 right-2 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+              style={{
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                background: 'rgba(255,255,255,0.80)',
+                color: 'var(--card-brand)',
+                border: '1px solid rgba(255,255,255,0.60)',
+              }}
+            >
+              {produto.marca}
+            </span>
+          )}
+
+          {/* Discount badge — bottom left */}
           {disc && disc >= 5 && (
-            <span className="absolute top-2 left-2 bg-[#d42b2b] text-white text-[11px] font-bold px-2 py-0.5 rounded-sm tracking-wide">
+            <span
+              className="absolute bottom-2 left-2 rounded-full px-2.5 py-0.5 text-[10px] font-bold"
+              style={{
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                background: 'rgba(212,43,43,0.90)',
+                color: '#fff',
+              }}
+            >
               -{disc}%
             </span>
           )}
 
-          {/* Esgotado */}
+          {/* Esgotado overlay */}
           {esgotado && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <span className="text-xs text-white font-bold bg-black/60 px-3 py-1.5 rounded uppercase tracking-widest">
+            <div
+              className="absolute inset-0 flex items-center justify-center"
+              style={{ background: 'rgba(0,0,0,0.50)' }}
+            >
+              <span
+                className="text-xs text-white font-bold uppercase tracking-widest rounded-full px-4 py-1.5"
+                style={{ background: 'rgba(0,0,0,0.60)' }}
+              >
                 Esgotado
               </span>
             </div>
@@ -95,17 +128,7 @@ export function ProductCard({ produto }: { produto: Produto }) {
         </div>
 
         {/* ── Conteúdo ──────────────────────────────────────── */}
-        <div className="flex flex-col flex-1 p-3">
-          {/* Marca */}
-          {produto.marca && (
-            <span
-              className="text-[10px] font-semibold uppercase tracking-[0.8px] mb-1 truncate"
-              style={{ color: 'var(--card-brand)' }}
-            >
-              {produto.marca}
-            </span>
-          )}
-
+        <div className="flex flex-col flex-1 p-3.5">
           {/* Nome */}
           <p
             className="text-[12.5px] font-medium leading-[1.35] mb-2 line-clamp-2 flex-1"
@@ -119,12 +142,15 @@ export function ProductCard({ produto }: { produto: Produto }) {
             {precoPromo && (
               <span
                 className="block text-[11px] line-through leading-none mb-0.5"
-                style={{ color: 'var(--card-old-price)' }}
+                style={{ color: 'var(--card-old-price, var(--dim))' }}
               >
                 {formatPrice(preco)}
               </span>
             )}
-            <span className="block font-black text-[20px] leading-none tracking-tight" style={{ color: 'var(--vermelho)' }}>
+            <span
+              className="block font-black text-[20px] leading-none tracking-tight"
+              style={{ color: 'var(--vermelho)' }}
+            >
               {formatPrice(precoFinal)}
             </span>
             <span
@@ -135,19 +161,21 @@ export function ProductCard({ produto }: { produto: Produto }) {
             </span>
           </div>
 
-          {/* CTA */}
+          {/* CTA — visible on hover with transition */}
           {!esgotado && (
             <button
               onClick={handleAddToCart}
-              className="mt-2.5 w-full flex items-center justify-center gap-1.5 py-2 rounded text-[12px] font-bold uppercase tracking-[0.4px] transition-all duration-200"
+              className="mt-2.5 w-full flex items-center justify-center gap-1.5 py-2 rounded-full text-[12px] font-bold uppercase tracking-[0.4px] transition-all duration-300"
               style={{
-                background: hov ? 'var(--vermelho)' : 'transparent',
+                background: hov ? 'var(--vermelho)' : 'rgba(212,43,43,0.08)',
                 color: hov ? '#fff' : 'var(--vermelho)',
-                border: '1.5px solid var(--vermelho)',
+                border: '1.5px solid rgba(212,43,43,0.30)',
+                transform: hov ? 'scale(1)' : 'scale(0.97)',
+                opacity: hov ? 1 : 0.85,
               }}
             >
               <ShoppingCart size={13} strokeWidth={2.5} />
-              Comprar
+              Adicionar
             </button>
           )}
         </div>

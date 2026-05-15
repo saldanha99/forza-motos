@@ -1,8 +1,9 @@
 export const dynamic = 'force-dynamic'
+import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/store/ProductCard'
 import { FiltrosProdutos } from '@/components/store/FiltrosProdutos'
-import { Breadcrumb } from '@/components/store/Breadcrumb'
+import { Package } from 'lucide-react'
 
 interface SearchParams {
   [key: string]: string | undefined
@@ -50,8 +51,8 @@ async function getFiltrosDisponiveis() {
     prisma.product.findMany({ where: filtroBase, select: { marca: true }, distinct: ['marca'] }),
   ])
   return {
-    categorias: categorias.map((c) => c.categoria).filter(Boolean),
-    marcas: marcas.map((m) => m.marca).filter(Boolean),
+    categorias: categorias.map((c) => c.categoria).filter(Boolean) as string[],
+    marcas: marcas.map((m) => m.marca).filter(Boolean) as string[],
   }
 }
 
@@ -65,64 +66,173 @@ export default async function ProdutosPage({ searchParams }: { searchParams: Sea
 
   const paginaAtual = Number(searchParams.page ?? 1)
 
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <Breadcrumb
-        items={[
-          { name: 'Produtos', url: '/produtos' },
-          ...(searchParams.categoria ? [{ name: searchParams.categoria, url: `/produtos?categoria=${searchParams.categoria}` }] : []),
-        ]}
-      />
+  // Active filter chips
+  const activeFilters: { label: string; removeKey: string }[] = []
+  if (searchParams.busca) activeFilters.push({ label: `"${searchParams.busca}"`, removeKey: 'busca' })
+  if (searchParams.categoria) activeFilters.push({ label: searchParams.categoria, removeKey: 'categoria' })
+  if (searchParams.marca) activeFilters.push({ label: searchParams.marca, removeKey: 'marca' })
+  if (searchParams.minPreco || searchParams.maxPreco) {
+    activeFilters.push({
+      label: `R$ ${searchParams.minPreco ?? '0'} – ${searchParams.maxPreco ?? '∞'}`,
+      removeKey: 'preco',
+    })
+  }
 
-      <div className="mb-7 mt-4">
-        <h1 className="font-grotesk font-bold text-3xl text-ink mb-1">Produtos</h1>
-        <p className="text-dim text-sm">{total} produto{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}</p>
+  function buildFilterUrl(removeKey: string) {
+    const q = { ...searchParams }
+    if (removeKey === 'preco') { delete q.minPreco; delete q.maxPreco }
+    else delete q[removeKey]
+    delete q.page
+    const params = new URLSearchParams()
+    Object.entries(q).forEach(([k, v]) => { if (v) params.set(k, v) })
+    const qs = params.toString()
+    return `/produtos${qs ? `?${qs}` : ''}`
+  }
+
+  return (
+    <div className="min-h-screen" style={{ background: 'var(--surface)' }}>
+
+      {/* ── Sticky glass top bar ─────────────────────────── */}
+      <div
+        className="sticky top-0 z-30 border-b"
+        style={{
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          background: 'rgba(255,255,255,0.80)',
+          borderColor: 'rgba(255,255,255,0.40)',
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center gap-3">
+          <div className="flex items-baseline gap-3 mr-auto">
+            <h1 className="font-rajdhani font-bold text-xl" style={{ color: 'var(--ink)' }}>
+              Produtos
+            </h1>
+            <span className="text-xs font-medium rounded-full px-2.5 py-0.5" style={{
+              background: 'rgba(212,43,43,0.10)',
+              color: 'var(--vermelho)',
+            }}>
+              {total} {total !== 1 ? 'itens' : 'item'}
+            </span>
+          </div>
+
+          {/* Active filter chips */}
+          {activeFilters.map((f) => (
+            <Link
+              key={f.removeKey}
+              href={buildFilterUrl(f.removeKey)}
+              className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-all duration-200 hover:opacity-80"
+              style={{
+                background: 'rgba(212,43,43,0.10)',
+                color: 'var(--vermelho)',
+                border: '1px solid rgba(212,43,43,0.20)',
+              }}
+            >
+              {f.label}
+              <span className="text-[10px] ml-0.5 opacity-70">×</span>
+            </Link>
+          ))}
+        </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Sidebar Filtros */}
-        <aside className="lg:w-56 shrink-0">
-          <FiltrosProdutos
-            categorias={filtros.categorias}
-            marcas={filtros.marcas}
-            params={searchParams}
-          />
-        </aside>
+      {/* ── Main layout ─────────────────────────────────── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex gap-8">
 
-        {/* Grid */}
-        <div className="flex-1">
-          {produtos.length === 0 ? (
-            <div className="text-center py-20 text-faint">
-              <p className="text-4xl mb-4">🔍</p>
-              <p className="text-dim">Nenhum produto encontrado com esses filtros.</p>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                {produtos.map((p) => (
-                  <ProductCard key={p.id} produto={p} />
-                ))}
+          {/* Sidebar */}
+          <aside className="w-64 shrink-0">
+            <FiltrosProdutos
+              categorias={filtros.categorias}
+              marcas={filtros.marcas}
+              params={searchParams}
+            />
+          </aside>
+
+          {/* Grid area */}
+          <div className="flex-1 min-w-0">
+            {produtos.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-24">
+                <div
+                  className="rounded-2xl p-10 flex flex-col items-center text-center max-w-sm"
+                  style={{
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    background: 'rgba(255,255,255,0.60)',
+                    border: '1px solid rgba(255,255,255,0.40)',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+                  }}
+                >
+                  <Package
+                    size={48}
+                    strokeWidth={1.2}
+                    style={{ color: 'var(--dim)', marginBottom: '16px' }}
+                  />
+                  <p
+                    className="font-semibold text-base mb-1"
+                    style={{ color: 'var(--ink)' }}
+                  >
+                    Nenhum produto encontrado
+                  </p>
+                  <p className="text-sm" style={{ color: 'var(--dim)' }}>
+                    Tente ajustar ou limpar os filtros aplicados.
+                  </p>
+                  <Link
+                    href="/produtos"
+                    className="mt-5 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200"
+                    style={{
+                      background: 'var(--vermelho)',
+                      color: '#fff',
+                      boxShadow: '0 2px 12px rgba(212,43,43,0.30)',
+                    }}
+                  >
+                    Ver todos
+                  </Link>
+                </div>
               </div>
-
-              {pages > 1 && (
-                <div className="flex justify-center gap-2 mt-10">
-                  {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
-                    <a
-                      key={p}
-                      href={`?${new URLSearchParams({ ...searchParams, page: String(p) })}`}
-                      className={`w-9 h-9 flex items-center justify-center rounded-md text-sm transition-colors font-medium ${
-                        p === paginaAtual
-                          ? 'bg-vermelho text-white'
-                          : 'bg-card border border-line text-dim hover:border-line-hi hover:text-ink'
-                      }`}
-                    >
-                      {p}
-                    </a>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+                  {produtos.map((p) => (
+                    <ProductCard key={p.id} produto={p} />
                   ))}
                 </div>
-              )}
-            </>
-          )}
+
+                {/* Pagination */}
+                {pages > 1 && (
+                  <div className="flex justify-center gap-2 mt-12">
+                    {Array.from({ length: pages }, (_, i) => i + 1).map((p) => {
+                      const isActive = p === paginaAtual
+                      const href = `/produtos?${new URLSearchParams({ ...searchParams, page: String(p) })}`
+                      return (
+                        <a
+                          key={p}
+                          href={href}
+                          className="w-9 h-9 flex items-center justify-center rounded-full text-sm font-semibold transition-all duration-200"
+                          style={
+                            isActive
+                              ? {
+                                  background: 'var(--vermelho)',
+                                  color: '#fff',
+                                  boxShadow: '0 2px 12px rgba(212,43,43,0.35)',
+                                }
+                              : {
+                                  backdropFilter: 'blur(8px)',
+                                  WebkitBackdropFilter: 'blur(8px)',
+                                  background: 'rgba(255,255,255,0.60)',
+                                  border: '1px solid rgba(255,255,255,0.40)',
+                                  color: 'var(--dim)',
+                                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                                }
+                          }
+                        >
+                          {p}
+                        </a>
+                      )
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

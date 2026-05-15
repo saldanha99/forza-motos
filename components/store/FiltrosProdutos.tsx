@@ -2,8 +2,7 @@
 
 import { useRouter, usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
+import { Search } from 'lucide-react'
 
 interface Props {
   categorias: string[]
@@ -32,80 +31,218 @@ export function FiltrosProdutos({ categorias, marcas, params }: Props) {
     router.push(pathname)
   }
 
+  const hasActiveFilters = !!(params.busca || params.categoria || params.marca || params.minPreco || params.maxPreco)
+
   return (
-    <div className="bg-card border border-line rounded-xl p-5 space-y-5">
-      <Input
-        label="Buscar"
-        placeholder="Nome ou modelo..."
-        value={busca}
-        onChange={(e) => setBusca(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && aplicar({ busca })}
-      />
+    <div
+      className="sticky top-24 backdrop-blur-xl rounded-2xl shadow-lg space-y-5 p-5"
+      style={{
+        background: 'rgba(255,255,255,0.70)',
+        border: '1px solid rgba(255,255,255,0.50)',
+      }}
+    >
+      <style>{`
+        [data-theme='dark'] .filtros-glass {
+          background: rgba(24,24,27,0.75) !important;
+          border-color: rgba(255,255,255,0.07) !important;
+        }
+        [data-theme='dark'] .filtros-input {
+          background: rgba(255,255,255,0.07) !important;
+          border-color: rgba(255,255,255,0.10) !important;
+          color: var(--ink) !important;
+        }
+        [data-theme='dark'] .filtros-input::placeholder {
+          color: var(--dim) !important;
+        }
+        [data-theme='dark'] .filtros-section-title {
+          color: var(--dim) !important;
+        }
+      `}</style>
 
-      {categorias.length > 0 && (
-        <div>
-          <h3 className="text-xs font-semibold text-faint mb-2.5 uppercase tracking-wider">Categoria</h3>
-          <ul className="space-y-0.5">
-            <li>
-              <button
-                onClick={() => aplicar({ categoria: '' })}
-                className={`text-sm w-full text-left py-1.5 px-2 rounded-md transition-colors ${
-                  !params.categoria ? 'text-vermelho bg-[var(--vermelho-light)] font-medium' : 'text-dim hover:text-ink hover:bg-card-hi'
-                }`}
-              >
-                Todos
-              </button>
-            </li>
-            {categorias.map((cat) => (
-              <li key={cat}>
-                <button
-                  onClick={() => aplicar({ categoria: cat })}
-                  className={`text-sm w-full text-left py-1.5 px-2 rounded-md transition-colors capitalize ${
-                    params.categoria === cat ? 'text-vermelho bg-[var(--vermelho-light)] font-medium' : 'text-dim hover:text-ink hover:bg-card-hi'
-                  }`}
-                >
-                  {cat}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {marcas.length > 0 && (
-        <div>
-          <h3 className="text-xs font-semibold text-faint mb-2.5 uppercase tracking-wider">Marca</h3>
-          <ul className="space-y-0.5">
-            {marcas.map((marca) => (
-              <li key={marca}>
-                <button
-                  onClick={() => aplicar({ marca })}
-                  className={`text-sm w-full text-left py-1.5 px-2 rounded-md transition-colors ${
-                    params.marca === marca ? 'text-vermelho bg-[var(--vermelho-light)] font-medium' : 'text-dim hover:text-ink hover:bg-card-hi'
-                  }`}
-                >
-                  {marca}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <div>
-        <h3 className="text-xs font-semibold text-faint mb-2.5 uppercase tracking-wider">Faixa de Preço</h3>
-        <div className="flex gap-2">
-          <Input placeholder="Mín" type="number" value={minPreco} onChange={(e) => setMinPreco(e.target.value)} />
-          <Input placeholder="Máx" type="number" value={maxPreco} onChange={(e) => setMaxPreco(e.target.value)} />
-        </div>
-        <Button size="sm" variant="outline" className="mt-2 w-full" onClick={() => aplicar({ minPreco, maxPreco })}>
-          Aplicar
-        </Button>
+      {/* Search input */}
+      <div className="relative">
+        <Search
+          size={14}
+          className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+          style={{ color: 'var(--dim)' }}
+        />
+        <input
+          type="text"
+          placeholder="Nome ou modelo..."
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && aplicar({ busca })}
+          className="filtros-input w-full pl-9 pr-3 py-2 rounded-xl text-sm outline-none transition-all duration-200 backdrop-blur-sm"
+          style={{
+            background: 'rgba(255,255,255,0.50)',
+            border: '1px solid rgba(255,255,255,0.40)',
+            color: 'var(--ink)',
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(212,43,43,0.60)'
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.40)'
+          }}
+        />
       </div>
 
-      <Button variant="ghost" size="sm" className="w-full" onClick={limpar}>
-        Limpar filtros
-      </Button>
+      {/* Categorias */}
+      {categorias.length > 0 && (
+        <div>
+          <h3
+            className="filtros-section-title text-[10px] font-semibold uppercase tracking-widest mb-3"
+            style={{ color: 'var(--dim)' }}
+          >
+            Categoria
+          </h3>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              onClick={() => aplicar({ categoria: '' })}
+              className="rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-200"
+              style={
+                !params.categoria
+                  ? {
+                      background: 'var(--vermelho)',
+                      color: '#fff',
+                      boxShadow: '0 2px 12px rgba(212,43,43,0.35)',
+                    }
+                  : {
+                      background: 'rgba(0,0,0,0.06)',
+                      color: 'var(--dim)',
+                      border: '1px solid rgba(0,0,0,0.08)',
+                    }
+              }
+            >
+              Todos
+            </button>
+            {categorias.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => aplicar({ categoria: cat })}
+                className="rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-200 capitalize"
+                style={
+                  params.categoria === cat
+                    ? {
+                        background: 'var(--vermelho)',
+                        color: '#fff',
+                        boxShadow: '0 2px 12px rgba(212,43,43,0.35)',
+                      }
+                    : {
+                        background: 'rgba(0,0,0,0.06)',
+                        color: 'var(--dim)',
+                        border: '1px solid rgba(0,0,0,0.08)',
+                      }
+                }
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Marcas */}
+      {marcas.length > 0 && (
+        <div>
+          <h3
+            className="filtros-section-title text-[10px] font-semibold uppercase tracking-widest mb-3"
+            style={{ color: 'var(--dim)' }}
+          >
+            Marca
+          </h3>
+          <div className="flex flex-wrap gap-1.5">
+            {marcas.map((marca) => (
+              <button
+                key={marca}
+                onClick={() => aplicar({ marca })}
+                className="rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-200"
+                style={
+                  params.marca === marca
+                    ? {
+                        background: 'var(--vermelho)',
+                        color: '#fff',
+                        boxShadow: '0 2px 12px rgba(212,43,43,0.35)',
+                      }
+                    : {
+                        background: 'rgba(0,0,0,0.06)',
+                        color: 'var(--dim)',
+                        border: '1px solid rgba(0,0,0,0.08)',
+                      }
+                }
+              >
+                {marca}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Faixa de Preço */}
+      <div>
+        <h3
+          className="filtros-section-title text-[10px] font-semibold uppercase tracking-widest mb-3"
+          style={{ color: 'var(--dim)' }}
+        >
+          Faixa de Preço
+        </h3>
+        <div className="flex gap-2">
+          <input
+            type="number"
+            placeholder="Mín"
+            value={minPreco}
+            onChange={(e) => setMinPreco(e.target.value)}
+            className="filtros-input w-full px-3 py-2 rounded-xl text-sm outline-none transition-all duration-200"
+            style={{
+              background: 'rgba(255,255,255,0.50)',
+              border: '1px solid rgba(255,255,255,0.40)',
+              color: 'var(--ink)',
+            }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(212,43,43,0.60)' }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.40)' }}
+          />
+          <input
+            type="number"
+            placeholder="Máx"
+            value={maxPreco}
+            onChange={(e) => setMaxPreco(e.target.value)}
+            className="filtros-input w-full px-3 py-2 rounded-xl text-sm outline-none transition-all duration-200"
+            style={{
+              background: 'rgba(255,255,255,0.50)',
+              border: '1px solid rgba(255,255,255,0.40)',
+              color: 'var(--ink)',
+            }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(212,43,43,0.60)' }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.40)' }}
+          />
+        </div>
+        <button
+          onClick={() => aplicar({ minPreco, maxPreco })}
+          className="mt-2.5 w-full py-2 rounded-xl text-xs font-semibold transition-all duration-200"
+          style={{
+            background: 'rgba(212,43,43,0.10)',
+            color: 'var(--vermelho)',
+            border: '1px solid rgba(212,43,43,0.20)',
+          }}
+        >
+          Aplicar preço
+        </button>
+      </div>
+
+      {/* Limpar */}
+      {hasActiveFilters && (
+        <button
+          onClick={limpar}
+          className="w-full py-2 rounded-xl text-xs font-medium transition-all duration-200"
+          style={{
+            background: 'rgba(0,0,0,0.04)',
+            color: 'var(--dim)',
+            border: '1px solid rgba(0,0,0,0.08)',
+          }}
+        >
+          Limpar filtros
+        </button>
+      )}
     </div>
   )
 }
