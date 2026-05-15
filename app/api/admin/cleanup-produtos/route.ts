@@ -134,5 +134,53 @@ export async function POST(req: Request) {
     })
   }
 
+  if (tipo === 'sem_imagem') {
+    // Remove produtos sem foto (temImagem=false) que já foram verificados
+    // Exclui produtos que têm OrderItems para evitar violação de FK
+    const comPedidos = await prisma.orderItem.findMany({
+      where: { product: { temImagem: false } },
+      select: { productId: true },
+      distinct: ['productId'],
+    })
+    const idsComPedidos = comPedidos.map((p) => p.productId)
+
+    const r = await prisma.product.deleteMany({
+      where: {
+        temImagem: false,
+        imagensVerificadas: true,
+        ...(idsComPedidos.length > 0 ? { id: { notIn: idsComPedidos } } : {}),
+      },
+    })
+    removidos = r.count
+    return NextResponse.json({
+      ok: true,
+      removidos,
+      tipo: 'sem_imagem',
+      pulados: idsComPedidos.length,
+      msg: idsComPedidos.length > 0
+        ? `${removidos} excluídos, ${idsComPedidos.length} mantidos (têm pedidos vinculados)`
+        : `${removidos} produtos sem foto excluídos`,
+    })
+  }
+
+  if (tipo === 'sem_imagem_count') {
+    // Só conta, não deleta — para mostrar preview antes da confirmação
+    const comPedidos = await prisma.orderItem.findMany({
+      where: { product: { temImagem: false } },
+      select: { productId: true },
+      distinct: ['productId'],
+    })
+    const idsComPedidos = comPedidos.map((p) => p.productId)
+
+    const count = await prisma.product.count({
+      where: {
+        temImagem: false,
+        imagensVerificadas: true,
+        ...(idsComPedidos.length > 0 ? { id: { notIn: idsComPedidos } } : {}),
+      },
+    })
+    return NextResponse.json({ ok: true, count, pulados: idsComPedidos.length })
+  }
+
   return NextResponse.json({ error: 'Tipo inválido' }, { status: 400 })
 }

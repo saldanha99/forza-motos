@@ -116,6 +116,12 @@ export function OlistSyncButton() {
   const [loadingCleanup, setLoadingCleanup] = useState(false)
   const [cleanupResult, setCleanupResult] = useState<any>(null)
 
+  // ── Excluir sem imagem ────────────────────────────────────────────────────────
+  const [loadingSemImagem, setLoadingSemImagem] = useState(false)
+  const [semImagemCount, setSemImagemCount] = useState<number | null>(null)
+  const [semImagemResult, setSemImagemResult] = useState<any>(null)
+  const [semImagemConfirming, setSemImagemConfirming] = useState(false)
+
   // ── Reconciliação ────────────────────────────────────────────────────────────
   const [loadingRecon, setLoadingRecon] = useState(false)
   const [reconResult, setReconResult] = useState<any>(null)
@@ -306,6 +312,32 @@ export function OlistSyncButton() {
       setCleanupResult(await res.json())
     } catch { setCleanupResult({ error: 'Erro de conexão' }) }
     finally { setLoadingCleanup(false); fetchDiag() }
+  }
+
+  async function handleSemImagemCount() {
+    setLoadingSemImagem(true); setSemImagemCount(null); setSemImagemResult(null); setSemImagemConfirming(false)
+    try {
+      const res = await fetch('/api/admin/cleanup-produtos', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'sem_imagem_count' }),
+      })
+      const data = await res.json()
+      setSemImagemCount(data.count ?? 0)
+      setSemImagemConfirming(true)
+    } catch { setSemImagemResult({ error: 'Erro de conexão' }) }
+    finally { setLoadingSemImagem(false) }
+  }
+
+  async function handleSemImagemConfirm() {
+    setLoadingSemImagem(true); setSemImagemConfirming(false)
+    try {
+      const res = await fetch('/api/admin/cleanup-produtos', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'sem_imagem' }),
+      })
+      setSemImagemResult(await res.json())
+    } catch { setSemImagemResult({ error: 'Erro de conexão' }) }
+    finally { setLoadingSemImagem(false); fetchDiag() }
   }
 
   async function handleReconciliar() {
@@ -629,6 +661,53 @@ export function OlistSyncButton() {
             {cleanupResult.error || `${cleanupResult.removidos} removidos`}
           </div>
         )}
+
+        {/* ── Excluir sem foto ── */}
+        <div className="border-t border-zinc-800/60 pt-2 space-y-2">
+          <p className="text-[10px] text-zinc-500 flex items-center gap-1.5">
+            <ImageIcon size={10} className="text-orange-400" />
+            Produtos verificados como <strong className="text-orange-300">sem nenhuma foto no Tiny</strong>
+          </p>
+
+          {!semImagemConfirming ? (
+            <button
+              onClick={handleSemImagemCount}
+              disabled={loadingSemImagem}
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-orange-900/40 hover:bg-orange-900/60 disabled:opacity-40 text-orange-300 text-[11px] font-semibold rounded transition-colors"
+            >
+              {loadingSemImagem ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+              {loadingSemImagem ? 'Contando…' : 'Excluir produtos sem foto'}
+            </button>
+          ) : (
+            <div className="space-y-2">
+              <div className="px-3 py-2 bg-orange-900/30 rounded-md text-orange-200 text-xs text-center">
+                <strong>{semImagemCount}</strong> produtos sem foto serão excluídos. Isso é irreversível!
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => { setSemImagemConfirming(false); setSemImagemCount(null) }}
+                  className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-[11px] rounded transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSemImagemConfirm}
+                  disabled={loadingSemImagem}
+                  className="flex items-center justify-center gap-1 px-3 py-1.5 bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white text-[11px] font-bold rounded transition-colors"
+                >
+                  {loadingSemImagem ? <Loader2 size={10} className="animate-spin" /> : <Trash2 size={10} />}
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!loadingSemImagem && semImagemResult && (
+            <div className={`text-xs px-3 py-2 rounded-md ${semImagemResult.error ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'}`}>
+              {semImagemResult.error || semImagemResult.msg || `${semImagemResult.removidos} produtos excluídos`}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="border-t border-zinc-800 pt-3">
