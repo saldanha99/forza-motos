@@ -19,16 +19,53 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const tinyId = searchParams.get('tinyId')
 
+  const busca = searchParams.get('busca')
+
   if (!tinyId) {
-    // Se não passar tinyId, retorna o primeiro produto com tinyId do banco
+    // Busca produto por nome/categoria se ?busca= foi passado
+    const where = busca
+      ? { tinyId: { not: null as any }, OR: [
+          { nome: { contains: busca, mode: 'insensitive' as const } },
+          { categoria: { contains: busca, mode: 'insensitive' as const } },
+        ]}
+      : { tinyId: { not: null as any } }
+
     const primeiro = await prisma.product.findFirst({
-      where: { tinyId: { not: null } },
-      select: { id: true, nome: true, tinyId: true, sku: true, imagens: true },
+      where,
+      select: { id: true, nome: true, tinyId: true, sku: true, imagens: true, categoria: true },
     })
-    return NextResponse.json({
-      info: 'Passe ?tinyId=XXX para buscar um produto específico. Exemplo abaixo:',
-      exemplo: primeiro,
-    })
+
+    if (!primeiro) {
+      return NextResponse.json({ info: 'Nenhum produto encontrado', busca })
+    }
+
+    // Auto-chama a API do Tiny se encontrou um produto
+    try {
+      const data = await tinyFetch('produto.obter.php', { id: String(primeiro.tinyId!) }, 0)
+      const produto = data.retorno?.produto ?? null
+      const imagensExtraidas = produto ? extrairImagensTiny(produto) : []
+      return NextResponse.json({
+        info: busca ? `Produto encontrado com busca="${busca}"` : 'Primeiro produto com tinyId',
+        db: primeiro,
+        imagensExtraidas,
+        totalImagensEncontradas: imagensExtraidas.length,
+        chavesDoObjeto: produto ? Object.keys(produto) : [],
+        camposImagem: {
+          foto: produto?.foto,
+          fotos: produto?.fotos,
+          imagens: produto?.imagens,
+          imagem_principal: produto?.imagem_principal,
+          imagens_externas: produto?.imagens_externas,
+          url_imagem: produto?.url_imagem,
+          imagem: produto?.imagem,
+          anexos: produto?.anexos,
+          galeria: produto?.galeria,
+        },
+        produtoBruto: produto,
+      })
+    } catch (e: any) {
+      return NextResponse.json({ info: 'DB ok, erro na API Tiny', db: primeiro, error: e.message })
+    }
   }
 
   try {
