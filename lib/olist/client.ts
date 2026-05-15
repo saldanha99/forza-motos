@@ -199,6 +199,7 @@ export function extrairImagensTiny(p: any): string[] {
     if (typeof item === 'string') return item
     return (
       item.url ||
+      item.anexo ||     // Tiny API v2: { "anexo": "https://s3.amazonaws.com/..." }
       item.link ||
       item.endereco ||
       item.src ||
