@@ -180,27 +180,41 @@ export async function fetchTinyProductEstoque(id: string | number): Promise<numb
 
 /**
  * Extrair URLs de imagem de um produto retornado pelo produto.obter.php
- * Suporta todos os formatos conhecidos do Tiny API v2
+ *
+ * Tiny API v2 usa DOIS campos de imagem:
+ *   - anexos          → imagens anexadas/uploaded diretamente no Tiny/Olist
+ *   - imagens_externas → imagens hospedadas em URL externa
+ *
+ * Ambos chegam como array de objetos: [{ url, nome, ... }]
+ * ou array vazio [] quando não há imagens.
  */
 export function extrairImagensTiny(p: any): string[] {
   if (!p) return []
 
   const urls: string[] = []
 
-  // Helper: normaliza item de foto para URL
+  // Helper: normaliza item para URL (tenta todas as chaves conhecidas)
   function toUrl(item: any): string {
     if (!item) return ''
     if (typeof item === 'string') return item
-    return item.url || item.link || item.endereco || item.src || item.path || ''
+    return (
+      item.url ||
+      item.link ||
+      item.endereco ||
+      item.src ||
+      item.path ||
+      item.arquivo ||
+      item.miniatura ||
+      ''
+    )
   }
 
-  // Helper: transforma campo em array de urls
+  // Helper: transforma campo em array de urls (suporta array, objeto aninhado ou objeto simples)
   function extrairArray(campo: any): string[] {
     if (!campo) return []
-    // Já é um array?
     if (Array.isArray(campo)) return campo.map(toUrl).filter(Boolean)
-    // É um objeto com sub-campo?
-    const subCampos = ['foto', 'imagem', 'image', 'item']
+    // Objeto com sub-campo (ex: { foto: [...] } ou { anexo: [...] })
+    const subCampos = ['foto', 'imagem', 'image', 'item', 'anexo', 'imagem_externa']
     for (const sub of subCampos) {
       if (campo[sub] !== undefined) {
         const sub_raw = campo[sub]
@@ -209,22 +223,32 @@ export function extrairImagensTiny(p: any): string[] {
         if (sub_urls.length) return sub_urls
       }
     }
-    // É um objeto simples (foto única)?
     const u = toUrl(campo)
     if (u) return [u]
     return []
   }
 
-  // 1. Campo "fotos" (mais comum no Tiny API v2)
+  // 1. Imagens anexadas/uploaded (campo confirmado pelo Tiny API v2)
+  if (Array.isArray(p.anexos) && p.anexos.length > 0) {
+    urls.push(...p.anexos.map(toUrl).filter(Boolean))
+  } else if (p.anexos && !Array.isArray(p.anexos)) {
+    urls.push(...extrairArray(p.anexos))
+  }
+  if (urls.length) return urls
+
+  // 2. Imagens externas (campo confirmado pelo Tiny API v2)
+  if (Array.isArray(p.imagens_externas) && p.imagens_externas.length > 0) {
+    urls.push(...p.imagens_externas.map(toUrl).filter(Boolean))
+  } else if (p.imagens_externas && !Array.isArray(p.imagens_externas)) {
+    urls.push(...extrairArray(p.imagens_externas))
+  }
+  if (urls.length) return urls
+
+  // 3. Outros campos legados (algumas versões do Tiny retornam nesses campos)
   if (p.fotos) urls.push(...extrairArray(p.fotos))
   if (urls.length) return urls
 
-  // 2. Campo "imagens"
   if (p.imagens) urls.push(...extrairArray(p.imagens))
-  if (urls.length) return urls
-
-  // 3. Imagens externas (Tiny v2 — produtos com foto hospedada fora)
-  if (p.imagens_externas) urls.push(...extrairArray(p.imagens_externas))
   if (urls.length) return urls
 
   // 4. Campos de foto única
