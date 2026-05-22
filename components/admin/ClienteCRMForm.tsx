@@ -41,36 +41,36 @@ export function ClienteCRMForm({ userId, crm }: { userId: string; crm: CRM | nul
   }
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 space-y-5">
-      <h2 className="font-rajdhani font-semibold text-lg text-white">CRM</h2>
+    <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-6 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
+      <h2 className="font-barlow font-bold text-xl text-brand-text">CRM</h2>
 
-      <dl className="space-y-3 text-sm">
-        <div>
-          <dt className="text-zinc-600 text-xs">Total de pedidos</dt>
-          <dd className="text-white">{crm?.totalPedidos ?? 0}</dd>
+      <dl className="space-y-4 text-sm border-b border-brand-border/20 pb-4">
+        <div className="flex justify-between">
+          <dt className="text-brand-muted text-xs font-semibold uppercase tracking-wider">Total de pedidos</dt>
+          <dd className="text-brand-text font-bold">{crm?.totalPedidos ?? 0}</dd>
         </div>
-        <div>
-          <dt className="text-zinc-600 text-xs">Total gasto</dt>
-          <dd className="text-white">{formatPrice(Number(crm?.totalGasto ?? 0))}</dd>
+        <div className="flex justify-between">
+          <dt className="text-brand-muted text-xs font-semibold uppercase tracking-wider">Total gasto</dt>
+          <dd className="text-brand-text font-bold text-brand-accent">{formatPrice(Number(crm?.totalGasto ?? 0))}</dd>
         </div>
-        <div>
-          <dt className="text-zinc-600 text-xs">Última compra</dt>
-          <dd className="text-white">{crm?.ultimaCompra ? formatDate(crm.ultimaCompra) : '-'}</dd>
+        <div className="flex justify-between">
+          <dt className="text-brand-muted text-xs font-semibold uppercase tracking-wider">Última compra</dt>
+          <dd className="text-brand-text font-semibold">{crm?.ultimaCompra ? formatDate(crm.ultimaCompra) : '-'}</dd>
         </div>
       </dl>
 
       <div>
-        <label className="text-sm text-zinc-400 font-medium block mb-2">Etapa do funil</label>
-        <div className="grid grid-cols-2 gap-2">
+        <label className="text-sm text-brand-muted font-medium block mb-3">Etapa do funil</label>
+        <div className="grid grid-cols-2 gap-2.5">
           {FUNIS.map((f) => (
             <button
               key={f}
               type="button"
               onClick={() => setEtapa(f)}
-              className={`text-xs py-2 rounded border transition-colors ${
+              className={`text-xs py-2.5 rounded-xl border font-bold tracking-wider transition-all duration-200 ${
                 etapa === f
-                  ? 'border-vermelho bg-vermelho/10 text-vermelho'
-                  : 'border-zinc-700 text-zinc-500 hover:border-zinc-500'
+                  ? 'border-brand-accent bg-brand-accent/15 text-brand-accent shadow-md shadow-brand-accent/10'
+                  : 'border-white/10 text-brand-muted hover:border-white/20 hover:bg-white/5'
               }`}
             >
               {f}
@@ -80,17 +80,17 @@ export function ClienteCRMForm({ userId, crm }: { userId: string; crm: CRM | nul
       </div>
 
       <div>
-        <label className="text-sm text-zinc-400 font-medium block mb-1">Notas</label>
+        <label className="text-sm text-brand-muted font-medium block mb-2">Notas</label>
         <textarea
           value={notas}
           onChange={(e) => setNotas(e.target.value)}
           rows={4}
-          className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-vermelho resize-none"
+          className="w-full bg-white/5 border border-white/10 hover:border-white/20 rounded-xl px-4 py-3 text-brand-text text-sm focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent/20 resize-none transition-all duration-200 placeholder:text-brand-muted/50"
           placeholder="Observações sobre o cliente..."
         />
       </div>
 
-      <Button onClick={salvar} loading={loading} className="w-full" size="sm">
+      <Button onClick={salvar} loading={loading} className="w-full font-bold uppercase tracking-wider text-xs rounded-xl py-3.5" size="sm">
         Salvar CRM
       </Button>
     </div>

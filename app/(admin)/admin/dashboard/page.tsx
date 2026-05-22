@@ -3,10 +3,12 @@ import { prisma } from '@/lib/prisma'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { statusBadge } from '@/components/ui/Badge'
 import { OlistSyncButton } from '@/components/admin/OlistSyncButton'
+import { KpiCard } from '@/components/admin/KpiCard'
+import { FadeIn } from '@/components/admin/FadeIn'
 import Link from 'next/link'
 import { ShoppingBag, DollarSign, Users, AlertTriangle } from 'lucide-react'
 
-export const metadata = { title: 'Dashboard Admin' }
+export const metadata = { title: 'Dashboard — Forza Admin' }
 
 export default async function DashboardPage() {
   const hoje = new Date()
@@ -42,72 +44,116 @@ export default async function DashboardPage() {
     }),
   ])
 
-  const kpis = [
-    { label: 'Pedidos hoje', value: pedidosHoje, icon: ShoppingBag, cor: 'text-blue-400' },
-    { label: 'Receita do mês', value: formatPrice(Number(receitaMes._sum.total ?? 0)), icon: DollarSign, cor: 'text-green-400' },
-    { label: 'Clientes novos', value: clientesNovos, icon: Users, cor: 'text-purple-400' },
-    { label: 'Estoque crítico', value: produtosBaixoEstoque, icon: AlertTriangle, cor: 'text-yellow-400' },
-  ]
+  const receitaNum = Number(receitaMes._sum.total ?? 0)
 
   return (
     <div>
-      <h1 className="font-rajdhani font-bold text-3xl text-white mb-8">Dashboard</h1>
+      {/* Page header */}
+      <div className="mb-8">
+        <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">
+          Dashboard
+        </h1>
+        <p className="text-brand-muted text-sm mt-1">
+          Visão geral do dia — atualizado agora
+        </p>
+      </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        {kpis.map((k) => (
-          <div key={k.label} className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-            <div className="flex items-start justify-between mb-3">
-              <p className="text-xs text-zinc-500 uppercase tracking-wide">{k.label}</p>
-              <k.icon size={18} className={k.cor} />
-            </div>
-            <p className={`font-rajdhani font-bold text-2xl ${k.cor}`}>{k.value}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <FadeIn delay={0}>
+          <KpiCard
+            label="Pedidos hoje"
+            value={pedidosHoje}
+            icon={ShoppingBag}
+          />
+        </FadeIn>
+        <FadeIn delay={80}>
+          <KpiCard
+            label="Receita do mês"
+            value={receitaNum}
+            icon={DollarSign}
+            prefix="R$ "
+            decimals={2}
+          />
+        </FadeIn>
+        <FadeIn delay={160}>
+          <KpiCard
+            label="Clientes novos"
+            value={clientesNovos}
+            icon={Users}
+          />
+        </FadeIn>
+        <FadeIn delay={240}>
+          <KpiCard
+            label="Estoque crítico"
+            value={produtosBaixoEstoque}
+            icon={AlertTriangle}
+          />
+        </FadeIn>
       </div>
 
       {/* OLIST Sync */}
-      <div className="mb-8">
+      <FadeIn delay={300} className="mb-8">
         <OlistSyncButton />
-      </div>
+      </FadeIn>
 
       {/* Últimos pedidos */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg">
-        <div className="flex items-center justify-between p-5 border-b border-zinc-800">
-          <h2 className="font-rajdhani font-semibold text-lg text-white">Últimos Pedidos</h2>
-          <Link href="/admin/pedidos" className="text-xs text-vermelho hover:text-red-400">
-            Ver todos →
-          </Link>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b border-zinc-800">
-              <tr className="text-xs text-zinc-500 uppercase tracking-wide">
-                <th className="text-left px-5 py-3">Pedido</th>
-                <th className="text-left px-5 py-3">Cliente</th>
-                <th className="text-left px-5 py-3">Total</th>
-                <th className="text-left px-5 py-3">Status</th>
-                <th className="text-left px-5 py-3">Data</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ultimosPedidos.map((p) => (
-                <tr key={p.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
-                  <td className="px-5 py-3">
-                    <Link href={`/admin/pedidos/${p.id}`} className="text-vermelho hover:text-red-400 font-medium">
-                      {p.orderNumber}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-3 text-zinc-400">{p.user?.nome ?? p.user?.email ?? 'Visitante'}</td>
-                  <td className="px-5 py-3 text-white font-medium">{formatPrice(Number(p.total))}</td>
-                  <td className="px-5 py-3">{statusBadge(p.status)}</td>
-                  <td className="px-5 py-3 text-zinc-500">{formatDate(p.createdAt)}</td>
+      <FadeIn delay={380}>
+        <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl overflow-hidden shadow-xl">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-brand-border/20 bg-white/[0.02]">
+            <h2 className="font-barlow font-bold text-lg text-brand-text">
+              Últimos Pedidos
+            </h2>
+            <Link
+              href="/admin/pedidos"
+              className="text-xs text-brand-accent hover:text-brand-accent-hover font-semibold transition-colors flex items-center gap-1"
+            >
+              Ver todos →
+            </Link>
+          </div>
+
+          <div className="overflow-x-auto admin-scroll">
+            <table className="w-full text-sm">
+              <thead className="border-b border-brand-border/20 bg-white/[0.01]">
+                <tr className="text-xs text-brand-muted uppercase tracking-widest">
+                  <th className="text-left px-6 py-3 font-medium">Pedido</th>
+                  <th className="text-left px-6 py-3 font-medium">Cliente</th>
+                  <th className="text-left px-6 py-3 font-medium">Total</th>
+                  <th className="text-left px-6 py-3 font-medium">Status</th>
+                  <th className="text-left px-6 py-3 font-medium">Data</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {ultimosPedidos.map((p) => (
+                  <tr
+                    key={p.id}
+                    className="border-b border-brand-border/10 hover:bg-white/[0.04] transition-colors"
+                  >
+                    <td className="px-6 py-3.5">
+                      <Link
+                        href={`/admin/pedidos/${p.id}`}
+                        className="text-brand-accent hover:text-brand-accent-hover font-semibold transition-colors"
+                      >
+                        {p.orderNumber}
+                      </Link>
+                    </td>
+                    <td className="px-6 py-3.5 text-brand-muted">
+                      {p.user?.nome ?? p.user?.email ?? 'Visitante'}
+                    </td>
+                    <td className="px-6 py-3.5 text-brand-text font-semibold">
+                      {formatPrice(Number(p.total))}
+                    </td>
+                    <td className="px-6 py-3.5">{statusBadge(p.status)}</td>
+                    <td className="px-6 py-3.5 text-brand-muted">
+                      {formatDate(p.createdAt)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      </FadeIn>
     </div>
   )
 }

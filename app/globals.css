@@ -141,6 +141,20 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   ADMIN BRAND TOKENS (Twix-style, dark-first — admin area only)
+   ═══════════════════════════════════════════════════════════════════ */
+:root {
+  --brand-bg:           #0a0a0a;
+  --brand-surface:      #111111;
+  --brand-surface-2:    #1a1a1a;
+  --brand-accent:       #d42b2b;        /* vermelho */
+  --brand-accent-hover: #b91c1c;
+  --brand-border:       rgba(212,43,43,0.15);
+  --brand-text:         #f0f0f0;
+  --brand-muted:        #888888;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    DARK MODE — Sobrescreve apenas camadas 2 e 3
    ═══════════════════════════════════════════════════════════════════ */
 [data-theme='dark'] {
@@ -218,6 +232,77 @@
 [data-theme='dark'] .group .bg-white { background-color: #1e1e1e !important; }
 [data-theme='dark'] .from-\[\#f2f2f2\] { --tw-gradient-from: #202020 !important; }
 [data-theme='dark'] .to-\[\#ebebeb\]   { --tw-gradient-to:   #1a1a1a !important; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   ADMIN ANIMATIONS (adapted from Twix — red palette)
+   ═══════════════════════════════════════════════════════════════════ */
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glow-pulse-red {
+  0%, 100% { box-shadow: 0 0 20px rgba(212,43,43,0.25); }
+  50%       { box-shadow: 0 0 40px rgba(212,43,43,0.55); }
+}
+
+@keyframes shimmer-border-rotate {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes admin-gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+
+.animate-fade-in-up    { animation: fade-in-up 0.5s ease-out both; }
+.animate-glow-pulse    { animation: glow-pulse-red 2.5s ease-in-out infinite; }
+.animate-admin-gradient {
+  background-size: 200% 200%;
+  animation: admin-gradient-shift 6s ease infinite;
+}
+
+.shimmer-border-gradient {
+  background: linear-gradient(
+    90deg,
+    #d42b2b 0%,
+    #f87171 25%,
+    #ef4444 50%,
+    #b91c1c 75%,
+    #d42b2b 100%
+  );
+  background-size: 300% 300%;
+  animation: shimmer-border-rotate 3s ease infinite;
+}
+
+/* Admin glass card */
+.admin-glass {
+  background: rgba(26,26,26,0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(212,43,43,0.12);
+}
+
+/* Admin scrollbar */
+.admin-scroll::-webkit-scrollbar       { width: 4px; height: 4px; }
+.admin-scroll::-webkit-scrollbar-track { background: var(--brand-surface); }
+.admin-scroll::-webkit-scrollbar-thumb { background: var(--brand-accent); border-radius: 2px; }
+.admin-scroll::-webkit-scrollbar-thumb:hover { background: var(--brand-accent-hover); }
+
+/* Admin radial glow (KPI card hover) */
+.admin-kpi-glow {
+  background: radial-gradient(circle at 50% 0%, rgba(212,43,43,0.08) 0%, transparent 70%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .animate-glow-pulse,
+  .animate-admin-gradient,
+  .shimmer-border-gradient { animation: none; }
+}
 
 /* ═══════════════════════════════════════════════════════════════════
    BASE STYLES

@@ -197,9 +197,20 @@ export function extrairImagensTiny(p: any): string[] {
   function toUrl(item: any): string {
     if (!item) return ''
     if (typeof item === 'string') return item
+
+    // Suporte para anexos Tiny/Olist que possuem idAnexo e nomeAnexo (ou id/nome ou anexo.id/anexo.nome)
+    const idAnexo = item.idAnexo || item.id || item.anexo?.id || item.anexo?.idAnexo
+    const nomeAnexo = item.nomeAnexo || item.nome || item.anexo?.nome || item.anexo?.nomeAnexo
+    if (idAnexo && nomeAnexo) {
+      return `https://erp.olist.com/download?idAnexo=${idAnexo}&nomeAnexo=${nomeAnexo}`
+    }
+
+    if (typeof item.anexo === 'string' && item.anexo) {
+      return item.anexo
+    }
+
     return (
       item.url ||
-      item.anexo ||     // Tiny API v2: { "anexo": "https://s3.amazonaws.com/..." }
       item.link ||
       item.endereco ||
       item.src ||

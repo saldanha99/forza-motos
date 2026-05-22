@@ -69,7 +69,7 @@ export async function POST(req: Request) {
     })
   }
 
-  // ── Fase 2: marcar fantasmas no banco ─────────────────────────────────────
+  // ── Fase 2: marcar e limpar fantasmas no banco ─────────────────────────────
   if (fase === 'marcar') {
     if (!Array.isArray(skusTiny) || skusTiny.length === 0) {
       return NextResponse.json({ error: 'Lista de SKUs vazia' }, { status: 400 })
@@ -77,47 +77,68 @@ export async function POST(req: Request) {
 
     const skuSet = new Set<string>(skusTiny.map(String))
 
-    // Busca todos os produtos ativos do banco
+    // Busca todos os produtos do banco que têm tinyId (ativos e inativos)
     const todosBanco = await prisma.product.findMany({
-      where: { ativo: true },
-      select: { id: true, sku: true, tinyId: true, nome: true },
+      where: { tinyId: { not: null } },
+      select: { id: true, sku: true, tinyId: true, nome: true, ativo: true },
     })
 
-    const idsFantasma = todosBanco
-      .filter(p => {
-        const sku = (p.sku || p.tinyId || '').trim()
-        return sku && !skuSet.has(sku)
-      })
-      .map(p => p.id)
+    const fantasmas = todosBanco.filter(p => {
+      const sku = (p.sku || p.tinyId || '').trim()
+      return sku && !skuSet.has(sku)
+    })
 
-    if (idsFantasma.length === 0) {
+    if (fantasmas.length === 0) {
       return NextResponse.json({
         ok: true,
         marcados: 0,
+        deletados: 0,
         totalBanco: todosBanco.length,
         totalTiny: skuSet.size,
         msg: 'Nenhum fantasma encontrado — banco está sincronizado com o Tiny!',
       })
     }
 
-    // Marca como inativo em lotes de 500 (limite do Prisma)
-    let marcados = 0
-    const LOTE = 500
-    for (let i = 0; i < idsFantasma.length; i += LOTE) {
-      const lote = idsFantasma.slice(i, i + LOTE)
+    const idsFantasma = fantasmas.map(p => p.id)
+
+    // Busca IDs de fantasmas que têm pedidos vinculados
+    const comPedidos = await prisma.orderItem.findMany({
+      where: { productId: { in: idsFantasma } },
+      select: { productId: true },
+      distinct: ['productId'],
+    })
+    const idsComPedidos = new Set(comPedidos.map(p => p.productId))
+
+    const paraDeletar = idsFantasma.filter(id => !idsComPedidos.has(id))
+    const paraInativar = idsFantasma.filter(id => idsComPedidos.has(id))
+
+    let deletadosCount = 0
+    let inativadosCount = 0
+
+    // Deleta os fantasmas sem pedidos
+    if (paraDeletar.length > 0) {
+      const r = await prisma.product.deleteMany({
+        where: { id: { in: paraDeletar } },
+      })
+      deletadosCount = r.count
+    }
+
+    // Inativa os fantasmas com pedidos
+    if (paraInativar.length > 0) {
       await prisma.product.updateMany({
-        where: { id: { in: lote } },
+        where: { id: { in: paraInativar } },
         data: { ativo: false },
       })
-      marcados += lote.length
+      inativadosCount = paraInativar.length
     }
 
     return NextResponse.json({
       ok: true,
-      marcados,
+      marcados: inativadosCount,
+      deletados: deletadosCount,
       totalBanco: todosBanco.length,
       totalTiny: skuSet.size,
-      msg: `${marcados} produtos marcados como inativos (não estão no Tiny). Use "Excluir inativos" para remover definitivamente.`,
+      msg: `${deletadosCount} fantasmas excluídos com sucesso. ${inativadosCount} fantasmas com pedidos vinculados foram desativados.`,
     })
   }
 

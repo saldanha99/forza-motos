@@ -6,7 +6,7 @@ import Link from 'next/link'
 
 const STATUS_OPTIONS = ['TODOS', 'AGUARDANDO_PAGAMENTO', 'CONFIRMADO', 'SEPARANDO', 'ENVIADO', 'ENTREGUE', 'CANCELADO']
 
-export const metadata = { title: 'Pedidos' }
+export const metadata = { title: 'Pedidos — Forza Admin' }
 
 export default async function PedidosAdminPage({ searchParams }: { searchParams: { status?: string; page?: string } }) {
   const page = Number(searchParams.page ?? 1)
@@ -29,7 +29,7 @@ export default async function PedidosAdminPage({ searchParams }: { searchParams:
 
   return (
     <div>
-      <h1 className="font-rajdhani font-bold text-3xl text-white mb-6">Pedidos</h1>
+      <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight mb-6">Pedidos</h1>
 
       {/* Filtro status */}
       <div className="flex flex-wrap gap-2 mb-6">
@@ -37,10 +37,10 @@ export default async function PedidosAdminPage({ searchParams }: { searchParams:
           <a
             key={s}
             href={`?status=${s}`}
-            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors capitalize ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 capitalize ${
               (searchParams.status ?? 'TODOS') === s
-                ? 'bg-vermelho text-white'
-                : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                ? 'bg-gradient-to-r from-brand-accent to-brand-accent-hover text-white shadow-md shadow-brand-accent/20'
+                : 'bg-white/5 text-brand-muted hover:text-brand-text hover:bg-white/10 border border-white/10'
             }`}
           >
             {s.replace(/_/g, ' ').toLowerCase()}
@@ -48,36 +48,38 @@ export default async function PedidosAdminPage({ searchParams }: { searchParams:
         ))}
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl overflow-hidden shadow-xl">
+        <div className="overflow-x-auto admin-scroll">
           <table className="w-full text-sm">
-            <thead className="border-b border-zinc-800 bg-zinc-950">
-              <tr className="text-xs text-zinc-500 uppercase tracking-wide">
-                <th className="text-left px-5 py-3">Pedido</th>
-                <th className="text-left px-5 py-3">Cliente</th>
-                <th className="text-left px-5 py-3">Itens</th>
-                <th className="text-left px-5 py-3">Total</th>
-                <th className="text-left px-5 py-3">Status</th>
-                <th className="text-left px-5 py-3">Data</th>
-                <th className="px-5 py-3" />
+            <thead className="border-b border-brand-border/20 bg-white/[0.01]">
+              <tr className="text-xs text-brand-muted uppercase tracking-widest">
+                <th className="text-left px-6 py-3 font-medium">Pedido</th>
+                <th className="text-left px-6 py-3 font-medium">Cliente</th>
+                <th className="text-left px-6 py-3 font-medium">Itens</th>
+                <th className="text-left px-6 py-3 font-medium">Total</th>
+                <th className="text-left px-6 py-3 font-medium">Status</th>
+                <th className="text-left px-6 py-3 font-medium">Data</th>
+                <th className="px-6 py-3" />
               </tr>
             </thead>
             <tbody>
               {pedidos.map((p) => (
-                <tr key={p.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
-                  <td className="px-5 py-3 font-medium text-vermelho">
-                    <Link href={`/admin/pedidos/${p.id}`}>{p.orderNumber}</Link>
+                <tr key={p.id} className="border-b border-brand-border/10 hover:bg-white/[0.04] transition-colors">
+                  <td className="px-6 py-3.5 font-semibold text-brand-accent">
+                    <Link href={`/admin/pedidos/${p.id}`} className="hover:text-brand-accent-hover transition-colors">
+                      {p.orderNumber}
+                    </Link>
                   </td>
-                  <td className="px-5 py-3 text-zinc-400">
-                    <div>{p.user?.nome ?? 'Visitante'}</div>
-                    <div className="text-xs text-zinc-600">{p.user?.email}</div>
+                  <td className="px-6 py-3.5 text-brand-muted">
+                    <div className="text-brand-text">{p.user?.nome ?? 'Visitante'}</div>
+                    <div className="text-xs text-brand-muted">{p.user?.email}</div>
                   </td>
-                  <td className="px-5 py-3 text-zinc-400">{p.items.length}</td>
-                  <td className="px-5 py-3 text-white font-medium">{formatPrice(Number(p.total))}</td>
-                  <td className="px-5 py-3">{statusBadge(p.status)}</td>
-                  <td className="px-5 py-3 text-zinc-500">{formatDate(p.createdAt)}</td>
-                  <td className="px-5 py-3">
-                    <Link href={`/admin/pedidos/${p.id}`} className="text-xs text-zinc-500 hover:text-white">
+                  <td className="px-6 py-3.5 text-brand-muted">{p.items.length}</td>
+                  <td className="px-6 py-3.5 text-brand-text font-semibold">{formatPrice(Number(p.total))}</td>
+                  <td className="px-6 py-3.5">{statusBadge(p.status)}</td>
+                  <td className="px-6 py-3.5 text-brand-muted">{formatDate(p.createdAt)}</td>
+                  <td className="px-6 py-3.5">
+                    <Link href={`/admin/pedidos/${p.id}`} className="text-xs text-brand-muted hover:text-brand-text transition-colors">
                       Ver →
                     </Link>
                   </td>
@@ -86,7 +88,7 @@ export default async function PedidosAdminPage({ searchParams }: { searchParams:
             </tbody>
           </table>
         </div>
-        <div className="p-4 border-t border-zinc-800 flex items-center justify-between text-xs text-zinc-500">
+        <div className="px-6 py-4 border-t border-brand-border/20 flex items-center justify-between text-xs text-brand-muted bg-white/[0.02]">
           <span>{total} pedido(s) encontrado(s)</span>
           {pages > 1 && (
             <div className="flex gap-1">
@@ -94,8 +96,8 @@ export default async function PedidosAdminPage({ searchParams }: { searchParams:
                 <a
                   key={p}
                   href={`?${new URLSearchParams({ ...searchParams, page: String(p) })}`}
-                  className={`w-7 h-7 flex items-center justify-center rounded transition-colors ${
-                    p === page ? 'bg-vermelho text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                  className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 font-medium ${
+                    p === page ? 'bg-brand-accent text-white shadow-md shadow-brand-accent/30' : 'bg-white/5 text-brand-muted hover:text-brand-text hover:bg-white/10 border border-white/10'
                   }`}
                 >
                   {p}

@@ -115,13 +115,18 @@ export async function POST(req: Request) {
         : null
       const cat = detalhe.categoria?.descricao || (typeof detalhe.categoria === 'string' ? detalhe.categoria : undefined)
       const marca = detalhe.marca || undefined
-      const ativo = detalhe.situacao === 'A' || detalhe.situacao === 'Ativo'
+      const tinyAtivo = detalhe.situacao === 'A' || detalhe.situacao === 'Ativo'
       const estoque = await fetchTinyProductEstoque(produto.tinyId!)
+
+      // Determina imagens finais e se tem imagem
+      const finalImagens = imagens.length > 0 ? imagens : (produto.imagens as any[] || [])
+      const temImagem = finalImagens.length > 0
+      const finalAtivo = tinyAtivo && temImagem && (estoque >= 0 ? estoque : 0) > 0
 
       const campos: Record<string, any> = {
         imagensVerificadas: true,
-        temImagem: imagens.length > 0,
-        ativo,
+        temImagem,
+        ativo: finalAtivo,
         ...(descricao   && { descricao }),
         ...(preco       !== undefined && { preco }),
         ...(precoPromocional !== undefined && { precoPromocional }),

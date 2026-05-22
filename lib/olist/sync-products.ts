@@ -54,34 +54,36 @@ export async function syncPaginaListagem(pagina: number) {
 
   // 2 queries em paralelo: SKUs existentes + slugs em conflito
   const [existentes, slugConflicts] = await Promise.all([
-    prisma.product.findMany({ where: { sku: { in: skus } }, select: { sku: true } }),
+    prisma.product.findMany({ where: { sku: { in: skus } }, select: { sku: true, temImagem: true } }),
     prisma.product.findMany({
       where: { slug: { in: dados.map(d => gerarSlug(d.nome)) } },
       select: { slug: true },
     }),
   ])
 
-  const skusExistentes = new Set(existentes.map(e => e.sku))
+  const existentesMap = new Map(existentes.map(e => [e.sku, e.temImagem]))
   const slugsExistentes = new Set(slugConflicts.map(s => s.slug))
 
-  const toUpdate = dados.filter(d => skusExistentes.has(d.sku))
-  const toCreate = dados.filter(d => !skusExistentes.has(d.sku))
+  const toUpdate = dados.filter(d => existentesMap.has(d.sku))
+  const toCreate = dados.filter(d => !existentesMap.has(d.sku))
 
   // Monta lista de operações para $transaction (1 round-trip ao DB)
   const ops = [
-    ...toUpdate.map(d =>
-      prisma.product.update({
+    ...toUpdate.map(d => {
+      const temImagem = existentesMap.get(d.sku) || false
+      const ativo = d.ativo && temImagem && d.estoque > 0
+      return prisma.product.update({
         where: { sku: d.sku },
         data: {
           nome:             d.nome,
           preco:            d.preco,
           precoPromocional: d.precoPromocional ?? undefined,
           estoque:          d.estoque,
-          ativo:            d.ativo,
+          ativo:            ativo,
           tinyId:           d.tinyId,
         },
       })
-    ),
+    }),
     ...toCreate.map(d => {
       let slug = gerarSlug(d.nome)
       if (slugsExistentes.has(slug)) slug = `${slug}-${d.sku}`
@@ -94,11 +96,12 @@ export async function syncPaginaListagem(pagina: number) {
           preco:             d.preco,
           precoPromocional:  d.precoPromocional ?? undefined,
           estoque:           d.estoque,
-          ativo:             d.ativo,
+          ativo:             false, // Novo produto não tem imagens ainda -> inativo por padrão
           tinyId:            d.tinyId,
           categoria:         d.categoria,
           marca:             d.marca,
           imagens:           [],
+          temImagem:         false,
           compatibilidadeMotos: [],
         },
       })
@@ -149,8 +152,8 @@ export async function syncImagensLote(limite = 10) {
   // Prioridade 2: produtos sem imagem mas já verificados (talvez tenham sido adicionadas fotos)
   // Prioridade 1: nunca verificados
   // Prioridade 2: verificados há mais de 7 dias e ainda sem foto (re-tentativa semanal)
-  const precisam = await prisma.$queryRaw<{ id: string; sku: string; tinyId: string; nome: string }[]>`
-    SELECT id, sku, "tinyId", nome
+  const precisam = await prisma.$queryRaw<{ id: string; sku: string; tinyId: string; nome: string; estoque: number }[]>`
+    SELECT id, sku, "tinyId", nome, estoque
     FROM "Product"
     WHERE "tinyId" IS NOT NULL
       AND (imagens::text = '[]' OR imagens IS NULL)
@@ -205,6 +208,9 @@ export async function syncImagensLote(limite = 10) {
       }
 
       const imagens = extrairImagensTiny(detalhe)
+      const temImagem = imagens.length > 0
+      const tinyAtivo = detalhe.situacao === 'A' || detalhe.situacao === 'Ativo'
+      const ativo = tinyAtivo && temImagem && produto.estoque > 0
       const descricao = detalhe.descricao_complementar || detalhe.obs || detalhe.descricao_curta || ''
       const categoria = detalhe.categoria?.descricao || (typeof detalhe.categoria === 'string' ? detalhe.categoria : '') || undefined
       const marca = detalhe.marca || undefined
@@ -219,7 +225,8 @@ export async function syncImagensLote(limite = 10) {
           // Produtos sem foto no Tiny serão re-tentados semanalmente
           // pela condição: updatedAt < NOW() - INTERVAL '7 days'
           imagensVerificadas: true,
-          temImagem: imagens.length > 0,
+          temImagem,
+          ativo,
           descricao: descricao || undefined,
           ...(categoria && { categoria }),
           ...(marca && { marca }),
@@ -281,13 +288,15 @@ export async function syncEstoquePrecos() {
         const existing = await prisma.product.findUnique({ where: { sku: d.sku } })
         if (!existing) continue
 
+        const ativo = d.ativo && existing.temImagem && d.estoque > 0
+
         await prisma.product.update({
           where: { sku: d.sku },
           data: {
             preco:            d.preco,
             precoPromocional: d.precoPromocional ?? undefined,
             estoque:          d.estoque,
-            ativo:            d.ativo,
+            ativo:            ativo,
           },
         })
         atualizados++
@@ -331,9 +340,16 @@ export async function syncEstoqueLote(limite = 5) {
     const novoEstoque = await fetchTinyProductEstoque(produto.tinyId!)
     if (novoEstoque === -1) { erros++; continue }
 
+    const productDb = await prisma.product.findUnique({
+      where: { id: produto.id },
+      select: { temImagem: true }
+    })
+    const temImagem = productDb?.temImagem || false
+    const ativo = temImagem && novoEstoque > 0
+
     await prisma.product.update({
       where: { id: produto.id },
-      data: { estoque: novoEstoque },
+      data: { estoque: novoEstoque, ativo },
     })
     atualizados++
   }
@@ -361,10 +377,19 @@ export async function syncEstoqueProduto(tinyId: string | number): Promise<numbe
   const novoEstoque = await fetchTinyProductEstoque(tinyId)
   if (novoEstoque === -1) return -1
 
-  await prisma.product.updateMany({
+  const products = await prisma.product.findMany({
     where: { tinyId: String(tinyId) },
-    data: { estoque: novoEstoque },
+    select: { id: true, temImagem: true }
   })
+
+  for (const p of products) {
+    const ativo = p.temImagem && novoEstoque > 0
+    await prisma.product.update({
+      where: { id: p.id },
+      data: { estoque: novoEstoque, ativo },
+    })
+  }
+
   return novoEstoque
 }
 
@@ -380,14 +405,18 @@ export async function syncProdutoUnico(tinyId: string | number): Promise<'criado
 
   const d = mapearListagem(detalhe)
   const imagens = extrairImagensTiny(detalhe)
+  const temImagem = imagens.length > 0
   const descricao = detalhe.descricao_complementar || detalhe.obs || ''
+
+  // Recalcular ativo: tinyAtivo && temImagem && estoque > 0
+  const ativo = d.ativo && temImagem && d.estoque > 0
 
   const existing = await prisma.product.findUnique({ where: { sku: d.sku } })
 
   if (existing) {
     await prisma.product.update({
       where: { sku: d.sku },
-      data: { ...d, imagens, descricao, temImagem: imagens.length > 0 },
+      data: { ...d, imagens, descricao, temImagem, ativo },
     })
     return 'atualizado'
   }
@@ -397,7 +426,7 @@ export async function syncProdutoUnico(tinyId: string | number): Promise<'criado
   if (slugExists) slug = `${slug}-${d.sku}`
 
   await prisma.product.create({
-    data: { ...d, slug, imagens, descricao, temImagem: imagens.length > 0, compatibilidadeMotos: [] },
+    data: { ...d, slug, imagens, descricao, temImagem, ativo, compatibilidadeMotos: [] },
   })
   return 'criado'
 }
@@ -468,13 +497,20 @@ export async function syncDeltaEstoque(diasAtras = 2): Promise<{
         ? calcularEstoqueDepositos(depositos)
         : Math.max(0, Number(p.saldo ?? 0))
 
-      const result = await prisma.product.updateMany({
+      const existingProducts = await prisma.product.findMany({
         where: { tinyId },
-        data: { estoque },
+        select: { id: true, temImagem: true }
       })
 
-      if (result.count > 0) {
-        atualizados += result.count
+      if (existingProducts.length > 0) {
+        for (const ep of existingProducts) {
+          const ativo = ep.temImagem && estoque > 0
+          await prisma.product.update({
+            where: { id: ep.id },
+            data: { estoque, ativo },
+          })
+          atualizados++
+        }
       } else {
         naoBanco++
       }
@@ -515,45 +551,52 @@ export async function syncDeltaProdutos(diasAtras = 2): Promise<{
       const d = mapearListagem(p)
       if (!d.sku) { naoBanco++; continue }
 
-      // Tenta atualizar pelo sku primeiro, depois pelo tinyId
-      let updated = await prisma.product.updateMany({
+      // Tenta localizar produto existente pelo sku ou tinyId para obter o temImagem
+      let existing = await prisma.product.findUnique({
         where: { sku: d.sku },
-        data: {
-          nome: d.nome,
-          preco: d.preco,
-          precoPromocional: d.precoPromocional ?? undefined,
-          ativo: d.ativo,
-          tinyId: d.tinyId,
-          categoria: d.categoria || undefined,
-          marca: d.marca || undefined,
-        },
+        select: { id: true, temImagem: true }
       })
 
-      if (updated.count === 0) {
-        // Tenta pelo tinyId
-        updated = await prisma.product.updateMany({
+      if (!existing) {
+        existing = await prisma.product.findFirst({
           where: { tinyId: d.tinyId },
+          select: { id: true, temImagem: true }
+        })
+      }
+
+      if (existing) {
+        // Recalcula ativo: tinyAtivo && temImagem && estoque > 0
+        const ativo = d.ativo && existing.temImagem && d.estoque > 0
+        await prisma.product.update({
+          where: { id: existing.id },
           data: {
             nome: d.nome,
             preco: d.preco,
             precoPromocional: d.precoPromocional ?? undefined,
-            ativo: d.ativo,
+            ativo: ativo,
+            tinyId: d.tinyId,
             categoria: d.categoria || undefined,
             marca: d.marca || undefined,
+            estoque: d.estoque,
           },
         })
-      }
-
-      if (updated.count > 0) {
-        atualizados += updated.count
+        atualizados++
       } else {
-        // Produto novo — cria no banco
+        // Produto novo — cria no banco (inativo por padrão até buscar fotos)
         try {
           let slug = gerarSlug(d.nome)
           const slugExists = await prisma.product.findUnique({ where: { slug } })
           if (slugExists) slug = `${slug}-${d.sku}`
           await prisma.product.create({
-            data: { ...d, slug, descricao: '', imagens: [], compatibilidadeMotos: [] },
+            data: {
+              ...d,
+              slug,
+              descricao: '',
+              imagens: [],
+              temImagem: false,
+              ativo: false,
+              compatibilidadeMotos: [],
+            },
           })
           criados++
         } catch {

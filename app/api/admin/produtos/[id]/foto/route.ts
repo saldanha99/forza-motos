@@ -14,14 +14,22 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const { url } = await req.json()
   if (!url) return NextResponse.json({ error: 'URL obrigatória' }, { status: 400 })
 
+  const current = await prisma.product.findUnique({
+    where: { id: params.id },
+    select: { estoque: true }
+  })
+  const estoque = current?.estoque ?? 0
+  const ativo = estoque > 0
+
   const produto = await prisma.product.update({
     where: { id: params.id },
     data: {
       imagens: [url],
       temImagem: true,
       imagensVerificadas: true,
+      ativo,
     },
-    select: { id: true, imagens: true, temImagem: true },
+    select: { id: true, imagens: true, temImagem: true, ativo: true },
   })
 
   return NextResponse.json(produto)
@@ -43,14 +51,22 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const blob = await put(filename, file, { access: 'public' })
 
+  const current = await prisma.product.findUnique({
+    where: { id: params.id },
+    select: { estoque: true }
+  })
+  const estoque = current?.estoque ?? 0
+  const ativo = estoque > 0
+
   const produto = await prisma.product.update({
     where: { id: params.id },
     data: {
       imagens: [blob.url],
       temImagem: true,
       imagensVerificadas: true,
+      ativo,
     },
-    select: { id: true, imagens: true, temImagem: true },
+    select: { id: true, imagens: true, temImagem: true, ativo: true },
   })
 
   return NextResponse.json({ ...produto, uploadUrl: blob.url })
@@ -65,7 +81,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
 
   await prisma.product.update({
     where: { id: params.id },
-    data: { imagens: [], temImagem: false, imagensVerificadas: false },
+    data: { imagens: [], temImagem: false, imagensVerificadas: false, ativo: false },
   })
 
   return NextResponse.json({ ok: true })

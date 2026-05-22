@@ -1,23 +1,25 @@
 export const dynamic = 'force-dynamic'
 import { prisma } from '@/lib/prisma'
-import { formatDate, formatPrice } from '@/lib/utils'
+import { formatPrice } from '@/lib/utils'
 import Link from 'next/link'
+import { KpiCard } from '@/components/admin/KpiCard'
+import { FadeIn } from '@/components/admin/FadeIn'
 import { ShoppingBag, Wrench, Users, TrendingUp, Store } from 'lucide-react'
 
-export const metadata = { title: 'CRM — Forza Motos' }
+export const metadata = { title: 'CRM — Forza Admin' }
 
 const FUNIL_COR: Record<string, string> = {
-  LEAD:       'bg-zinc-800 text-zinc-400',
-  ORCAMENTO:  'bg-blue-900/50 text-blue-300 border border-blue-800',
-  FECHADO:    'bg-green-900/50 text-green-300 border border-green-800',
-  RECORRENTE: 'bg-purple-900/50 text-purple-300 border border-purple-800',
+  LEAD:       'bg-brand-surface-2 border border-brand-border/30 text-brand-muted',
+  ORCAMENTO:  'bg-sky-500/10 border border-sky-500/20 text-sky-300',
+  FECHADO:    'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300',
+  RECORRENTE: 'bg-purple-500/10 border border-purple-500/20 text-purple-300',
 }
 
 const ORIGEM_COR: Record<string, string> = {
-  ECOMMERCE:    'bg-blue-900/40 text-blue-300',
-  MERCADOLIVRE: 'bg-yellow-900/40 text-yellow-300',
-  AGENDAMENTO:  'bg-orange-900/40 text-orange-300',
-  MANUAL:       'bg-zinc-800 text-zinc-400',
+  ECOMMERCE:    'bg-sky-500/10 text-sky-300',
+  MERCADOLIVRE: 'bg-amber-500/10 text-amber-300',
+  AGENDAMENTO:  'bg-orange-500/10 text-orange-300',
+  MANUAL:       'bg-brand-surface-2 text-brand-muted',
 }
 
 const ORIGEM_LABEL: Record<string, string> = {
@@ -50,7 +52,6 @@ export default async function ClientesAdminPage({
     take: 300,
   })
 
-  // KPIs
   const totalEcommerce    = clientes.filter(c => c.origem === 'ECOMMERCE').length
   const totalML           = clientes.filter(c => c.origem === 'MERCADOLIVRE').length
   const totalServico      = clientes.filter(c => c.origem === 'AGENDAMENTO').length
@@ -65,25 +66,27 @@ export default async function ClientesAdminPage({
 
   return (
     <div>
-      <h1 className="font-rajdhani font-bold text-3xl text-white mb-2">CRM Inteligente</h1>
-      <p className="text-zinc-500 text-sm mb-8">Clientes do e-commerce, Mercado Livre e agendamentos de serviço</p>
+      <div className="mb-8">
+        <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">CRM Inteligente</h1>
+        <p className="text-brand-muted text-sm mt-1">
+          Clientes do e-commerce, Mercado Livre e agendamentos de serviço
+        </p>
+      </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {[
-          { label: 'E-commerce',    value: totalEcommerce, icon: ShoppingBag, cor: 'text-blue-400' },
-          { label: 'Mercado Livre', value: totalML,        icon: Store,       cor: 'text-yellow-400' },
-          { label: 'Box / Serviço', value: totalServico,   icon: Wrench,      cor: 'text-orange-400' },
-          { label: 'Recorrentes',   value: recorrentes,    icon: TrendingUp,  cor: 'text-purple-400' },
-        ].map(k => (
-          <div key={k.label} className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-            <div className="flex items-start justify-between mb-3">
-              <p className="text-xs text-zinc-500 uppercase tracking-wide">{k.label}</p>
-              <k.icon size={18} className={k.cor} />
-            </div>
-            <p className={`font-rajdhani font-bold text-3xl ${k.cor}`}>{k.value}</p>
-          </div>
-        ))}
+        <FadeIn delay={0}>
+          <KpiCard label="E-commerce"    value={totalEcommerce} icon={ShoppingBag} />
+        </FadeIn>
+        <FadeIn delay={80}>
+          <KpiCard label="Mercado Livre" value={totalML}        icon={Store} />
+        </FadeIn>
+        <FadeIn delay={160}>
+          <KpiCard label="Box / Serviço" value={totalServico}   icon={Wrench} />
+        </FadeIn>
+        <FadeIn delay={240}>
+          <KpiCard label="Recorrentes"   value={recorrentes}    icon={TrendingUp} />
+        </FadeIn>
       </div>
 
       {/* Abas de filtro */}
@@ -92,71 +95,77 @@ export default async function ClientesAdminPage({
           <Link
             key={a.key}
             href={`/admin/clientes?categoria=${a.key}`}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
               categoria === a.key
-                ? 'bg-vermelho text-white'
-                : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
+                ? 'bg-gradient-to-r from-brand-accent to-brand-accent-hover text-white shadow-md shadow-brand-accent/20'
+                : 'bg-white/5 border border-white/10 text-brand-muted hover:text-brand-text hover:bg-white/10'
             }`}
           >
             <a.icon size={14} />
             {a.label}
-            <span className="bg-zinc-800 text-zinc-400 text-xs px-1.5 py-0.5 rounded-full">{a.count}</span>
+            <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
+              categoria === a.key
+                ? 'bg-white/20 text-white'
+                : 'bg-white/5 text-brand-muted border border-white/10'
+            }`}>
+              {a.count}
+            </span>
           </Link>
         ))}
       </div>
 
       {/* Tabela */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl overflow-hidden shadow-xl">
+        <div className="overflow-x-auto admin-scroll">
           <table className="w-full text-sm">
-            <thead className="border-b border-zinc-800 bg-zinc-950">
-              <tr className="text-xs text-zinc-500 uppercase tracking-wide">
-                <th className="text-left px-5 py-3">Cliente</th>
-                <th className="text-left px-5 py-3">Origem</th>
-                <th className="text-left px-5 py-3">Pedidos</th>
-                <th className="text-left px-5 py-3">Total gasto</th>
-                <th className="text-left px-5 py-3">Serviços</th>
-                <th className="text-left px-5 py-3">Funil</th>
-                <th className="px-5 py-3" />
+            <thead className="border-b border-brand-border/20 bg-white/[0.01]">
+              <tr className="text-xs text-brand-muted uppercase tracking-widest">
+                <th className="text-left px-6 py-3 font-medium">Cliente</th>
+                <th className="text-left px-6 py-3 font-medium">Origem</th>
+                <th className="text-left px-6 py-3 font-medium">Pedidos</th>
+                <th className="text-left px-6 py-3 font-medium">Total gasto</th>
+                <th className="text-left px-6 py-3 font-medium">Serviços</th>
+                <th className="text-left px-6 py-3 font-medium">Funil</th>
+                <th className="px-6 py-3" />
               </tr>
             </thead>
             <tbody>
               {clientes.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-zinc-600 text-sm">
+                  <td colSpan={7} className="px-6 py-12 text-center text-brand-muted text-sm">
                     Nenhum cliente encontrado
                   </td>
                 </tr>
               )}
               {clientes.map(c => (
-                <tr key={c.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
-                  <td className="px-5 py-3">
-                    <div className="font-medium text-white">{c.nome ?? '—'}</div>
-                    <div className="text-xs text-zinc-600">{c.email}</div>
-                    {c.telefone && <div className="text-xs text-zinc-600">{c.telefone}</div>}
+                <tr key={c.id} className="border-b border-brand-border/10 hover:bg-white/[0.04] transition-colors">
+                  <td className="px-6 py-3.5">
+                    <div className="font-medium text-brand-text">{c.nome ?? '—'}</div>
+                    <div className="text-xs text-brand-muted">{c.email}</div>
+                    {c.telefone && <div className="text-xs text-brand-muted">{c.telefone}</div>}
                   </td>
-                  <td className="px-5 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${ORIGEM_COR[c.origem]}`}>
+                  <td className="px-6 py-3.5">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium border ${ORIGEM_COR[c.origem]}`}>
                       {ORIGEM_LABEL[c.origem]}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-zinc-400">{c.orders.length}</td>
-                  <td className="px-5 py-3 text-white font-medium">
+                  <td className="px-6 py-3.5 text-brand-muted">{c.orders.length}</td>
+                  <td className="px-6 py-3.5 text-brand-text font-semibold">
                     {formatPrice(Number(c.crm?.totalGasto ?? 0))}
                   </td>
-                  <td className="px-5 py-3 text-zinc-400">
+                  <td className="px-6 py-3.5 text-brand-muted">
                     {c.appointments.length > 0
                       ? `${c.crm?.totalServicos ?? c.appointments.length}x`
-                      : <span className="text-zinc-700">—</span>
+                      : <span className="text-brand-muted/30">—</span>
                     }
                   </td>
-                  <td className="px-5 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${FUNIL_COR[c.crm?.etapaFunil ?? 'LEAD']}`}>
+                  <td className="px-6 py-3.5">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium border ${FUNIL_COR[c.crm?.etapaFunil ?? 'LEAD']}`}>
                       {c.crm?.etapaFunil ?? 'LEAD'}
                     </span>
                   </td>
-                  <td className="px-5 py-3">
-                    <Link href={`/admin/clientes/${c.id}`} className="text-xs text-zinc-500 hover:text-white transition-colors">
+                  <td className="px-6 py-3.5">
+                    <Link href={`/admin/clientes/${c.id}`} className="text-xs text-brand-muted hover:text-brand-text transition-colors">
                       Ver →
                     </Link>
                   </td>

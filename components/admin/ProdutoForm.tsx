@@ -127,24 +127,24 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
 
       {/* ── Sync Tiny (só aparece em produtos existentes com tinyId) ── */}
       {produto?.id && (
-        <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4 flex items-center justify-between gap-4">
+        <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-5 flex items-center justify-between gap-4 shadow-xl">
           <div>
-            <p className="text-white font-medium text-sm flex items-center gap-2">
-              <RefreshCw size={14} className="text-blue-400" />
+            <p className="text-brand-text font-semibold text-sm flex items-center gap-2">
+              <RefreshCw size={14} className="text-blue-400 animate-pulse" />
               Sincronizar com Tiny
             </p>
-            <p className="text-xs text-zinc-500 mt-0.5">
+            <p className="text-xs text-brand-muted mt-1">
               Atualiza nome, preço, estoque, imagens, descrição, categoria e marca
             </p>
             {syncResult && !syncResult.error && (
-              <p className="text-xs text-green-400 mt-1 flex items-center gap-1">
-                <CheckCircle2 size={11} />
+              <p className="text-xs text-emerald-400 mt-1.5 flex items-center gap-1.5 font-medium">
+                <CheckCircle2 size={12} />
                 {syncResult.aviso || `${syncResult.campos?.imagens ?? 0} imagens · preço R$${syncResult.campos?.preco?.toFixed(2)} · estoque ${syncResult.campos?.estoque}`}
               </p>
             )}
             {syncResult?.error && (
-              <p className="text-xs text-red-400 mt-1 flex items-center gap-1">
-                <AlertCircle size={11} /> {syncResult.error}
+              <p className="text-xs text-rose-400 mt-1.5 flex items-center gap-1.5 font-medium">
+                <AlertCircle size={12} /> {syncResult.error}
               </p>
             )}
           </div>
@@ -152,29 +152,30 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
             type="button"
             onClick={handleSyncTiny}
             disabled={syncLoading}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors shrink-0"
+            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-200 shadow-lg shadow-blue-500/20 active:scale-95 shrink-0"
           >
-            <RefreshCw size={13} className={syncLoading ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={syncLoading ? 'animate-spin' : ''} />
             {syncLoading ? 'Sincronizando…' : 'Sync agora'}
           </button>
         </div>
       )}
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 space-y-4">
-        <h2 className="font-rajdhani font-semibold text-lg text-white">Informações básicas</h2>
+      {/* Informações Básicas */}
+      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-5 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
+        <h2 className="font-barlow font-bold text-xl text-brand-text mb-4">Informações básicas</h2>
         <Input label="Nome *" value={form.nome} onChange={(e) => update('nome', e.target.value)} required />
         <div className="grid grid-cols-2 gap-4">
           <Input label="SKU *" value={form.sku} onChange={(e) => update('sku', e.target.value)} required />
           <Input label="Slug" value={form.slug} onChange={(e) => update('slug', e.target.value)} />
         </div>
         <div>
-          <label className="text-sm text-zinc-400 font-medium block mb-1">Descrição *</label>
+          <label className="text-sm text-brand-muted font-medium block mb-1.5">Descrição *</label>
           <textarea
             value={form.descricao}
             onChange={(e) => update('descricao', e.target.value)}
             rows={4}
             required
-            className="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-2.5 text-white text-sm focus:outline-none focus:border-vermelho resize-none"
+            className="w-full bg-brand-surface-2 border border-brand-border rounded-xl px-4 py-3 text-brand-text text-sm focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent/20 resize-none transition-all duration-200"
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -184,42 +185,42 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
       </div>
 
       {/* Preços e estoque */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 space-y-4">
-        <h2 className="font-rajdhani font-semibold text-lg text-white">Preços e estoque</h2>
+      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-5 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
+        <h2 className="font-barlow font-bold text-xl text-brand-text mb-4">Preços e estoque</h2>
         <div className="grid grid-cols-3 gap-4">
           <Input label="Preço *" type="number" step="0.01" value={form.preco} onChange={(e) => update('preco', Number(e.target.value))} required />
           <Input label="Preço Promocional" type="number" step="0.01" value={form.precoPromocional} onChange={(e) => update('precoPromocional', e.target.value)} />
           <Input label="Estoque" type="number" value={form.estoque} onChange={(e) => update('estoque', Number(e.target.value))} />
         </div>
-        <div className="flex gap-6">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={form.ativo} onChange={(e) => update('ativo', e.target.checked)} className="accent-vermelho" />
-            <span className="text-sm text-zinc-400">Produto ativo</span>
+        <div className="flex gap-6 pt-2">
+          <label className="flex items-center gap-2.5 cursor-pointer select-none group">
+            <input type="checkbox" checked={form.ativo} onChange={(e) => update('ativo', e.target.checked)} className="w-4 h-4 rounded accent-brand-accent border-brand-border bg-brand-surface-2" />
+            <span className="text-sm text-brand-muted group-hover:text-brand-text transition-colors">Produto ativo</span>
           </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={form.destaque} onChange={(e) => update('destaque', e.target.checked)} className="accent-vermelho" />
-            <span className="text-sm text-zinc-400">Produto em destaque</span>
+          <label className="flex items-center gap-2.5 cursor-pointer select-none group">
+            <input type="checkbox" checked={form.destaque} onChange={(e) => update('destaque', e.target.checked)} className="w-4 h-4 rounded accent-brand-accent border-brand-border bg-brand-surface-2" />
+            <span className="text-sm text-brand-muted group-hover:text-brand-text transition-colors">Produto em destaque</span>
           </label>
         </div>
       </div>
 
       {/* Imagens */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 space-y-4">
-        <h2 className="font-rajdhani font-semibold text-lg text-white">Imagens</h2>
-        <div className="flex flex-wrap gap-3">
+      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-5 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
+        <h2 className="font-barlow font-bold text-xl text-brand-text mb-4">Imagens</h2>
+        <div className="flex flex-wrap gap-4">
           {imagens.map((img, i) => (
-            <div key={i} className="relative w-20 h-20 bg-zinc-800 rounded overflow-hidden">
+            <div key={i} className="relative w-24 h-24 bg-brand-surface-2 border border-brand-border rounded-xl overflow-hidden group/img transition-all duration-200 hover:border-brand-accent">
               <img src={img} alt="" className="w-full h-full object-cover" />
               <button
                 type="button"
                 onClick={() => setImagens((imgs) => imgs.filter((_, j) => j !== i))}
-                className="absolute top-0 right-0 bg-black/70 p-0.5 text-white"
+                className="absolute top-1.5 right-1.5 bg-black/80 hover:bg-brand-accent p-1.5 rounded-lg text-white transition-colors opacity-0 group-hover/img:opacity-100 duration-200"
               >
                 <X size={12} />
               </button>
             </div>
           ))}
-          <label className="w-20 h-20 bg-zinc-800 border border-dashed border-zinc-600 rounded flex items-center justify-center cursor-pointer hover:border-zinc-500">
+          <label className="w-24 h-24 bg-brand-surface-2 border border-dashed border-brand-border hover:border-brand-accent rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-brand-surface-2/80 transition-all duration-200 group">
             <input
               type="file"
               accept="image/*"
@@ -227,18 +228,21 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
               onChange={(e) => e.target.files?.[0] && uploadImagem(e.target.files[0])}
             />
             {uploadLoading ? (
-              <span className="text-xs text-zinc-500">...</span>
+              <span className="text-xs text-brand-muted animate-pulse">Enviando...</span>
             ) : (
-              <Upload size={16} className="text-zinc-500" />
+              <>
+                <Upload size={20} className="text-brand-muted group-hover:text-brand-accent transition-colors mb-1" />
+                <span className="text-[10px] text-brand-muted group-hover:text-brand-text transition-colors font-medium">Upload</span>
+              </>
             )}
           </label>
         </div>
       </div>
 
       {/* Compatibilidade */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 space-y-4">
-        <h2 className="font-rajdhani font-semibold text-lg text-white">Compatibilidade com motos</h2>
-        <div className="flex gap-2">
+      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-5 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
+        <h2 className="font-barlow font-bold text-xl text-brand-text mb-4">Compatibilidade com motos</h2>
+        <div className="flex gap-3">
           <input
             value={novaCompat}
             onChange={(e) => setNovaCompat(e.target.value)}
@@ -252,7 +256,7 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
               }
             }}
             placeholder="Ex: Honda CB 300R 2020-2024"
-            className="flex-1 bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-vermelho"
+            className="flex-1 bg-brand-surface-2 border border-brand-border rounded-xl px-4 py-2.5 text-brand-text text-sm placeholder:text-brand-muted focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent/20 transition-all duration-200"
           />
           <button
             type="button"
@@ -262,28 +266,32 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
                 setNovaCompat('')
               }
             }}
-            className="bg-zinc-800 hover:bg-zinc-700 text-white px-3 rounded transition-colors"
+            className="bg-brand-surface-2 hover:bg-brand-surface-3 border border-brand-border hover:border-brand-border-highlight text-brand-text px-4 rounded-xl transition-all duration-200"
           >
-            <Plus size={16} />
+            <Plus size={18} />
           </button>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {compatibilidade.map((m, i) => (
-            <span key={i} className="inline-flex items-center gap-1.5 bg-zinc-800 text-zinc-300 text-xs px-3 py-1 rounded-full">
-              {m}
-              <button type="button" onClick={() => setCompatibilidade((c) => c.filter((_, j) => j !== i))}>
-                <X size={11} />
-              </button>
-            </span>
-          ))}
+        <div className="flex flex-wrap gap-2.5 pt-2">
+          {compatibilidade.length === 0 ? (
+            <p className="text-xs text-brand-muted/70">Nenhuma compatibilidade listada.</p>
+          ) : (
+            compatibilidade.map((m, i) => (
+              <span key={i} className="inline-flex items-center gap-1.5 bg-brand-surface-2 text-brand-text border border-brand-border text-xs px-3.5 py-1.5 rounded-full hover:border-brand-accent/50 transition-colors">
+                {m}
+                <button type="button" onClick={() => setCompatibilidade((c) => c.filter((_, j) => j !== i))} className="hover:text-brand-accent transition-colors">
+                  <X size={12} />
+                </button>
+              </span>
+            ))
+          )}
         </div>
       </div>
 
       <div className="flex gap-4">
-        <Button type="submit" loading={loading} size="lg" className="flex-1">
+        <Button type="submit" loading={loading} size="lg" className="flex-1 font-bold uppercase tracking-wider text-sm rounded-xl py-4">
           {produto?.id ? 'Salvar alterações' : 'Criar produto'}
         </Button>
-        <Button type="button" variant="ghost" size="lg" onClick={() => router.back()}>
+        <Button type="button" variant="ghost" size="lg" onClick={() => router.back()} className="font-bold uppercase tracking-wider text-sm rounded-xl py-4 text-brand-muted hover:text-brand-text hover:bg-brand-surface-2 transition-colors">
           Cancelar
         </Button>
       </div>

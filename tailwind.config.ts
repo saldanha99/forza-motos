@@ -20,6 +20,15 @@ const config: Config = {
         ink: 'var(--ink)',
         dim: 'var(--dim)',
         faint: 'var(--faint)',
+        // ── Admin brand tokens (Twix-style, vermelho accent) ──
+        'brand-bg':           'var(--brand-bg)',
+        'brand-surface':      'var(--brand-surface)',
+        'brand-surface-2':    'var(--brand-surface-2)',
+        'brand-accent':       'var(--brand-accent)',
+        'brand-accent-hover': 'var(--brand-accent-hover)',
+        'brand-border':       'var(--brand-border)',
+        'brand-text':         'var(--brand-text)',
+        'brand-muted':        'var(--brand-muted)',
       },
       fontFamily: {
         barlow: ['var(--font-barlow)', 'Barlow Condensed', 'sans-serif'],

@@ -21,32 +21,14 @@ export async function POST(req: Request) {
   let removidos = 0
 
   if (tipo === 'inativos') {
-    // Remove produtos marcados como ativo=false (fantasmas confirmados pelo sync de imagens)
-    // Exclui produtos que têm OrderItems para evitar violação de FK
-
-    // Busca IDs de inativos que têm pedidos vinculados
-    const comPedidos = await prisma.orderItem.findMany({
-      where: { product: { ativo: false } },
-      select: { productId: true },
-      distinct: ['productId'],
-    })
-    const idsComPedidos = comPedidos.map((p) => p.productId)
-
-    const r = await prisma.product.deleteMany({
-      where: {
-        ativo: false,
-        ...(idsComPedidos.length > 0 ? { id: { notIn: idsComPedidos } } : {}),
-      },
-    })
-    removidos = r.count
+    // Desativado para segurança — apagar todos os ativo=false deletava produtos válidos sem estoque.
+    // Agora o Passo 0 (Limpar fantasmas) faz isso comparando com o Tiny em tempo real de forma 100% segura.
     return NextResponse.json({
       ok: true,
-      removidos,
+      removidos: 0,
       tipo: 'inativos',
-      pulados: idsComPedidos.length,
-      msg: idsComPedidos.length > 0
-        ? `${removidos} deletados, ${idsComPedidos.length} mantidos (têm pedidos vinculados)`
-        : `${removidos} produtos deletados`,
+      pulados: 0,
+      msg: 'Use a ferramenta "Limpar fantasmas automaticamente" (Passo 0). Ela é 100% segura e evita apagar produtos legítimos que estão apenas sem estoque temporariamente.',
     })
   }
 

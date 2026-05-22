@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/Input'
 import { gerarSlug } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
-import { Upload } from 'lucide-react'
+import { Upload, X } from 'lucide-react'
 
 interface Post {
   id?: string
@@ -40,11 +40,15 @@ export function BlogForm({ post }: { post?: Post }) {
   async function uploadCapa(file: File) {
     const formData = new FormData()
     formData.append('file', file)
-    const res = await fetch('/api/upload', { method: 'POST', body: formData })
-    if (!res.ok) return
-    const data = await res.json()
-    update('capaUrl', data.url)
-    toast.success('Capa enviada!')
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      update('capaUrl', data.url)
+      toast.success('Capa enviada!')
+    } catch {
+      toast.error('Erro ao enviar capa')
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -71,7 +75,7 @@ export function BlogForm({ post }: { post?: Post }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 space-y-4">
+      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-5 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
         <Input label="Título *" value={form.titulo} onChange={(e) => update('titulo', e.target.value)} required />
         <div className="grid grid-cols-2 gap-4">
           <Input label="Slug" value={form.slug} onChange={(e) => update('slug', e.target.value)} />
@@ -80,12 +84,21 @@ export function BlogForm({ post }: { post?: Post }) {
 
         {/* Upload capa */}
         <div>
-          <label className="text-sm text-zinc-400 font-medium block mb-1">Imagem de capa</label>
+          <label className="text-sm text-brand-muted font-medium block mb-2">Imagem de capa</label>
           {form.capaUrl && (
-            <img src={form.capaUrl} alt="capa" className="w-full max-h-40 object-cover rounded mb-2" />
+            <div className="relative w-full max-h-48 rounded-xl overflow-hidden mb-3 border border-brand-border/30 group/capa">
+              <img src={form.capaUrl} alt="capa" className="w-full max-h-48 object-cover" />
+              <button
+                type="button"
+                onClick={() => update('capaUrl', '')}
+                className="absolute top-2 right-2 bg-black/80 hover:bg-brand-accent p-1.5 rounded-lg text-white transition-colors duration-200"
+              >
+                <X size={14} />
+              </button>
+            </div>
           )}
-          <label className="inline-flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm px-3 py-2 rounded cursor-pointer transition-colors">
-            <Upload size={14} />
+          <label className="inline-flex items-center gap-2.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-brand-text text-sm px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 font-semibold select-none">
+            <Upload size={16} />
             Enviar capa
             <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadCapa(e.target.files[0])} />
           </label>
@@ -93,33 +106,33 @@ export function BlogForm({ post }: { post?: Post }) {
 
         {/* Conteúdo */}
         <div>
-          <label className="text-sm text-zinc-400 font-medium block mb-1">Conteúdo (HTML) *</label>
+          <label className="text-sm text-brand-muted font-medium block mb-1.5">Conteúdo (HTML) *</label>
           <textarea
             value={form.conteudo}
             onChange={(e) => update('conteudo', e.target.value)}
             rows={16}
             required
-            className="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-2.5 text-white text-sm font-mono focus:outline-none focus:border-vermelho resize-y"
+            className="w-full bg-white/5 border border-white/10 hover:border-white/20 rounded-xl px-4 py-3 text-brand-text text-sm font-mono focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent/20 resize-y transition-all duration-200 placeholder:text-brand-muted/50"
             placeholder="<p>Seu conteúdo em HTML aqui...</p>"
           />
         </div>
 
-        <label className="flex items-center gap-2 cursor-pointer">
+        <label className="flex items-center gap-2.5 cursor-pointer select-none group pt-2">
           <input
             type="checkbox"
             checked={form.publicado}
             onChange={(e) => update('publicado', e.target.checked)}
-            className="accent-vermelho"
+            className="w-4 h-4 rounded accent-brand-accent border-white/10 bg-white/5"
           />
-          <span className="text-sm text-zinc-400">Publicar agora</span>
+          <span className="text-sm text-brand-muted group-hover:text-brand-text transition-colors">Publicar agora</span>
         </label>
       </div>
 
       <div className="flex gap-4">
-        <Button type="submit" loading={loading} size="lg" className="flex-1">
+        <Button type="submit" loading={loading} size="lg" className="flex-1 font-bold uppercase tracking-wider text-sm rounded-xl py-4">
           {post?.id ? 'Salvar alterações' : 'Criar post'}
         </Button>
-        <Button type="button" variant="ghost" size="lg" onClick={() => router.back()}>
+        <Button type="button" variant="ghost" size="lg" onClick={() => router.back()} className="font-bold uppercase tracking-wider text-sm rounded-xl py-4 text-brand-muted hover:text-brand-text hover:bg-brand-surface-2 transition-colors">
           Cancelar
         </Button>
       </div>

@@ -54,12 +54,23 @@ export async function POST(req: Request) {
       include: { items: { include: { product: true } } },
     })
 
-    // Debita estoque
+    // Debita estoque e desativa se zerar
     for (const item of pedido.items) {
-      await prisma.product.update({
+      const prod = await prisma.product.findUnique({
         where: { id: item.productId },
-        data: { estoque: { decrement: item.quantidade } },
+        select: { estoque: true, temImagem: true }
       })
+      if (prod) {
+        const novoEstoque = Math.max(0, prod.estoque - item.quantidade)
+        const ativo = novoEstoque > 0 && prod.temImagem
+        await prisma.product.update({
+          where: { id: item.productId },
+          data: {
+            estoque: novoEstoque,
+            ativo,
+          },
+        })
+      }
     }
 
     // Atualiza CRM

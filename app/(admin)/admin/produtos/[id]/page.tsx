@@ -9,7 +9,7 @@ export default async function EditarProdutoPage({ params }: { params: { id: stri
 
   return (
     <div className="max-w-3xl">
-      <h1 className="font-rajdhani font-bold text-3xl text-white mb-8">Editar Produto</h1>
+      <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight mb-8">Editar Produto</h1>
       <ProdutoForm produto={produto as any} />
     </div>
   )

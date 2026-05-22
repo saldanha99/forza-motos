@@ -9,14 +9,37 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
   }
 
+  const current = await prisma.product.findUnique({
+    where: { id: params.id },
+    select: { imagens: true, estoque: true, ativo: true }
+  })
+
+  if (!current) {
+    return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 })
+  }
+
   const body = await req.json()
+  
+  const rawImagens = body.imagens !== undefined ? body.imagens : current.imagens
+  const imagens = Array.isArray(rawImagens) ? rawImagens : []
+  const temImagem = imagens.length > 0
+  
+  const estoque = body.estoque !== undefined ? Number(body.estoque) : current.estoque
+  
+  const requestedAtivo = body.ativo !== undefined ? body.ativo : current.ativo
+  const finalAtivo = requestedAtivo && temImagem && estoque > 0
+
   const produto = await prisma.product.update({
     where: { id: params.id },
     data: {
       ...body,
-      preco: Number(body.preco),
-      precoPromocional: body.precoPromocional ? Number(body.precoPromocional) : null,
-      estoque: Number(body.estoque),
+      preco: body.preco !== undefined ? Number(body.preco) : undefined,
+      precoPromocional: body.precoPromocional !== undefined
+        ? (body.precoPromocional ? Number(body.precoPromocional) : null)
+        : undefined,
+      estoque,
+      temImagem,
+      ativo: finalAtivo,
     },
   })
 

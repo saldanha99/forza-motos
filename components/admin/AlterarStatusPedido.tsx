@@ -14,7 +14,6 @@ const STATUS_TRANSICOES: Record<string, string[]> = {
   CANCELADO: [],
 }
 
-
 export function AlterarStatusPedido({ pedidoId, statusAtual }: { pedidoId: string; statusAtual: string }) {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -41,9 +40,9 @@ export function AlterarStatusPedido({ pedidoId, statusAtual }: { pedidoId: strin
   if (proximos.length === 0) return null
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-      <h2 className="font-rajdhani font-semibold text-lg text-white mb-4">Alterar Status</h2>
-      <div className="space-y-2">
+    <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
+      <h2 className="font-barlow font-bold text-xl text-brand-text mb-4">Alterar Status</h2>
+      <div className="space-y-2.5">
         {proximos.map((s) => (
           <Button
             key={s}
@@ -51,7 +50,7 @@ export function AlterarStatusPedido({ pedidoId, statusAtual }: { pedidoId: strin
             size="sm"
             loading={loading}
             onClick={() => alterarStatus(s)}
-            className="w-full"
+            className="w-full font-bold uppercase tracking-wider text-xs rounded-xl py-3"
           >
             {s.replace(/_/g, ' ')}
           </Button>

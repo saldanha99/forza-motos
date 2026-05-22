@@ -30,8 +30,8 @@ export default async function FotosAdminPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="font-rajdhani font-bold text-3xl text-white">Gerenciador de Fotos</h1>
-        <p className="text-zinc-500 text-sm mt-1">
+        <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">Gerenciador de Fotos</h1>
+        <p className="text-brand-muted text-sm mt-1">
           Suba imagens direto no card · Clique, arraste ou cole uma URL · Salva automaticamente
         </p>
       </div>

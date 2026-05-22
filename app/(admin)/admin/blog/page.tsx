@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/Badge'
 import { Plus } from 'lucide-react'
 
-export const metadata = { title: 'Blog Admin' }
+export const metadata = { title: 'Blog / CMS — Forza Admin' }
 
 export default async function BlogAdminPage() {
   const posts = await prisma.blogPost.findMany({
@@ -16,34 +16,37 @@ export default async function BlogAdminPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-rajdhani font-bold text-3xl text-white">Blog / CMS</h1>
-        <Link href="/admin/blog/novo" className="inline-flex items-center gap-2 bg-vermelho hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-semibold transition-colors">
+        <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">Blog / CMS</h1>
+        <Link
+          href="/admin/blog/novo"
+          className="inline-flex items-center gap-2 bg-gradient-to-r from-brand-accent to-brand-accent-hover hover:opacity-90 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 shadow-md shadow-brand-accent/20"
+        >
           <Plus size={16} /> Novo post
         </Link>
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
+      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl overflow-hidden shadow-xl">
         <table className="w-full text-sm">
-          <thead className="border-b border-zinc-800 bg-zinc-950">
-            <tr className="text-xs text-zinc-500 uppercase tracking-wide">
-              <th className="text-left px-5 py-3">Título</th>
-              <th className="text-left px-5 py-3">Autor</th>
-              <th className="text-left px-5 py-3">Status</th>
-              <th className="text-left px-5 py-3">Data</th>
-              <th className="px-5 py-3" />
+          <thead className="border-b border-brand-border/20 bg-white/[0.01]">
+            <tr className="text-xs text-brand-muted uppercase tracking-widest">
+              <th className="text-left px-6 py-3 font-medium">Título</th>
+              <th className="text-left px-6 py-3 font-medium">Autor</th>
+              <th className="text-left px-6 py-3 font-medium">Status</th>
+              <th className="text-left px-6 py-3 font-medium">Data</th>
+              <th className="px-6 py-3" />
             </tr>
           </thead>
           <tbody>
             {posts.map((p) => (
-              <tr key={p.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
-                <td className="px-5 py-3 text-white font-medium">{p.titulo}</td>
-                <td className="px-5 py-3 text-zinc-400">{p.autor}</td>
-                <td className="px-5 py-3">
+              <tr key={p.id} className="border-b border-brand-border/10 hover:bg-white/[0.04] transition-colors">
+                <td className="px-6 py-3.5 text-brand-text font-medium">{p.titulo}</td>
+                <td className="px-6 py-3.5 text-brand-muted">{p.autor}</td>
+                <td className="px-6 py-3.5">
                   {p.publicado ? <Badge variant="success">Publicado</Badge> : <Badge variant="warning">Rascunho</Badge>}
                 </td>
-                <td className="px-5 py-3 text-zinc-500">{formatDate(p.createdAt)}</td>
-                <td className="px-5 py-3">
-                  <Link href={`/admin/blog/${p.id}`} className="text-xs text-zinc-500 hover:text-white">
+                <td className="px-6 py-3.5 text-brand-muted">{formatDate(p.createdAt)}</td>
+                <td className="px-6 py-3.5">
+                  <Link href={`/admin/blog/${p.id}`} className="text-xs text-brand-muted hover:text-brand-text transition-colors">
                     Editar →
                   </Link>
                 </td>

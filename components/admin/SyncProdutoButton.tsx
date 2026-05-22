@@ -40,7 +40,7 @@ export function SyncProdutoButton({ produtoId, hasTinyId }: Props) {
       disabled={loading}
       title={status === 'ok' ? msg : status === 'error' ? msg : 'Sincronizar com Tiny'}
       className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors disabled:opacity-50
-        bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white"
+        bg-brand-surface-2 hover:bg-brand-accent/20 border border-brand-border/30 text-brand-muted hover:text-brand-text"
     >
       {loading ? (
         <RefreshCw size={11} className="animate-spin" />

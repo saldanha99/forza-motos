@@ -109,15 +109,15 @@ export function SyncCategoriaClient() {
     <div className="space-y-6">
 
       {/* ── Seletor de categoria ── */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4">
-        <h2 className="text-white font-semibold text-sm flex items-center gap-2">
-          <Tag size={14} className="text-blue-400" />
+      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-4 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
+        <h2 className="text-brand-text font-semibold text-sm flex items-center gap-2">
+          <Tag size={14} className="text-brand-accent" />
           Selecionar categoria
         </h2>
 
         {loadingCats ? (
-          <div className="flex items-center gap-2 text-zinc-500 text-sm">
-            <Loader2 size={14} className="animate-spin" /> Carregando categorias…
+          <div className="flex items-center gap-2 text-brand-muted text-sm">
+            <Loader2 size={14} className="animate-spin text-brand-accent" /> Carregando categorias…
           </div>
         ) : (
           <div className="space-y-3">
@@ -126,31 +126,31 @@ export function SyncCategoriaClient() {
                 value={selected}
                 onChange={e => { setSelected(e.target.value); setDone(false); setLog([]); setError('') }}
                 disabled={running}
-                className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-4 py-3 text-sm appearance-none focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                className="w-full bg-brand-surface-2 border border-brand-border text-brand-text rounded-xl px-4 py-3 text-sm appearance-none focus:outline-none focus:border-brand-accent/50 disabled:opacity-50 transition-all duration-200"
               >
-                <option value="">— Escolha uma categoria —</option>
+                <option value="" className="bg-brand-bg text-brand-text">— Escolha uma categoria —</option>
                 {categorias.map(c => (
-                  <option key={c.categoria} value={c.categoria}>
+                  <option key={c.categoria} value={c.categoria} className="bg-brand-bg text-brand-text">
                     {c.categoria} ({c.total} produtos{c.semImagem > 0 ? ` · ${c.semImagem} sem foto` : ''})
                   </option>
                 ))}
               </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-muted pointer-events-none" />
             </div>
 
             {catSelecionada && (
               <div className="flex gap-3">
-                <div className="bg-zinc-800 rounded-lg px-3 py-2 text-center flex-1">
-                  <div className="text-white font-bold text-lg">{catSelecionada.total}</div>
-                  <div className="text-zinc-500 text-[10px]">Total</div>
+                <div className="bg-brand-surface-2 border border-brand-border/30 rounded-xl px-3 py-2 text-center flex-1">
+                  <div className="text-brand-text font-bold text-lg">{catSelecionada.total}</div>
+                  <div className="text-brand-muted text-[10px]">Total</div>
                 </div>
-                <div className="bg-yellow-900/30 rounded-lg px-3 py-2 text-center flex-1">
-                  <div className="text-yellow-400 font-bold text-lg">{catSelecionada.semImagem}</div>
-                  <div className="text-zinc-500 text-[10px]">Sem imagem</div>
+                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl px-3 py-2 text-center flex-1">
+                  <div className="text-amber-400 font-bold text-lg">{catSelecionada.semImagem}</div>
+                  <div className="text-brand-muted text-[10px]">Sem imagem</div>
                 </div>
-                <div className="bg-green-900/30 rounded-lg px-3 py-2 text-center flex-1">
-                  <div className="text-green-400 font-bold text-lg">{catSelecionada.total - catSelecionada.semImagem}</div>
-                  <div className="text-zinc-500 text-[10px]">Com imagem</div>
+                <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl px-3 py-2 text-center flex-1">
+                  <div className="text-emerald-400 font-bold text-lg">{catSelecionada.total - catSelecionada.semImagem}</div>
+                  <div className="text-brand-muted text-[10px]">Com imagem</div>
                 </div>
               </div>
             )}
@@ -163,7 +163,7 @@ export function SyncCategoriaClient() {
             <button
               onClick={handleStart}
               disabled={!selected || loadingCats}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-semibold rounded-xl transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-brand-accent to-brand-accent-hover hover:opacity-90 disabled:opacity-40 text-brand-text font-semibold rounded-xl transition-all duration-200 shadow-md shadow-brand-accent/20"
             >
               <Play size={14} />
               Sincronizar categoria completa
@@ -171,7 +171,7 @@ export function SyncCategoriaClient() {
           ) : (
             <button
               onClick={() => { cancelRef.current = true }}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-zinc-700 hover:bg-zinc-600 text-white font-semibold rounded-xl transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-brand-surface-2 hover:bg-brand-accent/20 border border-brand-border/30 text-brand-text font-semibold rounded-xl transition-all duration-200"
             >
               <StopCircle size={14} />
               Parar sync
@@ -182,61 +182,61 @@ export function SyncCategoriaClient() {
 
       {/* ── Progresso ── */}
       {(running || done || error) && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4">
+        <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-4 shadow-xl">
           <div className="flex items-center justify-between">
-            <h2 className="text-white font-semibold text-sm flex items-center gap-2">
+            <h2 className="text-brand-text font-semibold text-sm flex items-center gap-2">
               {running
-                ? <><Loader2 size={13} className="animate-spin text-blue-400" /> Processando…</>
+                ? <><Loader2 size={13} className="animate-spin text-brand-accent" /> Processando…</>
                 : done
-                ? <><CheckCircle2 size={13} className="text-green-400" /> Concluído</>
-                : <><AlertCircle size={13} className="text-red-400" /> Erro</>
+                ? <><CheckCircle2 size={13} className="text-emerald-400" /> Concluído</>
+                : <><AlertCircle size={13} className="text-rose-400" /> Erro</>
               }
             </h2>
-            <span className="text-zinc-400 text-sm font-mono">
+            <span className="text-brand-muted text-sm font-mono">
               {progress.processados}/{progress.total} · {pct}%
             </span>
           </div>
 
           {/* Barra de progresso */}
-          <div className="w-full bg-zinc-800 rounded-full h-2">
+          <div className="w-full bg-brand-surface-2 border border-brand-border/20 rounded-full h-2">
             <div
               className="h-2 rounded-full transition-all duration-500"
               style={{
                 width: `${pct}%`,
-                background: done ? '#22c55e' : error ? '#ef4444' : '#3b82f6',
+                background: done ? '#10b981' : error ? '#f43f5e' : '#eb2a24',
               }}
             />
           </div>
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="bg-zinc-800 rounded-lg p-2">
-              <div className="text-white font-bold">{progress.processados}</div>
-              <div className="text-zinc-600 text-[10px]">Processados</div>
+            <div className="bg-brand-surface-2 border border-brand-border/30 rounded-xl p-2">
+              <div className="text-brand-text font-bold">{progress.processados}</div>
+              <div className="text-brand-muted text-[10px]">Processados</div>
             </div>
-            <div className="bg-green-900/30 rounded-lg p-2">
-              <div className="text-green-400 font-bold">{progress.atualizados}</div>
-              <div className="text-zinc-600 text-[10px]">Atualizados</div>
+            <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl p-2">
+              <div className="text-emerald-400 font-bold">{progress.atualizados}</div>
+              <div className="text-brand-muted text-[10px]">Atualizados</div>
             </div>
-            <div className="bg-red-900/30 rounded-lg p-2">
-              <div className="text-red-400 font-bold">{progress.erros}</div>
-              <div className="text-zinc-600 text-[10px]">Erros</div>
+            <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl p-2">
+              <div className="text-rose-400 font-bold">{progress.erros}</div>
+              <div className="text-brand-muted text-[10px]">Erros</div>
             </div>
           </div>
 
           {/* Log */}
           <div
             ref={logRef}
-            className="bg-zinc-950 rounded-lg p-3 h-48 overflow-y-auto font-mono text-[11px] space-y-0.5"
+            className="bg-brand-bg/50 border border-brand-border/20 rounded-xl p-3 h-48 overflow-y-auto font-mono text-[11px] space-y-0.5"
           >
             {log.map((line, i) => (
               <div key={i} className={
-                line.startsWith('✅') ? 'text-green-400' :
-                line.startsWith('❌') ? 'text-red-400' :
-                line.startsWith('⏹') ? 'text-yellow-400' :
-                line.startsWith('✓') ? 'text-blue-300' :
-                line.startsWith('○') ? 'text-zinc-500' :
-                'text-zinc-400'
+                line.startsWith('✅') ? 'text-emerald-400' :
+                line.startsWith('❌') ? 'text-rose-400' :
+                line.startsWith('⏹') ? 'text-amber-400' :
+                line.startsWith('✓') ? 'text-sky-300' :
+                line.startsWith('○') ? 'text-brand-muted' :
+                'text-brand-muted'
               }>
                 {line}
               </div>

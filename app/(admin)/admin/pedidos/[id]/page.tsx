@@ -22,34 +22,34 @@ export default async function PedidoDetalhePage({ params }: { params: { id: stri
   return (
     <div className="max-w-4xl">
       <div className="flex items-center gap-4 mb-8">
-        <h1 className="font-rajdhani font-bold text-3xl text-white">{pedido.orderNumber}</h1>
+        <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">{pedido.orderNumber}</h1>
         {statusBadge(pedido.status)}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           {/* Itens */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-            <h2 className="font-rajdhani font-semibold text-lg text-white mb-4">Itens</h2>
+          <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
+            <h2 className="font-barlow font-bold text-xl text-brand-text mb-4">Itens</h2>
             <div className="space-y-3">
               {pedido.items.map((item) => (
                 <div key={item.id} className="flex justify-between text-sm">
-                  <span className="text-zinc-400">{item.product.nome} × {item.quantidade}</span>
-                  <span className="text-white">{formatPrice(Number(item.precoUnitario) * item.quantidade)}</span>
+                  <span className="text-brand-muted font-medium">{item.product.nome} × {item.quantidade}</span>
+                  <span className="text-brand-text font-semibold">{formatPrice(Number(item.precoUnitario) * item.quantidade)}</span>
                 </div>
               ))}
-              <div className="border-t border-zinc-800 pt-3 space-y-1 text-sm">
-                <div className="flex justify-between text-zinc-500">
+              <div className="border-t border-brand-border/20 pt-3 space-y-2 text-sm">
+                <div className="flex justify-between text-brand-muted/80">
                   <span>Frete</span>
-                  <span>{formatPrice(Number(pedido.frete))}</span>
+                  <span className="text-brand-text">{formatPrice(Number(pedido.frete))}</span>
                 </div>
                 {Number(pedido.desconto) > 0 && (
-                  <div className="flex justify-between text-green-400">
+                  <div className="flex justify-between text-emerald-400 font-medium">
                     <span>Desconto</span>
                     <span>-{formatPrice(Number(pedido.desconto))}</span>
                   </div>
                 )}
-                <div className="flex justify-between font-bold text-white text-base">
+                <div className="flex justify-between font-bold text-brand-text text-base pt-1 border-t border-brand-border/20">
                   <span>Total</span>
                   <span>{formatPrice(Number(pedido.total))}</span>
                 </div>
@@ -58,16 +58,16 @@ export default async function PedidoDetalhePage({ params }: { params: { id: stri
           </div>
 
           {/* Histórico de tracking */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-            <h2 className="font-rajdhani font-semibold text-lg text-white mb-4">Histórico</h2>
+          <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
+            <h2 className="font-barlow font-bold text-xl text-brand-text mb-4">Histórico</h2>
             {pedido.tracking.length === 0 ? (
-              <p className="text-sm text-zinc-500">Nenhum evento ainda.</p>
+              <p className="text-sm text-brand-muted/70">Nenhum evento ainda.</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {pedido.tracking.map((t) => (
-                  <div key={t.id} className="flex gap-3 text-sm">
-                    <span className="text-zinc-600 shrink-0">{formatDate(t.createdAt)}</span>
-                    <span className="text-zinc-400">{t.descricao}</span>
+                  <div key={t.id} className="flex gap-4 text-sm border-l-2 border-brand-accent/20 pl-4 py-0.5">
+                    <span className="text-brand-muted/60 shrink-0 font-mono text-xs">{formatDate(t.createdAt)}</span>
+                    <span className="text-brand-text/90">{t.descricao}</span>
                   </div>
                 ))}
               </div>
@@ -81,54 +81,54 @@ export default async function PedidoDetalhePage({ params }: { params: { id: stri
 
           {/* Cliente */}
           {pedido.user && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-              <h2 className="font-rajdhani font-semibold text-lg text-white mb-3">Cliente</h2>
-              <dl className="space-y-2 text-sm">
+            <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
+              <h2 className="font-barlow font-bold text-xl text-brand-text mb-4">Cliente</h2>
+              <dl className="space-y-3 text-sm">
                 <div>
-                  <dt className="text-zinc-600 text-xs">Nome</dt>
-                  <dd className="text-white">{pedido.user.nome}</dd>
+                  <dt className="text-brand-muted text-xs font-semibold uppercase tracking-wider">Nome</dt>
+                  <dd className="text-brand-text font-medium mt-0.5">{pedido.user.nome}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-600 text-xs">E-mail</dt>
-                  <dd className="text-white">{pedido.user.email}</dd>
+                  <dt className="text-brand-muted text-xs font-semibold uppercase tracking-wider">E-mail</dt>
+                  <dd className="text-brand-text font-medium mt-0.5 break-all">{pedido.user.email}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-600 text-xs">Telefone</dt>
-                  <dd className="text-white">{pedido.user.telefone ?? '-'}</dd>
+                  <dt className="text-brand-muted text-xs font-semibold uppercase tracking-wider">Telefone</dt>
+                  <dd className="text-brand-text font-medium mt-0.5">{pedido.user.telefone ?? '-'}</dd>
                 </div>
               </dl>
             </div>
           )}
 
           {/* Endereço */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-            <h2 className="font-rajdhani font-semibold text-lg text-white mb-3">Entrega</h2>
-            <address className="text-sm text-zinc-400 not-italic space-y-1">
-              <p>{endereco?.rua}, {endereco?.numero} {endereco?.complemento}</p>
+          <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
+            <h2 className="font-barlow font-bold text-xl text-brand-text mb-4">Entrega</h2>
+            <address className="text-sm text-brand-muted/90 not-italic space-y-1">
+              <p className="text-brand-text font-medium">{endereco?.rua}, {endereco?.numero} {endereco?.complemento}</p>
               <p>{endereco?.bairro}</p>
               <p>{endereco?.cidade}/{endereco?.estado}</p>
-              <p>CEP: {endereco?.cep}</p>
+              <p className="pt-1 font-mono text-xs text-brand-muted/60">CEP: {endereco?.cep}</p>
             </address>
           </div>
 
           {/* Pagamento */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-            <h2 className="font-rajdhani font-semibold text-lg text-white mb-3">Pagamento</h2>
-            <dl className="space-y-2 text-sm">
+          <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
+            <h2 className="font-barlow font-bold text-xl text-brand-text mb-4">Pagamento</h2>
+            <dl className="space-y-3 text-sm">
               <div>
-                <dt className="text-zinc-600 text-xs">Método</dt>
-                <dd className="text-white">{pedido.pagamentoMetodo ?? '-'}</dd>
+                <dt className="text-brand-muted text-xs font-semibold uppercase tracking-wider">Método</dt>
+                <dd className="text-brand-text font-semibold mt-0.5">{pedido.pagamentoMetodo ?? '-'}</dd>
               </div>
               {pedido.pagamentoIdExterno && (
                 <div>
-                  <dt className="text-zinc-600 text-xs">ID externo</dt>
-                  <dd className="text-zinc-400 text-xs break-all">{pedido.pagamentoIdExterno}</dd>
+                  <dt className="text-brand-muted text-xs font-semibold uppercase tracking-wider">ID externo</dt>
+                  <dd className="text-brand-muted/80 text-xs font-mono break-all mt-0.5">{pedido.pagamentoIdExterno}</dd>
                 </div>
               )}
               {pedido.olistOrderId && (
                 <div>
-                  <dt className="text-zinc-600 text-xs">OLIST Order ID</dt>
-                  <dd className="text-zinc-400">{pedido.olistOrderId}</dd>
+                  <dt className="text-brand-muted text-xs font-semibold uppercase tracking-wider">OLIST Order ID</dt>
+                  <dd className="text-brand-muted font-mono text-xs mt-0.5">{pedido.olistOrderId}</dd>
                 </div>
               )}
             </dl>

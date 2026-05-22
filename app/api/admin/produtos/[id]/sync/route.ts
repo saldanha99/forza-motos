@@ -25,7 +25,7 @@ export async function POST(
   // Busca produto no banco
   const produto = await prisma.product.findUnique({
     where: { id: params.id },
-    select: { id: true, tinyId: true, nome: true, sku: true },
+    select: { id: true, tinyId: true, nome: true, sku: true, imagens: true },
   })
 
   if (!produto) {
@@ -65,16 +65,21 @@ export async function POST(
       : null
     const categoria = detalhe.categoria?.descricao || (typeof detalhe.categoria === 'string' ? detalhe.categoria : undefined)
     const marca = detalhe.marca || undefined
-    const ativo = detalhe.situacao === 'A' || detalhe.situacao === 'Ativo'
+    const tinyAtivo = detalhe.situacao === 'A' || detalhe.situacao === 'Ativo'
 
     // Busca estoque real (depósitos)
     const estoque = await fetchTinyProductEstoque(produto.tinyId)
 
+    // Determina imagens finais e se tem imagem
+    const finalImagens = imagens.length > 0 ? imagens : (produto.imagens as any[] || [])
+    const temImagem = finalImagens.length > 0
+    const finalAtivo = tinyAtivo && temImagem && (estoque >= 0 ? estoque : 0) > 0
+
     // Monta campos atualizados
     const campos: Record<string, any> = {
       imagensVerificadas: true,
-      temImagem: imagens.length > 0,
-      ativo,
+      temImagem,
+      ativo: finalAtivo,
       ...(nome        && { nome }),
       ...(descricao   && { descricao }),
       ...(preco       !== undefined && { preco }),
@@ -104,7 +109,7 @@ export async function POST(
         imagens: imagens.length,
         categoria,
         marca,
-        ativo,
+        ativo: finalAtivo,
         descricao: !!descricao,
       },
     })
