@@ -222,3 +222,187 @@ model BlogPost {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+// ============================================================
+// MÓDULO GLOSSÁRIO — fragmento de schema.prisma
+// ============================================================
+// Cole estes models no seu schema.prisma e rode:
+//   npx prisma migrate dev --name add_glossario
+// ============================================================
+
+/// Termo do glossário (substituto do post type "glossario" do WordPress)
+model GlossaryTerm {
+  id           String   @id @default(cuid())
+  /// Título do termo. Ex: "Pneu Radial"
+  termo        String
+  /// Slug URL-friendly. Ex: "pneu-radial"
+  slug         String   @unique
+  /// Letra inicial em maiúscula (A-Z, ou "0-9" para números). Indexada para filtrar A-Z rapidamente.
+  letra        String
+  /// Conteúdo HTML/Markdown da definição. Mínimo recomendado: 300 palavras para SEO.
+  conteudo     String   @db.Text
+  /// Resumo curto (até 160 chars) — usado em meta description e schema.org
+  resumo       String?
+  /// URL da imagem destacada (opcional)
+  imagem       String?
+  /// Nome do autor exibido no schema.org
+  autor        String   @default("Equipe Forza")
+  /// Categoria/nicho do termo. Ex: "Pneus", "Motor", "Freios"
+  categoria    String?
+  /// Lista de termos relacionados (slugs)
+  relacionados Json     @default("[]")
+  /// Origem do conteúdo: MANUAL, AI_GEMINI, AI_OPENAI
+  origem       GlossaryOrigem @default(MANUAL)
+  /// Status de publicação
+  publicado    Boolean  @default(false)
+  /// Marca true quando o conteúdo foi revisado por humano após geração por IA
+  revisado     Boolean  @default(false)
+  /// Visualizações (incrementadas em background)
+  views        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([letra, publicado])
+  @@index([categoria, publicado])
+  @@index([createdAt])
+}
+
+enum GlossaryOrigem {
+  MANUAL
+  AI_GEMINI
+  AI_OPENAI
+  CSV_IMPORT
+}
+
+/// Fila de geração em massa de termos via IA
+model GlossaryJob {
+  id           String   @id @default(cuid())
+  titulo       String
+  letra        String
+  nicho        String
+  /// Provedor de IA a usar
+  provider     GlossaryOrigem @default(AI_GEMINI)
+  /// Modelo específico. Ex: "gemini-2.0-flash" ou "gpt-4o-mini"
+  modelo       String
+  idioma       String   @default("pt-BR")
+  estilo       String   @default("informativo e técnico")
+  /// Tokens máximos (controla tamanho)
+  maxTokens    Int      @default(2000)
+  /// Prompt customizado adicional (concatenado ao prompt base)
+  promptExtra  String?  @db.Text
+  /// Status do job
+  status       GlossaryJobStatus @default(PENDENTE)
+  /// Quando processar (suporte a agendamento)
+  agendadoPara DateTime?
+  /// ID do termo criado após sucesso
+  termoId      String?
+  /// Mensagem de erro caso falhe
+  erro         String?  @db.Text
+  /// Quantas tentativas já foram feitas
+  tentativas   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status, agendadoPara])
+}
+
+enum GlossaryJobStatus {
+  PENDENTE
+  PROCESSANDO
+  CONCLUIDO
+  ERRO
+}
+// ============================================================
+// MÓDULOS EXTRAS DE SEO — fragmento de schema.prisma
+// ============================================================
+// Adiciona suporte a Redirects e 404 Monitor (substituem os módulos
+// "Redirections" e "404 Monitor" do Rank Math).
+// ============================================================
+
+/// Redirecionamentos gerenciáveis (via middleware ou route handler)
+model SeoRedirect {
+  id        String   @id @default(cuid())
+  /// Path de origem. Ex: "/produto-antigo"
+  from      String   @unique
+  /// Path ou URL de destino
+  to        String
+  /// Código HTTP (301 permanente, 302 temporário, 307, 308)
+  statusCode Int     @default(301)
+  /// Quantas vezes esse redirect foi acessado
+  hits      Int      @default(0)
+  ativo     Boolean  @default(true)
+  notas     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([from, ativo])
+}
+
+/// Log de 404 — útil para identificar links quebrados e oportunidades de redirect
+model SeoNotFoundLog {
+  id        String   @id @default(cuid())
+  path      String
+  /// User-agent agregado
+  userAgent String?  @db.Text
+  /// Referer (de onde o usuário veio)
+  referer   String?
+  /// IP anonimizado (últimos octetos zerados)
+  ip        String?
+  /// Quantas vezes esse path foi acessado e deu 404
+  hits      Int      @default(1)
+  /// Marca true após criar um redirect para este path
+  resolvido Boolean  @default(false)
+  /// Última vez acessado
+  ultimoAcesso DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@unique([path])
+  @@index([resolvido, hits])
+}
+
+/// Log de toda notificação de indexação enviada para Google/Bing/etc.
+/// Permite auditar o que foi enviado, debugar falhas e retry de URLs que falharam.
+model SeoIndexingLog {
+  id          String   @id @default(cuid())
+  /// URL completa notificada
+  url         String
+  /// Ação enviada
+  action      SeoIndexingAction @default(URL_UPDATED)
+  /// Provedor que recebeu a notificação
+  provider    SeoIndexingProvider
+  /// Status do envio
+  status      SeoIndexingStatus @default(PENDENTE)
+  /// Mensagem de erro caso falhe
+  erro        String?  @db.Text
+  /// Quantidade de tentativas (incrementada a cada retry)
+  tentativas  Int      @default(0)
+  /// Resposta crua do provedor (útil para debug)
+  resposta    String?  @db.Text
+  /// Origem do trigger (manual, cron, hook automático)
+  origem      String?
+  /// Quando o envio foi efetivamente concluído (sucesso ou desistência)
+  enviadoEm   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([url, provider])
+  @@index([status, createdAt])
+  @@index([createdAt])
+}
+
+enum SeoIndexingAction {
+  URL_UPDATED
+  URL_DELETED
+}
+
+enum SeoIndexingProvider {
+  GOOGLE
+  INDEXNOW
+}
+
+enum SeoIndexingStatus {
+  PENDENTE
+  SUCESSO
+  FALHA
+  IGNORADO
+}
+

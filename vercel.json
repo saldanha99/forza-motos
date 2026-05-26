@@ -3,6 +3,14 @@
     {
       "path": "/api/olist/cron",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/glossario/cron",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/seo/reindex-cron",
+      "schedule": "0 5 * * *"
     }
   ]
 }

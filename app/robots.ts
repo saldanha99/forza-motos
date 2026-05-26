@@ -1,16 +1,16 @@
-import { MetadataRoute } from 'next'
+import type { MetadataRoute } from 'next'
+import { SEO_CONFIG } from '@/lib/seo/config'
 
 export default function robots(): MetadataRoute.Robots {
-  const base = 'https://forza-motos-app.vercel.app'
   return {
     rules: [
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/admin/', '/api/', '/minha-conta/', '/carrinho/', '/checkout/'],
+        disallow: [...SEO_CONFIG.robots.disallow],
       },
     ],
-    sitemap: `${base}/sitemap.xml`,
-    host: base,
+    sitemap: `${SEO_CONFIG.siteUrl}/sitemap.xml`,
+    host: SEO_CONFIG.siteUrl,
   }
 }

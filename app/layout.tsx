@@ -4,6 +4,12 @@ import './globals.css'
 import { Providers } from './providers'
 import { Toaster } from 'react-hot-toast'
 import { GoogleAnalytics } from '@/components/GoogleAnalytics'
+import { JsonLd } from '@/components/seo/JsonLd'
+import {
+  organizationSchema,
+  websiteSchema,
+  localBusinessSchema,
+} from '@/lib/seo/schema'
 
 const barlowCondensed = Barlow_Condensed({
   subsets: ['latin'],
@@ -67,6 +73,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR" className={`${barlowCondensed.variable} ${inter.variable}`}>
       <body className="bg-white text-[#111] font-inter antialiased">
+        {/* SEO — JSON-LD global (Organization + WebSite + LocalBusiness) */}
+        <JsonLd
+          data={[organizationSchema(), websiteSchema(), localBusinessSchema()]}
+        />
         <GoogleAnalytics />
         <Providers>
           {children}

@@ -11,7 +11,10 @@ export default withAuth(
       return NextResponse.redirect(new URL('/login?callbackUrl=/admin', req.url))
     }
 
-    return NextResponse.next()
+    // Header usado pelo logger de 404 (lib/seo/not-found-logger.ts)
+    const res = NextResponse.next()
+    res.headers.set('x-pathname', pathname)
+    return res
   },
   {
     callbacks: {
