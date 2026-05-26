@@ -4,7 +4,10 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { gerarOrderNumber } from '@/lib/utils'
 import { criarPreferencia } from '@/lib/mercadopago'
-import { replicarPedidoOlist } from '@/lib/olist/sync-orders'
+// NOTE: a replicação do pedido para o Olist agora acontece APENAS
+// dentro do webhook do Mercado Pago, quando o pagamento é aprovado.
+// Isso evita que o Olist receba pedidos não pagos e dispare emissão
+// precoce de NF.
 
 export async function POST(req: Request) {
   try {
@@ -117,8 +120,8 @@ export async function POST(req: Request) {
       console.error('Mercado Pago erro:', e)
     }
 
-    // Replica no OLIST em background (não bloqueia a resposta)
-    replicarPedidoOlist(pedido.id).catch(console.error)
+    // Replicação no Olist movida para o webhook do Mercado Pago — só
+    // replica quando pagamento for aprovado (ver app/api/mercadopago/webhook).
 
     return NextResponse.json({
       id: pedido.id,

@@ -30,6 +30,10 @@ export async function replicarPedidoOlist(orderId: string) {
         zip_code: endereco.cep?.replace(/\D/g, ''),
         country: 'BRA',
       },
+      // Sinaliza ao Olist a transportadora escolhida pelo cliente.
+      // Olist usa pra emitir etiqueta no Melhor Envio.
+      ...(order.freteTransportadora && { carrier: order.freteTransportadora }),
+      ...(order.freteServico && { service_code: order.freteServico }),
     },
     items: order.items.map((item) => ({
       sku: item.product.sku,

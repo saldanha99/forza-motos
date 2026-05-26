@@ -22,6 +22,13 @@ function mapearListagem(p: any) {
     ? Number(estoqueRaw)
     : ativo ? 999 : 0   // fallback: ativo=disponível, inativo=indisponível
 
+  // Dimensões e peso (Tiny retorna em campos diferentes dependendo do endpoint)
+  // peso_bruto vem em kg; dimensões em cm
+  const peso = parseFloatOuNull(p.peso_bruto ?? p.peso_liquido ?? p.peso)
+  const altura = parseFloatOuNull(p.altura_embalagem ?? p.altura)
+  const largura = parseFloatOuNull(p.largura_embalagem ?? p.largura)
+  const comprimento = parseFloatOuNull(p.comprimento_embalagem ?? p.comprimento)
+
   return {
     sku:      String(p.codigo || p.id),
     nome:     p.nome || 'Produto sem nome',
@@ -34,7 +41,20 @@ function mapearListagem(p: any) {
     tinyId:   String(p.id),
     categoria: p.categoria?.descricao || (typeof p.categoria === 'string' ? p.categoria : '') || 'Geral',
     marca:    p.marca || '',
+    // Dimensões só são incluídas se vierem preenchidas (preserva valores antigos no banco)
+    ...(peso !== null && { peso }),
+    ...(altura !== null && { altura }),
+    ...(largura !== null && { largura }),
+    ...(comprimento !== null && { comprimento }),
   }
+}
+
+/** Parse seguro de número, retorna null se vazio/inválido/zero */
+function parseFloatOuNull(v: any): number | null {
+  if (v === null || v === undefined || v === '') return null
+  const n = Number(String(v).replace(',', '.'))
+  if (!Number.isFinite(n) || n <= 0) return null
+  return n
 }
 
 /**

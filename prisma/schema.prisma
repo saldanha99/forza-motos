@@ -101,6 +101,14 @@ model Product {
   imagensVerificadas   Boolean     @default(false)
   /// True quando o produto tem pelo menos 1 imagem — usado para filtrar exibição
   temImagem            Boolean     @default(false)
+  /// Peso em kg (para cotação de frete)
+  peso                 Decimal?    @db.Decimal(8, 3)
+  /// Altura em cm
+  altura               Decimal?    @db.Decimal(8, 2)
+  /// Largura em cm
+  largura              Decimal?    @db.Decimal(8, 2)
+  /// Comprimento em cm
+  comprimento          Decimal?    @db.Decimal(8, 2)
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt
 
@@ -121,6 +129,14 @@ model Order {
   pagamentoMetodo    String?
   pagamentoIdExterno String?
   olistOrderId       String?
+  /// Serviço de frete escolhido pelo cliente (ex: "pac", "sedex", "jadlog", "jet")
+  freteServico       String?
+  /// Nome da transportadora exibido ao cliente (ex: "Correios PAC", "Jadlog Package")
+  freteTransportadora String?
+  /// Prazo estimado em dias úteis informado na cotação
+  fretePrazo         Int?
+  /// Código de rastreamento informado pela transportadora (preenchido após envio)
+  trackingCode       String?
   /// Canal de origem do pedido
   canal              CanalVenda  @default(ECOMMERCE)
   createdAt          DateTime    @default(now())

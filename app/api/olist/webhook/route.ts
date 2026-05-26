@@ -94,25 +94,59 @@ export async function POST(req: Request) {
       const statusKey = body.dados?.situacao || body.data?.status || ''
       const novoStatus = STATUS_MAP[statusKey]
 
+      // Tenta capturar tracking code de várias estruturas possíveis do Tiny/Olist
+      const trackingCode =
+        body.dados?.codigo_rastreamento ||
+        body.dados?.rastreamento?.codigo ||
+        body.dados?.objeto_correios ||
+        body.data?.tracking_code ||
+        body.data?.tracking?.code ||
+        null
+      const transportadora =
+        body.dados?.transportadora?.nome ||
+        body.dados?.transportadora ||
+        body.data?.shipping?.carrier ||
+        null
+
       if (olistId && novoStatus) {
         const pedido = await prisma.order.findFirst({
           where: { olistOrderId: olistId },
+          select: {
+            id: true,
+            status: true,
+            trackingCode: true,
+            freteTransportadora: true,
+            orderNumber: true,
+          },
         })
 
-        if (pedido) {
+        if (pedido && (pedido.status !== novoStatus || (trackingCode && !pedido.trackingCode))) {
+          const desc: string[] = [`Status atualizado via webhook OLIST/Tiny: ${statusKey}`]
+          if (trackingCode && !pedido.trackingCode) {
+            desc.push(`Código de rastreamento: ${trackingCode}`)
+          }
+
           await prisma.order.update({
             where: { id: pedido.id },
             data: {
               status: novoStatus as any,
+              // Salva tracking code se vier no payload e ainda não estiver setado
+              ...(trackingCode && !pedido.trackingCode && { trackingCode: String(trackingCode) }),
+              ...(transportadora && !pedido.freteTransportadora && {
+                freteTransportadora: String(transportadora),
+              }),
               tracking: {
                 create: {
                   status: novoStatus,
-                  descricao: `Status atualizado via webhook OLIST/Tiny: ${statusKey}`,
+                  descricao: desc.join(' | '),
                 },
               },
             },
           })
-          console.log(`[webhook] Pedido ${olistId} → ${novoStatus}`)
+          console.log(
+            `[webhook] Pedido ${olistId} → ${novoStatus}` +
+              (trackingCode ? ` (rastreio: ${trackingCode})` : '')
+          )
         }
       }
       return NextResponse.json({ ok: true })
