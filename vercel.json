@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/glossario/cron",
-      "schedule": "0 * * * *"
+      "schedule": "0 3 * * *"
     },
     {
       "path": "/api/seo/reindex-cron",
