@@ -220,9 +220,16 @@ export function ProductDetail({ produto }: { produto: Produto }) {
         {/* Description */}
         <div className="border-t border-[#eee] pt-6">
           <h3 className="font-barlow font-bold text-[16px] text-[#111] mb-3 uppercase tracking-[0.3px]">Descrição</h3>
-          <p className="font-inter text-[14px] text-[#555] whitespace-pre-line leading-relaxed">
-            {produto.descricao}
-          </p>
+          <div
+            className="font-inter text-[14px] text-[#555] leading-relaxed prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{
+              __html: (produto.descricao ?? '')
+                // Normaliza quebras de linha em <br>
+                .replace(/\n/g, '<br />')
+                // Remove <br /> duplicados seguidos
+                .replace(/(<br\s*\/?>){3,}/gi, '<br /><br />'),
+            }}
+          />
         </div>
 
         {/* Compatibility */}

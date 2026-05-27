@@ -40,8 +40,10 @@ export function BrandMarquee() {
 
   const sectionBg  = dark ? '#0a0a0a' : '#f5f5f5'
   const borderCol  = dark ? '#1e1e1e' : '#e8e8e8'
-  const cardBg     = (bg?: string) => bg ? bg : dark ? '#1a1a1a' : '#ffffff'
-  const cardBorder = (bg?: string) => bg ? 'transparent' : dark ? '#2a2a2a' : '#e8e8e8'
+  // Cards sem bg customizado sempre ficam brancos (dark ou light)
+  // assim os logos ficam legíveis independente do tema
+  const cardBg     = (bg?: string) => bg ? bg : '#ffffff'
+  const cardBorder = (bg?: string) => bg ? 'transparent' : '#e8e8e8'
   const titleCol   = dark ? '#f0f0f0' : '#111111'
   const subtitleCol = dark ? '#555' : '#999'
 
