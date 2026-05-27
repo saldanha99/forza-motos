@@ -245,14 +245,14 @@ export function FiltrosMobile({ categorias, marcas, params }: Props) {
             role="dialog"
             aria-modal="true"
             aria-label="Filtros"
-            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl flex flex-col transition-transform duration-300 ease-out"
+            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl flex flex-col transition-transform duration-300 ease-out overflow-hidden"
             style={{
               background: 'rgba(255,255,255,0.97)',
               backdropFilter: 'blur(20px)',
-              maxHeight: '88vh',
+              height: '88vh',          /* altura fixa — overflow-hidden precisa de dimensão explícita */
               transform: visible ? 'translateY(0)' : 'translateY(100%)',
               boxShadow: '0 -8px 40px rgba(0,0,0,0.20)',
-              paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
+              willChange: 'transform', /* força compositing layer — evita vazamento */
             }}
           >
             {/* Handle de arraste */}
@@ -282,8 +282,11 @@ export function FiltrosMobile({ categorias, marcas, params }: Props) {
               </button>
             </div>
 
-            {/* Conteúdo com scroll */}
-            <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-5">
+            {/* Conteúdo com scroll — ocupa o restante da altura */}
+            <div
+              className="flex-1 overflow-y-auto overscroll-contain px-5 py-5"
+              style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 20px)' }}
+            >
               <FiltrosConteudo
                 categorias={categorias}
                 marcas={marcas}
