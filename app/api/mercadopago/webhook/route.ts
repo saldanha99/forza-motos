@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { replicarPedidoOlist } from '@/lib/olist/sync-orders'
 import { triggerIndexing } from '@/lib/seo/indexing'
 import { SEO_CONFIG } from '@/lib/seo/config'
+import { verificarEstoqueTiny } from '@/lib/tiny/verificar-estoque'
 
 /**
  * Webhook do Mercado Pago.
@@ -45,35 +46,83 @@ export async function POST(req: Request) {
     if (payment.status === 'approved') {
       const order = await prisma.order.findUnique({
         where: { id: orderId },
-        select: { id: true, status: true, olistOrderId: true, orderNumber: true },
+        select: {
+          id: true, status: true, olistOrderId: true, orderNumber: true,
+          items: { select: { productId: true, quantidade: true } },
+        },
       })
       if (!order) return NextResponse.json({ ok: true })
 
-      // 1) Atualiza status — só se ainda não estiver confirmado (idempotência)
-      if (order.status !== 'CONFIRMADO' && order.status !== 'SEPARANDO' && order.status !== 'ENVIADO' && order.status !== 'ENTREGUE') {
+      // Já está em estado final — nada a fazer (idempotência)
+      const statusFinais = ['CONFIRMADO', 'SEPARANDO', 'ENVIADO', 'ENTREGUE', 'CANCELADO']
+      if (statusFinais.includes(order.status)) {
+        return NextResponse.json({ ok: true, status: order.status })
+      }
+
+      // 1) Verificação final de estoque no Tiny antes de confirmar o pedido
+      //    Garante que, mesmo que o produto tenha sido vendido no físico
+      //    entre o checkout e o pagamento, não entregamos o que não temos.
+      const verificacao = await verificarEstoqueTiny(
+        order.items.map((i) => ({ productId: i.productId, quantidade: i.quantidade }))
+      ).catch(() => ({ ok: true, esgotados: [] })) // em caso de falha na API, libera
+
+      if (!verificacao.ok) {
+        // Estoque insuficiente: cancela e solicita reembolso automático no MP
+        const nomes = verificacao.esgotados.map((e) => e.nome).join(', ')
+        console.warn(`[mp-webhook] ⚠️ Estoque insuficiente após pagamento — pedido ${order.orderNumber}: ${nomes}`)
+
         await prisma.order.update({
           where: { id: orderId },
           data: {
-            status: 'CONFIRMADO',
-            pagamentoMetodo: payment.payment_method_id,
+            status: 'CANCELADO',
             tracking: {
               create: {
-                status: 'CONFIRMADO',
-                descricao: `Pagamento aprovado via ${payment.payment_method_id}.`,
+                status: 'CANCELADO',
+                descricao: `⚠️ Pedido cancelado automaticamente: produto(s) esgotado(s) no estoque físico após confirmação do pagamento. Estornando: ${nomes}. Entre em contato com o cliente.`,
               },
             },
           },
         })
+
+        // Solicita reembolso total no Mercado Pago
+        try {
+          await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}/refunds`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({}), // corpo vazio = reembolso total
+          })
+          console.log(`[mp-webhook] Reembolso solicitado para pagamento ${paymentId}`)
+        } catch (e) {
+          console.error('[mp-webhook] Falha ao solicitar reembolso:', e)
+        }
+
+        return NextResponse.json({ ok: true, status: 'cancelled_no_stock' })
       }
 
-      // 2) Replica no Olist — só se ainda não foi replicado (idempotência)
+      // 2) Estoque OK — confirma o pedido
+      await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          status: 'CONFIRMADO',
+          pagamentoMetodo: payment.payment_method_id,
+          tracking: {
+            create: {
+              status: 'CONFIRMADO',
+              descricao: `Pagamento aprovado via ${payment.payment_method_id}.`,
+            },
+          },
+        },
+      })
+
+      // 3) Replica no Olist — só se ainda não foi replicado (idempotência)
       if (!order.olistOrderId) {
         try {
           await replicarPedidoOlist(orderId)
           console.log(`[mp-webhook] Pedido ${order.orderNumber} replicado no Olist`)
         } catch (e) {
-          // Não joga erro pro MP (que ia reenviar o webhook eternamente)
-          // mas registra no tracking pra você ver no admin
           console.error('[mp-webhook] Falha ao replicar Olist:', e)
           await prisma.order.update({
             where: { id: orderId },

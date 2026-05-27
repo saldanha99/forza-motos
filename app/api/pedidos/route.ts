@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { gerarOrderNumber } from '@/lib/utils'
 import { criarPreferencia } from '@/lib/mercadopago'
+import { verificarEstoqueTiny } from '@/lib/tiny/verificar-estoque'
 // NOTE: a replicação do pedido para o Olist agora acontece APENAS
 // dentro do webhook do Mercado Pago, quando o pagamento é aprovado.
 // Isso evita que o Olist receba pedidos não pagos e dispare emissão
@@ -22,12 +23,20 @@ export async function POST(req: Request) {
     })
     const orderNumber = gerarOrderNumber(count + 1, ano)
 
-    // Verifica estoque
-    for (const item of items) {
-      const produto = await prisma.product.findUnique({ where: { id: item.productId } })
-      if (!produto || produto.estoque < item.quantidade) {
-        return NextResponse.json({ error: `Produto ${produto?.nome ?? item.productId} sem estoque suficiente` }, { status: 400 })
-      }
+    // ── Verificação de estoque em tempo real no Tiny ──────────────────────
+    // Bate na API do Tiny antes de criar o pedido para garantir que o
+    // estoque não foi vendido no físico desde o último sync periódico.
+    const verificacao = await verificarEstoqueTiny(
+      items.map((i: any) => ({ productId: i.productId, quantidade: i.quantidade }))
+    )
+    if (!verificacao.ok) {
+      const nomes = verificacao.esgotados.map((e) =>
+        `${e.nome} (disponível: ${e.estoqueReal === 0 ? 'esgotado' : e.estoqueReal})`
+      ).join(', ')
+      return NextResponse.json(
+        { error: `Produto(s) sem estoque suficiente: ${nomes}` },
+        { status: 400 }
+      )
     }
 
     // Cria pedido
