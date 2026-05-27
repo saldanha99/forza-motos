@@ -172,36 +172,45 @@ export async function syncImagensLote(limite = 10) {
   // Prioridade 2: produtos sem imagem mas já verificados (talvez tenham sido adicionadas fotos)
   // Prioridade 1: nunca verificados
   // Prioridade 2: verificados há mais de 7 dias e ainda sem foto (re-tentativa semanal)
-  const precisam = await prisma.$queryRaw<{ id: string; sku: string; tinyId: string; nome: string; estoque: number }[]>`
-    SELECT id, sku, "tinyId", nome, estoque
-    FROM "Product"
-    WHERE "tinyId" IS NOT NULL
-      AND (imagens::text = '[]' OR imagens IS NULL)
-      AND (
-        "imagensVerificadas" = false
-        OR "updatedAt" < NOW() - INTERVAL '7 days'
-      )
-    ORDER BY "imagensVerificadas" ASC, "updatedAt" ASC
-    LIMIT ${limite}
-  `
+  // Prioridade 1: nunca verificados (imagensVerificadas=false)
+  // Prioridade 2: verificados há mais de 7 dias e ainda sem foto
+  // Sem $queryRaw para compatibilidade com Neon Pooler
+  const seteAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+
+  const naoVerif = await prisma.product.findMany({
+    where: { tinyId: { not: null }, temImagem: false, imagensVerificadas: false },
+    select: { id: true, sku: true, tinyId: true, nome: true, estoque: true },
+    orderBy: { updatedAt: 'asc' },
+    take: limite,
+  })
+
+  const restante = limite - naoVerif.length
+  const recheck = restante > 0
+    ? await prisma.product.findMany({
+        where: {
+          tinyId: { not: null },
+          temImagem: false,
+          imagensVerificadas: true,
+          updatedAt: { lt: seteAtras },
+        },
+        select: { id: true, sku: true, tinyId: true, nome: true, estoque: true },
+        orderBy: { updatedAt: 'asc' },
+        take: restante,
+      })
+    : []
+
+  const precisam = [...naoVerif, ...recheck]
 
   if (precisam.length === 0) {
-    // Conta quantos ainda estão sem imagem (incluindo os já verificados)
-    const [semImagem, naoVerificados] = await Promise.all([
-      prisma.$queryRaw<[{ n: number }]>`
-        SELECT COUNT(*)::int as n FROM "Product"
-        WHERE "tinyId" IS NOT NULL AND (imagens::text = '[]' OR imagens IS NULL)
-      `,
-      prisma.$queryRaw<[{ n: number }]>`
-        SELECT COUNT(*)::int as n FROM "Product"
-        WHERE "tinyId" IS NOT NULL AND (imagens::text = '[]' OR imagens IS NULL) AND "imagensVerificadas" = false
-      `,
+    const [restantes, naoVerificados] = await Promise.all([
+      prisma.product.count({ where: { tinyId: { not: null }, temImagem: false } }),
+      prisma.product.count({ where: { tinyId: { not: null }, temImagem: false, imagensVerificadas: false } }),
     ])
     return {
       atualizados: 0,
       semImagem: 0,
-      restantes: semImagem[0]?.n ?? 0,
-      naoVerificados: naoVerificados[0]?.n ?? 0,
+      restantes,
+      naoVerificados,
       hasMore: false,
       semImagemNoTiny: false,
     }
@@ -259,20 +268,11 @@ export async function syncImagensLote(limite = 10) {
     }
   }
 
-  // Conta restantes ainda não verificados
-  const [restantesArr, naoVerificadosArr] = await Promise.all([
-    prisma.$queryRaw<[{ n: number }]>`
-      SELECT COUNT(*)::int as n FROM "Product"
-      WHERE "tinyId" IS NOT NULL AND (imagens::text = '[]' OR imagens IS NULL)
-    `,
-    prisma.$queryRaw<[{ n: number }]>`
-      SELECT COUNT(*)::int as n FROM "Product"
-      WHERE "tinyId" IS NOT NULL AND (imagens::text = '[]' OR imagens IS NULL) AND "imagensVerificadas" = false
-    `,
+  // Conta restantes ainda não verificados — sem $queryRaw
+  const [restantes, naoVerificados] = await Promise.all([
+    prisma.product.count({ where: { tinyId: { not: null }, temImagem: false } }),
+    prisma.product.count({ where: { tinyId: { not: null }, temImagem: false, imagensVerificadas: false } }),
   ])
-
-  const restantes = restantesArr[0]?.n ?? 0
-  const naoVerificados = naoVerificadosArr[0]?.n ?? 0
 
   return {
     atualizados,
@@ -337,17 +337,28 @@ export async function syncEstoquePrecos() {
  * Prioridade: produtos com estoque=999 ainda não verificados (recém importados)
  */
 export async function syncEstoqueLote(limite = 5) {
-  // Prioridade: produtos que nunca tiveram estoque real verificado (999 = placeholder)
-  // Depois: produtos com estoque 0 (podem ter sido reabastecidos)
-  const produtos = await prisma.$queryRaw<{ id: string; tinyId: string; estoque: number }[]>`
-    SELECT id, "tinyId", estoque FROM "Product"
-    WHERE "tinyId" IS NOT NULL
-    ORDER BY
-      CASE WHEN estoque = 999 THEN 0 ELSE 1 END,  -- 999 (não verificado) vem primeiro
-      estoque ASC,                                  -- depois os zerados
-      "updatedAt" ASC                               -- mais antigos
-    LIMIT ${limite}
-  `
+  // Prioridade 1: produtos com estoque=999 (placeholder, nunca verificados)
+  // Prioridade 2: produtos com estoque=0 (podem ter sido reabastecidos)
+  // Sem $queryRaw para compatibilidade com Neon Pooler (pgBouncer transaction mode)
+
+  const naoVerificados = await prisma.product.findMany({
+    where: { tinyId: { not: null }, estoque: 999 },
+    select: { id: true, tinyId: true, estoque: true },
+    orderBy: { updatedAt: 'asc' },
+    take: limite,
+  })
+
+  const restante = limite - naoVerificados.length
+  const zerados = restante > 0
+    ? await prisma.product.findMany({
+        where: { tinyId: { not: null }, estoque: { lte: 0 } },
+        select: { id: true, tinyId: true, estoque: true },
+        orderBy: { updatedAt: 'asc' },
+        take: restante,
+      })
+    : []
+
+  const produtos = [...naoVerificados, ...zerados]
 
   if (produtos.length === 0) {
     return { atualizados: 0, erros: 0, pendentes: 0, total: 0, hasMore: false }
@@ -376,15 +387,13 @@ export async function syncEstoqueLote(limite = 5) {
 
   const [total, pendentes] = await Promise.all([
     prisma.product.count({ where: { tinyId: { not: null } } }),
-    prisma.$queryRaw<[{ n: number }]>`
-      SELECT COUNT(*)::int AS n FROM "Product" WHERE "tinyId" IS NOT NULL AND estoque = 999
-    `.then(r => r[0]?.n ?? 0),
+    prisma.product.count({ where: { tinyId: { not: null }, estoque: 999 } }),
   ])
 
   return {
     atualizados,
     erros,
-    pendentes,  // quantos ainda com 999 (placeholder, não verificados)
+    pendentes,
     total,
     hasMore: pendentes > 0,
   }
