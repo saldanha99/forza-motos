@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/store/ProductCard'
-import { FiltrosProdutos } from '@/components/store/FiltrosProdutos'
+import { FiltrosProdutos, FiltrosMobile } from '@/components/store/FiltrosProdutos'
 import { Package } from 'lucide-react'
 
 interface SearchParams {
@@ -115,6 +115,11 @@ export default async function ProdutosPage({ searchParams }: { searchParams: Sea
             </span>
           </div>
 
+          {/* Botão filtros mobile */}
+          <div className="lg:hidden">
+            <FiltrosMobile categorias={filtros.categorias} marcas={filtros.marcas} params={searchParams} />
+          </div>
+
           {/* Active filter chips */}
           {activeFilters.map((f) => (
             <Link
@@ -135,11 +140,11 @@ export default async function ProdutosPage({ searchParams }: { searchParams: Sea
       </div>
 
       {/* ── Main layout ─────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+        <div className="lg:flex lg:gap-8">
 
-          {/* Sidebar */}
-          <aside className="w-64 shrink-0">
+          {/* Sidebar — apenas desktop */}
+          <aside className="hidden lg:block w-64 shrink-0">
             <FiltrosProdutos
               categorias={filtros.categorias}
               marcas={filtros.marcas}
@@ -190,7 +195,7 @@ export default async function ProdutosPage({ searchParams }: { searchParams: Sea
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
                   {produtos.map((p) => (
                     <ProductCard key={p.id} produto={p} />
                   ))}
