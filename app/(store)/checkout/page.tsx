@@ -6,46 +6,49 @@ import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { formatPrice } from '@/lib/utils'
-import { calcularFrete } from '@/lib/correios'
+import { calcularRegrasFrete, faltaParaFreteGratis, type OpcaoFrete } from '@/lib/frete/regras'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
-import { Check } from 'lucide-react'
+import { Check, Truck, Zap, Gift } from 'lucide-react'
 
 type Etapa = 'dados' | 'frete' | 'pagamento'
-
-interface OpcaoFrete {
-  codigo: string
-  servico: string
-  valor: number
-  prazo: number
-}
 
 export default function CheckoutPage() {
   const { data: session } = useSession()
   const { items, subtotal, limpar } = useCartStore()
   const router = useRouter()
 
-  const [etapa, setEtapa] = useState<Etapa>('dados')
-  const [loading, setLoading] = useState(false)
-  const [freteOpcoes, setFreteOpcoes] = useState<OpcaoFrete[]>([])
+  const [etapa, setEtapa]                   = useState<Etapa>('dados')
+  const [loading, setLoading]               = useState(false)
+  const [freteOpcoes, setFreteOpcoes]       = useState<OpcaoFrete[]>([])
   const [freteSelecionado, setFreteSelecionado] = useState<OpcaoFrete | null>(null)
 
   const [form, setForm] = useState({
-    nome: session?.user?.name ?? '',
-    email: session?.user?.email ?? '',
-    telefone: '',
-    cep: '',
-    rua: '',
-    numero: '',
+    nome:        session?.user?.name  ?? '',
+    email:       session?.user?.email ?? '',
+    telefone:    '',
+    cep:         '',
+    rua:         '',
+    numero:      '',
     complemento: '',
-    bairro: '',
-    cidade: '',
-    estado: '',
+    bairro:      '',
+    cidade:      '',
+    estado:      '',
   })
 
   useEffect(() => {
     if (items.length === 0) router.replace('/carrinho')
   }, [items.length, router])
+
+  // Recalcula frete se estado ou subtotal mudar enquanto ainda na etapa de frete
+  useEffect(() => {
+    if (etapa === 'frete' && form.estado) {
+      const opcoes = calcularRegrasFrete(form.estado, subtotal())
+      setFreteOpcoes(opcoes)
+      // Auto-seleciona se só houver uma opção (frete grátis)
+      if (opcoes.length === 1) setFreteSelecionado(opcoes[0])
+    }
+  }, [form.estado, etapa]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (items.length === 0) return null
 
@@ -60,26 +63,33 @@ export default function CheckoutPage() {
       const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
       const d = await r.json()
       if (!d.erro) {
-        setForm((f) => ({ ...f, rua: d.logradouro, bairro: d.bairro, cidade: d.localidade, estado: d.uf }))
+        setForm((f) => ({
+          ...f,
+          rua:    d.logradouro,
+          bairro: d.bairro,
+          cidade: d.localidade,
+          estado: d.uf,
+        }))
       }
     } catch {}
   }
 
-  async function avancarParaFrete() {
+  function avancarParaFrete() {
     if (!form.nome || !form.email || !form.cep || !form.rua || !form.numero) {
       toast.error('Preencha todos os campos obrigatórios')
       return
     }
-    setLoading(true)
-    try {
-      const opcoes = await calcularFrete(form.cep, 1, subtotal())
-      setFreteOpcoes(opcoes)
-      setEtapa('frete')
-    } catch {
-      toast.error('Erro ao calcular frete')
-    } finally {
-      setLoading(false)
+    if (!form.estado) {
+      toast.error('CEP não encontrado. Preencha o estado manualmente.')
+      return
     }
+    const opcoes = calcularRegrasFrete(form.estado, subtotal())
+    setFreteOpcoes(opcoes)
+    // Auto-seleciona frete grátis
+    if (opcoes.length === 1 && opcoes[0].gratis) {
+      setFreteSelecionado(opcoes[0])
+    }
+    setEtapa('frete')
   }
 
   async function finalizarPedido() {
@@ -90,11 +100,15 @@ export default function CheckoutPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: items.map((i) => ({ productId: i.id, quantidade: i.quantidade, precoUnitario: i.preco })),
+          items: items.map((i) => ({
+            productId:     i.id,
+            quantidade:    i.quantidade,
+            precoUnitario: i.preco,
+          })),
           enderecoEntrega: form,
-          frete: freteSelecionado.valor,
+          frete:    freteSelecionado.valor,
           subtotal: subtotal(),
-          total: subtotal() + freteSelecionado.valor,
+          total:    subtotal() + freteSelecionado.valor,
         }),
       })
 
@@ -115,13 +129,25 @@ export default function CheckoutPage() {
     }
   }
 
-  const total = subtotal() + (freteSelecionado?.valor ?? 0)
+  const total      = subtotal() + (freteSelecionado?.valor ?? 0)
   const etapas: Etapa[] = ['dados', 'frete', 'pagamento']
-  const etapaIdx = etapas.indexOf(etapa)
+  const etapaIdx   = etapas.indexOf(etapa)
+
+  // Banner de frete grátis — quantos reais faltam (para SP)
+  const falta = faltaParaFreteGratis(form.estado, subtotal())
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <h1 className="font-grotesk font-bold text-3xl text-ink mb-8">Checkout</h1>
+
+      {/* Banner frete grátis — aparece quando estado é SP e falta pouco */}
+      {falta !== null && falta > 0 && falta <= 200 && (
+        <div className="mb-6 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium"
+          style={{ background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.25)', color: '#15803d' }}>
+          <Gift size={16} className="shrink-0" />
+          Falta <strong className="mx-1">{formatPrice(falta)}</strong> para ganhar <strong className="ml-1">Frete Grátis para SP!</strong>
+        </div>
+      )}
 
       {/* Stepper */}
       <div className="flex items-center gap-0 mb-10">
@@ -150,39 +176,62 @@ export default function CheckoutPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          {/* Etapa 1: Dados */}
+
+          {/* ── Etapa 1: Dados ── */}
           {etapa === 'dados' && (
             <div className="bg-card border border-line rounded-xl p-6 space-y-4">
               <h2 className="font-grotesk font-semibold text-xl text-ink">Dados pessoais e entrega</h2>
-              <Input label="Nome completo *" value={form.nome} onChange={(e) => updateForm('nome', e.target.value)} />
-              <Input label="E-mail *" type="email" value={form.email} onChange={(e) => updateForm('email', e.target.value)} />
-              <Input label="Telefone" value={form.telefone} onChange={(e) => updateForm('telefone', e.target.value)} placeholder="(19) 99999-9999" />
-              <Input label="CEP *" value={form.cep} onChange={(e) => updateForm('cep', e.target.value)} onBlur={buscarCEP} placeholder="00000-000" />
+              <Input label="Nome completo *" value={form.nome}
+                onChange={(e) => updateForm('nome', e.target.value)} />
+              <Input label="E-mail *" type="email" value={form.email}
+                onChange={(e) => updateForm('email', e.target.value)} />
+              <Input label="Telefone" value={form.telefone}
+                onChange={(e) => updateForm('telefone', e.target.value)} placeholder="(19) 99999-9999" />
+              <Input label="CEP *" value={form.cep}
+                onChange={(e) => updateForm('cep', e.target.value)}
+                onBlur={buscarCEP} placeholder="00000-000" />
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <Input label="Rua *" value={form.rua} onChange={(e) => updateForm('rua', e.target.value)} />
+                  <Input label="Rua *" value={form.rua}
+                    onChange={(e) => updateForm('rua', e.target.value)} />
                 </div>
-                <Input label="Número *" value={form.numero} onChange={(e) => updateForm('numero', e.target.value)} />
-                <Input label="Complemento" value={form.complemento} onChange={(e) => updateForm('complemento', e.target.value)} />
-                <Input label="Bairro" value={form.bairro} onChange={(e) => updateForm('bairro', e.target.value)} />
-                <Input label="Cidade" value={form.cidade} onChange={(e) => updateForm('cidade', e.target.value)} />
+                <Input label="Número *" value={form.numero}
+                  onChange={(e) => updateForm('numero', e.target.value)} />
+                <Input label="Complemento" value={form.complemento}
+                  onChange={(e) => updateForm('complemento', e.target.value)} />
+                <Input label="Bairro" value={form.bairro}
+                  onChange={(e) => updateForm('bairro', e.target.value)} />
+                <Input label="Cidade" value={form.cidade}
+                  onChange={(e) => updateForm('cidade', e.target.value)} />
+                <div className="col-span-2 sm:col-span-1">
+                  <Input label="Estado" value={form.estado}
+                    onChange={(e) => updateForm('estado', e.target.value.toUpperCase())}
+                    placeholder="SP" maxLength={2} />
+                </div>
               </div>
-              <Button onClick={avancarParaFrete} loading={loading} className="w-full" size="lg">
-                Calcular Frete
+              <Button onClick={avancarParaFrete} className="w-full" size="lg">
+                Continuar para o Frete
               </Button>
             </div>
           )}
 
-          {/* Etapa 2: Frete */}
+          {/* ── Etapa 2: Frete ── */}
           {etapa === 'frete' && (
             <div className="bg-card border border-line rounded-xl p-6 space-y-4">
               <h2 className="font-grotesk font-semibold text-xl text-ink">Escolha o frete</h2>
+              <p className="text-sm text-dim">
+                Entregando em <strong className="text-ink">{form.cidade} — {form.estado}</strong>
+              </p>
+
               {freteOpcoes.map((op) => (
-                <label key={op.codigo} className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-colors ${
-                  freteSelecionado?.codigo === op.codigo
-                    ? 'border-vermelho bg-[var(--vermelho-light)]'
-                    : 'border-line hover:border-line-hi'
-                }`}>
+                <label
+                  key={op.codigo}
+                  className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${
+                    freteSelecionado?.codigo === op.codigo
+                      ? 'border-vermelho bg-[var(--vermelho-light)]'
+                      : 'border-line hover:border-line-hi'
+                  }`}
+                >
                   <div className="flex items-center gap-3">
                     <input
                       type="radio"
@@ -192,32 +241,57 @@ export default function CheckoutPage() {
                       className="accent-vermelho"
                     />
                     <div>
-                      <p className="font-semibold text-ink text-sm">{op.servico}</p>
+                      <p className="font-semibold text-ink text-sm flex items-center gap-1.5">
+                        {op.gratis
+                          ? <Gift size={14} className="text-green-500" />
+                          : op.prazo <= 3
+                          ? <Zap size={14} className="text-amber-500" />
+                          : <Truck size={14} className="text-dim" />
+                        }
+                        {op.servico}
+                      </p>
                       <p className="text-xs text-faint">Prazo: até {op.prazo} dias úteis</p>
                     </div>
                   </div>
-                  <span className="font-bold text-ink">{formatPrice(op.valor)}</span>
+                  <span className={`font-bold text-base ${op.gratis ? 'text-green-600' : 'text-ink'}`}>
+                    {op.valor === 0 ? 'Grátis' : formatPrice(op.valor)}
+                  </span>
                 </label>
               ))}
+
               <div className="flex gap-3 pt-2">
-                <Button variant="surface" onClick={() => setEtapa('dados')} className="flex-1">Voltar</Button>
-                <Button onClick={() => freteSelecionado && setEtapa('pagamento')} disabled={!freteSelecionado} className="flex-1" size="lg">
+                <Button variant="surface" onClick={() => setEtapa('dados')} className="flex-1">
+                  Voltar
+                </Button>
+                <Button
+                  onClick={() => freteSelecionado && setEtapa('pagamento')}
+                  disabled={!freteSelecionado}
+                  className="flex-1"
+                  size="lg"
+                >
                   Ir para Pagamento
                 </Button>
               </div>
             </div>
           )}
 
-          {/* Etapa 3: Pagamento */}
+          {/* ── Etapa 3: Pagamento ── */}
           {etapa === 'pagamento' && (
             <div className="bg-card border border-line rounded-xl p-6 space-y-4">
               <h2 className="font-grotesk font-semibold text-xl text-ink">Pagamento</h2>
               <div className="bg-surface border border-line rounded-xl p-5 text-sm text-dim">
-                <p>Você será redirecionado para o <strong className="text-ink">Mercado Pago</strong> para concluir o pagamento com segurança.</p>
-                <p className="mt-2 text-xs text-faint">Aceitamos: PIX, cartão de crédito/débito e boleto bancário.</p>
+                <p>
+                  Você será redirecionado para o{' '}
+                  <strong className="text-ink">Mercado Pago</strong> para concluir o pagamento com segurança.
+                </p>
+                <p className="mt-2 text-xs text-faint">
+                  Aceitamos: PIX, cartão de crédito/débito e boleto bancário.
+                </p>
               </div>
               <div className="flex gap-3">
-                <Button variant="surface" onClick={() => setEtapa('frete')} className="flex-1">Voltar</Button>
+                <Button variant="surface" onClick={() => setEtapa('frete')} className="flex-1">
+                  Voltar
+                </Button>
                 <Button onClick={finalizarPedido} loading={loading} className="flex-1" size="lg">
                   Pagar {formatPrice(total)}
                 </Button>
@@ -226,7 +300,7 @@ export default function CheckoutPage() {
           )}
         </div>
 
-        {/* Resumo */}
+        {/* ── Resumo lateral ── */}
         <div>
           <div className="bg-card border border-line rounded-xl p-5 sticky top-24">
             <h3 className="font-grotesk font-semibold text-base text-ink mb-4">Resumo do pedido</h3>
@@ -234,18 +308,35 @@ export default function CheckoutPage() {
               {items.map((i) => (
                 <div key={i.id} className="flex justify-between gap-2">
                   <span className="truncate">{i.nome} ×{i.quantidade}</span>
-                  <span className="text-ink shrink-0 font-medium">{formatPrice(i.preco * i.quantidade)}</span>
+                  <span className="text-ink shrink-0 font-medium">
+                    {formatPrice(i.preco * i.quantidade)}
+                  </span>
                 </div>
               ))}
               <div className="border-t border-line pt-2 flex justify-between">
                 <span>Frete</span>
-                <span className="text-ink">{freteSelecionado ? formatPrice(freteSelecionado.valor) : '–'}</span>
+                <span className={freteSelecionado?.gratis ? 'text-green-600 font-semibold' : 'text-ink'}>
+                  {freteSelecionado
+                    ? freteSelecionado.valor === 0
+                      ? 'Grátis 🎉'
+                      : formatPrice(freteSelecionado.valor)
+                    : '–'
+                  }
+                </span>
               </div>
               <div className="flex justify-between font-bold text-ink text-base pt-1">
                 <span>Total</span>
                 <span>{formatPrice(total)}</span>
               </div>
             </div>
+
+            {/* Badge frete grátis no resumo */}
+            {falta === 0 && freteSelecionado?.gratis && (
+              <div className="text-xs text-center py-2 rounded-lg font-semibold"
+                style={{ background: 'rgba(34,197,94,0.12)', color: '#15803d' }}>
+                🎉 Frete Grátis aplicado!
+              </div>
+            )}
           </div>
         </div>
       </div>
