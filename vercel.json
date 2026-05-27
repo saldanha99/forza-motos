@@ -14,7 +14,7 @@
     },
     {
       "path": "/api/crm/queue",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 8 * * *"
     }
   ]
 }
