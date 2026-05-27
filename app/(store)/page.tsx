@@ -491,52 +491,46 @@ export default async function HomePage() {
             Box rápido, equipe especializada e estrutura completa para sua moto.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Fachada */}
-            <div className="relative rounded-2xl overflow-hidden aspect-[3/4] shadow-md group col-span-1 md:row-span-2 md:aspect-auto">
-              <Image
-                src="/images/loja-fachada.jpg"
-                alt="Fachada Forza Motos — Moto Service Campinas"
-                fill
-                className="object-cover group-hover:scale-105 transition-transform duration-700"
-                sizes="(max-width: 768px) 100vw, 33vw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              <div className="absolute bottom-5 left-5">
-                <span className="text-white font-barlow font-black text-xl tracking-wide drop-shadow">Forza Motos</span>
-                <p className="text-white/80 text-sm">Campinas, SP</p>
+          {/* 3 colunas iguais com aspect-ratio respeitando as fotos verticais */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              {
+                src: '/images/loja-fachada.jpg',
+                alt: 'Fachada Forza Motos — Moto Service Campinas',
+                label: 'Nossa Loja',
+                sub: 'Campinas, SP',
+                pos: 'object-top',
+              },
+              {
+                src: '/images/loja-servico-1.jpg',
+                alt: 'Troca de pneu na Forza Motos',
+                label: 'Box Rápido',
+                sub: 'Troca em 30 min',
+                pos: 'object-center',
+              },
+              {
+                src: '/images/loja-servico-2.jpg',
+                alt: 'Mecânico especializado Forza Motos',
+                label: 'Mão de Obra',
+                sub: 'Equipe especializada',
+                pos: 'object-top',
+              },
+            ].map((item) => (
+              <div key={item.src} className="relative rounded-2xl overflow-hidden shadow-md group" style={{ aspectRatio: '3/4' }}>
+                <Image
+                  src={item.src}
+                  alt={item.alt}
+                  fill
+                  className={`object-cover ${item.pos} group-hover:scale-105 transition-transform duration-700`}
+                  sizes="(max-width: 640px) 100vw, 33vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
+                <div className="absolute bottom-5 left-5">
+                  <p className="text-white font-barlow font-black text-xl drop-shadow">{item.label}</p>
+                  <p className="text-white/75 font-inter text-sm">{item.sub}</p>
+                </div>
               </div>
-            </div>
-
-            {/* Serviço 1 */}
-            <div className="relative rounded-2xl overflow-hidden aspect-[4/3] shadow-md group md:col-span-2">
-              <Image
-                src="/images/loja-servico-1.jpg"
-                alt="Troca de pneu na Forza Motos"
-                fill
-                className="object-cover object-center group-hover:scale-105 transition-transform duration-700"
-                sizes="(max-width: 768px) 100vw, 66vw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-              <div className="absolute bottom-4 left-5">
-                <span className="text-white font-barlow font-bold text-lg drop-shadow">Box Rápido — Troca de Pneu em 30 min</span>
-              </div>
-            </div>
-
-            {/* Serviço 2 */}
-            <div className="relative rounded-2xl overflow-hidden aspect-[4/3] shadow-md group md:col-span-2">
-              <Image
-                src="/images/loja-servico-2.jpg"
-                alt="Mecânico especializado Forza Motos"
-                fill
-                className="object-cover object-top group-hover:scale-105 transition-transform duration-700"
-                sizes="(max-width: 768px) 100vw, 66vw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-              <div className="absolute bottom-4 left-5">
-                <span className="text-white font-barlow font-bold text-lg drop-shadow">Mão de Obra Especializada</span>
-              </div>
-            </div>
+            ))}
           </div>
 
           <div className="text-center mt-8">

@@ -134,59 +134,46 @@ export default function SobrePage() {
             Nossa loja & mão de obra
           </h2>
 
-          {/* Layout: fachada grande + 2 fotos de serviço lado a lado */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Fachada — ocupa a coluna da esquerda inteira */}
-            <div className="relative rounded-2xl overflow-hidden aspect-[3/4] md:aspect-auto md:row-span-2 shadow-lg group">
-              <Image
-                src="/images/loja-fachada.jpg"
-                alt="Fachada da Forza Motos — Moto Service em Campinas"
-                fill
-                className="object-cover group-hover:scale-105 transition-transform duration-700"
-                sizes="(max-width: 768px) 100vw, 50vw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              <div className="absolute bottom-4 left-5">
-                <span className="text-white font-barlow font-black text-xl tracking-wide drop-shadow">
-                  Nossa Loja
-                </span>
-                <p className="text-white/80 text-sm font-inter">Campinas, SP</p>
+          {/* 3 colunas iguais com aspect-ratio respeitando as fotos verticais */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              {
+                src: '/images/loja-fachada.jpg',
+                alt: 'Fachada da Forza Motos — Moto Service em Campinas',
+                label: 'Nossa Loja',
+                sub: 'Campinas, SP',
+                pos: 'object-top',
+              },
+              {
+                src: '/images/loja-servico-1.jpg',
+                alt: 'Troca de pneu na Forza Motos — serviço especializado',
+                label: 'Box Rápido',
+                sub: 'Troca em 30 minutos',
+                pos: 'object-center',
+              },
+              {
+                src: '/images/loja-servico-2.jpg',
+                alt: 'Mecânico Forza Motos realizando troca de pneu traseiro',
+                label: 'Mão de Obra',
+                sub: 'Equipe especializada FM',
+                pos: 'object-top',
+              },
+            ].map((item) => (
+              <div key={item.src} className="relative rounded-2xl overflow-hidden shadow-lg group" style={{ aspectRatio: '3/4' }}>
+                <Image
+                  src={item.src}
+                  alt={item.alt}
+                  fill
+                  className={`object-cover ${item.pos} group-hover:scale-105 transition-transform duration-700`}
+                  sizes="(max-width: 640px) 100vw, 33vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <div className="absolute bottom-5 left-5">
+                  <p className="text-white font-barlow font-black text-xl drop-shadow">{item.label}</p>
+                  <p className="text-white/75 font-inter text-sm">{item.sub}</p>
+                </div>
               </div>
-            </div>
-
-            {/* Serviço 1 */}
-            <div className="relative rounded-2xl overflow-hidden aspect-[4/3] shadow-lg group">
-              <Image
-                src="/images/loja-servico-1.jpg"
-                alt="Troca de pneu na Forza Motos — serviço especializado"
-                fill
-                className="object-cover group-hover:scale-105 transition-transform duration-700"
-                sizes="(max-width: 768px) 100vw, 50vw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-              <div className="absolute bottom-4 left-5">
-                <span className="text-white font-barlow font-bold text-base drop-shadow">
-                  Troca de Pneu
-                </span>
-              </div>
-            </div>
-
-            {/* Serviço 2 */}
-            <div className="relative rounded-2xl overflow-hidden aspect-[4/3] shadow-lg group">
-              <Image
-                src="/images/loja-servico-2.jpg"
-                alt="Mecânico Forza Motos realizando troca de pneu traseiro"
-                fill
-                className="object-cover group-hover:scale-105 transition-transform duration-700"
-                sizes="(max-width: 768px) 100vw, 50vw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-              <div className="absolute bottom-4 left-5">
-                <span className="text-white font-barlow font-bold text-base drop-shadow">
-                  Mão de Obra Especializada
-                </span>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
