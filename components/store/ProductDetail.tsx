@@ -7,6 +7,7 @@ import { formatPrice, whatsappLink } from '@/lib/utils'
 import { useCartStore } from '@/store/cart'
 import toast from 'react-hot-toast'
 import { ProductReviews } from './ProductReviews'
+import { CalculadorFrete } from './CalculadorFrete'
 
 interface Produto {
   id: string
@@ -379,6 +380,11 @@ export function ProductDetail({ produto }: { produto: Produto }) {
               <span className="text-[13px] font-inter text-red-600">Fora de estoque</span>
             </div>
           )}
+
+          {/* Calcular frete */}
+          <div className="mb-6">
+            <CalculadorFrete subtotal={precoPromo ?? preco} compact />
+          </div>
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row gap-3 mb-8">

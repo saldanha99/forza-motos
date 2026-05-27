@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react'
+import { CalculadorFrete } from '@/components/store/CalculadorFrete'
 
 export default function CarrinhoPage() {
   const { items, removerItem, atualizarQuantidade, subtotal } = useCartStore()
@@ -86,14 +87,10 @@ export default function CarrinhoPage() {
                 <span>Subtotal ({items.reduce((a, i) => a + i.quantidade, 0)} itens)</span>
                 <span className="text-ink font-medium">{formatPrice(subtotal())}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Frete</span>
-                <span className="text-faint text-xs">calculado no checkout</span>
-              </div>
-              <div className="border-t border-line pt-3 flex justify-between text-ink font-bold text-base">
-                <span>Total estimado</span>
-                <span>{formatPrice(subtotal())}</span>
-              </div>
+            </div>
+            {/* Calculador de frete */}
+            <div className="mb-4">
+              <CalculadorFrete subtotal={subtotal()} />
             </div>
             <Link href="/checkout">
               <Button size="lg" className="w-full">Ir para Checkout</Button>
