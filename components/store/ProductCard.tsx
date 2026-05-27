@@ -128,10 +128,10 @@ export function ProductCard({ produto }: { produto: Produto }) {
         </div>
 
         {/* ── Conteúdo ──────────────────────────────────────── */}
-        <div className="flex flex-col flex-1 p-3.5">
+        <div className="flex flex-col flex-1 p-2.5 sm:p-3.5">
           {/* Nome */}
           <p
-            className="text-[12.5px] font-medium leading-[1.35] mb-2 line-clamp-2 flex-1"
+            className="text-[11px] sm:text-[12.5px] font-medium leading-[1.35] mb-1.5 line-clamp-2 flex-1"
             style={{ color: 'var(--card-text)' }}
           >
             {produto.nome}
@@ -141,31 +141,31 @@ export function ProductCard({ produto }: { produto: Produto }) {
           <div className="mt-auto">
             {precoPromo && (
               <span
-                className="block text-[11px] line-through leading-none mb-0.5"
+                className="block text-[10px] line-through leading-none mb-0.5"
                 style={{ color: 'var(--card-old-price, var(--dim))' }}
               >
                 {formatPrice(preco)}
               </span>
             )}
             <span
-              className="block font-black text-[20px] leading-none tracking-tight"
+              className="block font-black text-[15px] sm:text-[20px] leading-none tracking-tight"
               style={{ color: 'var(--vermelho)' }}
             >
               {formatPrice(precoFinal)}
             </span>
             <span
-              className="text-[10px] mt-0.5 block"
+              className="text-[9px] sm:text-[10px] mt-0.5 block"
               style={{ color: 'var(--card-installment)' }}
             >
-              ou {formatPrice(precoFinal / 12)}/mês no cartão
+              ou {formatPrice(precoFinal / 12)}/mês
             </span>
           </div>
 
-          {/* CTA — visible on hover with transition */}
+          {/* CTA */}
           {!esgotado && (
             <button
               onClick={handleAddToCart}
-              className="mt-2.5 w-full flex items-center justify-center gap-1.5 py-2 rounded-full text-[12px] font-bold uppercase tracking-[0.4px] transition-all duration-300"
+              className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-[12px] font-bold uppercase tracking-[0.4px] transition-all duration-300"
               style={{
                 background: hov ? 'var(--vermelho)' : 'rgba(212,43,43,0.08)',
                 color: hov ? '#fff' : 'var(--vermelho)',
@@ -174,8 +174,8 @@ export function ProductCard({ produto }: { produto: Produto }) {
                 opacity: hov ? 1 : 0.85,
               }}
             >
-              <ShoppingCart size={13} strokeWidth={2.5} />
-              Adicionar
+              <ShoppingCart size={12} strokeWidth={2.5} />
+              Carrinho
             </button>
           )}
         </div>

@@ -98,49 +98,54 @@ export default async function ProdutosPage({ searchParams }: { searchParams: Sea
         style={{
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
-          background: 'rgba(255,255,255,0.80)',
-          borderColor: 'rgba(255,255,255,0.40)',
+          background: 'rgba(255,255,255,0.85)',
+          borderColor: 'rgba(0,0,0,0.08)',
         }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center gap-3">
-          <div className="flex items-baseline gap-3 mr-auto">
-            <h1 className="font-rajdhani font-bold text-xl" style={{ color: 'var(--ink)' }}>
+        {/* Row 1: título + botão filtros */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-2 flex items-center gap-3">
+          <div className="flex items-baseline gap-2 flex-1 min-w-0">
+            <h1 className="font-rajdhani font-bold text-xl truncate" style={{ color: 'var(--ink)' }}>
               Produtos
             </h1>
-            <span className="text-xs font-medium rounded-full px-2.5 py-0.5" style={{
+            <span className="text-xs font-medium rounded-full px-2 py-0.5 shrink-0" style={{
               background: 'rgba(212,43,43,0.10)',
               color: 'var(--vermelho)',
             }}>
-              {total} {total !== 1 ? 'itens' : 'item'}
+              {total}
             </span>
           </div>
 
-          {/* Botão filtros mobile */}
-          <div className="lg:hidden">
+          {/* Botão filtros — só mobile */}
+          <div className="lg:hidden shrink-0">
             <FiltrosMobile categorias={filtros.categorias} marcas={filtros.marcas} params={searchParams} />
           </div>
-
-          {/* Active filter chips */}
-          {activeFilters.map((f) => (
-            <Link
-              key={f.removeKey}
-              href={buildFilterUrl(f.removeKey)}
-              className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-all duration-200 hover:opacity-80"
-              style={{
-                background: 'rgba(212,43,43,0.10)',
-                color: 'var(--vermelho)',
-                border: '1px solid rgba(212,43,43,0.20)',
-              }}
-            >
-              {f.label}
-              <span className="text-[10px] ml-0.5 opacity-70">×</span>
-            </Link>
-          ))}
         </div>
+
+        {/* Row 2: chips de filtros ativos (só se houver) */}
+        {activeFilters.length > 0 && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-2 flex flex-wrap gap-1.5">
+            {activeFilters.map((f) => (
+              <Link
+                key={f.removeKey}
+                href={buildFilterUrl(f.removeKey)}
+                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-all duration-200 hover:opacity-80"
+                style={{
+                  background: 'rgba(212,43,43,0.10)',
+                  color: 'var(--vermelho)',
+                  border: '1px solid rgba(212,43,43,0.20)',
+                }}
+              >
+                {f.label}
+                <span className="text-[10px] ml-0.5 opacity-70">×</span>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Main layout ─────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 lg:py-8">
         <div className="lg:flex lg:gap-8">
 
           {/* Sidebar — apenas desktop */}
@@ -195,7 +200,7 @@ export default async function ProdutosPage({ searchParams }: { searchParams: Sea
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4 lg:gap-5">
                   {produtos.map((p) => (
                     <ProductCard key={p.id} produto={p} />
                   ))}
