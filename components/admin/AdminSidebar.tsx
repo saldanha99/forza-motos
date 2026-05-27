@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import {
@@ -38,14 +39,16 @@ export function AdminSidebar({ user }: { user: any }) {
       {/* ── Desktop sidebar ── */}
       <aside className="hidden lg:flex flex-col w-64 shrink-0 min-h-screen sticky top-0 admin-glass !bg-black/30 border-r border-brand-border/30 backdrop-blur-xl z-20">
         {/* Logo */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-brand-border/20">
-          <div className="flex items-baseline gap-1">
-            <span className="text-xl font-black text-brand-accent tracking-tight font-barlow">
-              FORZA
-            </span>
-            <span className="text-xl font-black text-brand-text tracking-tight font-barlow">
-              MOTOS
-            </span>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-brand-border/20">
+          <div className="bg-white rounded-xl px-2 py-1">
+            <Image
+              src="/images/logo-forza.png"
+              alt="Forza Motos"
+              width={120}
+              height={40}
+              style={{ objectFit: 'contain', height: 36, width: 'auto' }}
+              priority
+            />
           </div>
           <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest bg-brand-accent/10 text-brand-accent border border-brand-accent/30 animate-pulse">
             Admin

@@ -1,70 +1,49 @@
+import Image from 'next/image'
+
 interface LogoSVGProps {
-  /** true = texto "FORZA" branco (para fundos escuros); false = preto (fundos claros) */
+  /** true = contexto escuro (adiciona fundo branco arredondado atrás do logo) */
   dark?: boolean
   height?: number
   className?: string
 }
 
+/**
+ * Logo real da Forza Motos (PNG).
+ * - dark=true  → contexto escuro: exibe o logo com fundo branco arredondado
+ * - dark=false → contexto claro: exibe direto (fundo da imagem é branco)
+ */
 export function LogoSVG({ dark = false, height = 40, className = '' }: LogoSVGProps) {
-  const textColor = dark ? '#ffffff' : '#111111'
-  const width = Math.round(height * (168 / 50))
+  // Proporção original do logo: 1200×900 ≈ 4:3 → largura = height * 1.55 (sem o texto abaixo seria 1.33)
+  // Com o texto "FORZAMOTOS" abaixo a proporção real é ~1200x900 = 4:3
+  const width = Math.round(height * (4 / 3))
+
+  if (dark) {
+    return (
+      <div
+        className={`inline-flex items-center justify-center bg-white rounded-xl px-2 ${className}`}
+        style={{ height: height + 8, width: width + 16 }}
+      >
+        <Image
+          src="/images/logo-forza.png"
+          alt="Forza Motos"
+          width={width}
+          height={height}
+          style={{ objectFit: 'contain', height, width }}
+          priority
+        />
+      </div>
+    )
+  }
 
   return (
-    <svg
-      viewBox="0 0 168 50"
-      height={height}
+    <Image
+      src="/images/logo-forza.png"
+      alt="Forza Motos"
       width={width}
-      fill="none"
+      height={height}
+      style={{ objectFit: 'contain', height, width }}
       className={className}
-      aria-label="Forza Motos"
-      role="img"
-    >
-      {/* ── Oval badge ── */}
-      <ellipse cx="25" cy="25" rx="23" ry="23" fill="#d42b2b" />
-      <ellipse cx="25" cy="25" rx="19.5" ry="19.5" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1.2" />
-
-      {/* ── FM initials ── */}
-      <text
-        x="25"
-        y="32"
-        textAnchor="middle"
-        fill="white"
-        fontSize="17"
-        fontWeight="900"
-        letterSpacing="-0.5"
-        style={{ fontFamily: "var(--font-barlow),'Barlow Condensed',sans-serif" }}
-      >
-        FM
-      </text>
-
-      {/* ── Vertical divider ── */}
-      <line x1="57" y1="9" x2="57" y2="41" stroke={dark ? 'rgba(255,255,255,0.18)' : '#ddd'} strokeWidth="1" />
-
-      {/* ── FORZA ── */}
-      <text
-        x="66"
-        y="26"
-        fill={textColor}
-        fontSize="20"
-        fontWeight="900"
-        letterSpacing="2.5"
-        style={{ fontFamily: "var(--font-barlow),'Barlow Condensed',sans-serif" }}
-      >
-        FORZA
-      </text>
-
-      {/* ── MOTOS ── */}
-      <text
-        x="66"
-        y="44"
-        fill="#d42b2b"
-        fontSize="20"
-        fontWeight="900"
-        letterSpacing="2.5"
-        style={{ fontFamily: "var(--font-barlow),'Barlow Condensed',sans-serif" }}
-      >
-        MOTOS
-      </text>
-    </svg>
+      priority
+    />
   )
 }
