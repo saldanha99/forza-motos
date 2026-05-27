@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { enfileirarMensagem } from '@/lib/evolution/queue'
+import { normalizarWhatsApp } from '@/lib/evolution/client'
 
 export async function POST(req: Request) {
   try {
@@ -27,6 +29,33 @@ export async function POST(req: Request) {
         where: { userId: session.user.id },
         update: { etapaFunil: 'ORCAMENTO' },
         create: { userId: session.user.id, etapaFunil: 'ORCAMENTO' },
+      })
+    }
+
+    // Enfileira mensagem de confirmação no WhatsApp
+    if (body.telefone) {
+      const dataFormatada = new Date(body.dataPreferida).toLocaleDateString('pt-BR', {
+        weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
+      })
+
+      // Captura lead (ou atualiza se já existir)
+      const wa = normalizarWhatsApp(body.telefone)
+      const leadExistente = await prisma.crmLead.findFirst({ where: { whatsapp: wa } })
+      const lead = leadExistente ?? await prisma.crmLead.create({
+        data: { nome: body.nome, whatsapp: wa, origem: 'AGENDAMENTO', etapa: 'NOVO' },
+      })
+
+      await enfileirarMensagem({
+        whatsapp: wa,
+        nome: body.nome,
+        tipo: 'AGENDAMENTO',
+        leadId: lead.id,
+        payload: {
+          servico: body.servico,
+          data: dataFormatada,
+          horario: body.horarioPreferido,
+          moto: body.motoModelo,
+        },
       })
     }
 

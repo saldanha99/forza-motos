@@ -4,6 +4,8 @@ import { replicarPedidoOlist } from '@/lib/olist/sync-orders'
 import { triggerIndexing } from '@/lib/seo/indexing'
 import { SEO_CONFIG } from '@/lib/seo/config'
 import { verificarEstoqueTiny } from '@/lib/tiny/verificar-estoque'
+import { enfileirarMensagem } from '@/lib/evolution/queue'
+import { normalizarWhatsApp } from '@/lib/evolution/client'
 
 /**
  * Webhook do Mercado Pago.
@@ -103,7 +105,7 @@ export async function POST(req: Request) {
       }
 
       // 2) Estoque OK — confirma o pedido
-      await prisma.order.update({
+      const orderComUser = await prisma.order.update({
         where: { id: orderId },
         data: {
           status: 'CONFIRMADO',
@@ -115,7 +117,22 @@ export async function POST(req: Request) {
             },
           },
         },
+        include: { user: { select: { nome: true, telefone: true, email: true } } },
       })
+
+      // Dispara WhatsApp de confirmação se o usuário tem telefone
+      if (orderComUser.user?.telefone) {
+        const wa = normalizarWhatsApp(orderComUser.user.telefone)
+        const lead = await prisma.crmLead.findFirst({ where: { whatsapp: wa } })
+        await enfileirarMensagem({
+          whatsapp: wa,
+          nome: orderComUser.user.nome ?? 'Cliente',
+          tipo: 'PEDIDO_CONFIRMADO',
+          leadId: lead?.id,
+          userId: orderComUser.userId ?? undefined,
+          payload: { numeroPedido: order.orderNumber },
+        }).catch(() => {})
+      }
 
       // 3) Replica no Olist — só se ainda não foi replicado (idempotência)
       if (!order.olistOrderId) {

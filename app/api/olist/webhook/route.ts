@@ -13,6 +13,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { syncProdutoUnico, syncEstoqueProduto } from '@/lib/olist/sync-products'
+import { enfileirarMensagem } from '@/lib/evolution/queue'
+import { normalizarWhatsApp } from '@/lib/evolution/client'
 
 const STATUS_MAP: Record<string, string> = {
   new: 'CONFIRMADO',
@@ -147,6 +149,30 @@ export async function POST(req: Request) {
             `[webhook] Pedido ${olistId} → ${novoStatus}` +
               (trackingCode ? ` (rastreio: ${trackingCode})` : '')
           )
+
+          // Dispara WhatsApp com rastreio quando pedido é enviado
+          if (novoStatus === 'ENVIADO' && trackingCode && pedido) {
+            const orderFull = await prisma.order.findUnique({
+              where: { id: pedido.id },
+              include: { user: { select: { nome: true, telefone: true } } },
+            })
+            if (orderFull?.user?.telefone) {
+              const wa = normalizarWhatsApp(orderFull.user.telefone)
+              const lead = await prisma.crmLead.findFirst({ where: { whatsapp: wa } })
+              await enfileirarMensagem({
+                whatsapp: wa,
+                nome: orderFull.user.nome ?? 'Cliente',
+                tipo: 'PEDIDO_ENVIADO',
+                leadId: lead?.id,
+                userId: orderFull.userId ?? undefined,
+                payload: {
+                  numeroPedido: pedido.orderNumber,
+                  rastreio: trackingCode,
+                  transportadora: transportadora ?? 'Transportadora',
+                },
+              }).catch(() => {})
+            }
+          }
         }
       }
       return NextResponse.json({ ok: true })

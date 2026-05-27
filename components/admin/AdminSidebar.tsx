@@ -7,7 +7,7 @@ import { signOut } from 'next-auth/react'
 import {
   LayoutDashboard, ShoppingBag, Package, Users, Calendar,
   FileText, LogOut, ImagePlus, RefreshCw, ExternalLink,
-  BookOpen, Search,
+  BookOpen, Search, MessageCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { href: '/admin/produtos',      label: 'Produtos',      icon: Package },
   { href: '/admin/fotos',         label: 'Fotos',         icon: ImagePlus },
   { href: '/admin/sync-categoria',label: 'Sync',          icon: RefreshCw },
+  { href: '/admin/crm',           label: 'CRM WhatsApp',  icon: MessageCircle },
   { href: '/admin/clientes',      label: 'CRM Clientes',  icon: Users },
   { href: '/admin/agendamentos',  label: 'Agendamentos',  icon: Calendar },
   { href: '/admin/blog',          label: 'Blog / CMS',    icon: FileText },

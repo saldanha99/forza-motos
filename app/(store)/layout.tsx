@@ -3,6 +3,7 @@ import { Footer } from '@/components/store/Footer'
 import { WhatsappButton } from '@/components/store/WhatsappButton'
 import { AnnouncementBar } from '@/components/store/AnnouncementBar'
 import { SmoothScroll } from '@/components/SmoothScroll'
+import { LeadCaptureModal } from '@/components/store/LeadCaptureModal'
 
 export default function StoreLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -13,6 +14,7 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
         <main className="flex-1">{children}</main>
         <Footer />
         <WhatsappButton />
+        <LeadCaptureModal />
       </div>
     </SmoothScroll>
   )

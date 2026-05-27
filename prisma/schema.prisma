@@ -227,6 +227,110 @@ model Appointment {
   createdAt        DateTime @default(now())
 }
 
+// ============================================================
+// MÓDULO CRM INTELIGENTE — Evolution API + WhatsApp
+// ============================================================
+
+/// Lead capturado via pop-up, botão WhatsApp, agendamento ou checkout
+model CrmLead {
+  id               String        @id @default(cuid())
+  nome             String
+  whatsapp         String
+  /// Origem da captura
+  origem           LeadOrigem    @default(POPUP)
+  /// Produto que estava visualizando (opcional)
+  produtoSlug      String?
+  /// Etapa atual no funil
+  etapa            LeadEtapa     @default(NOVO)
+  /// UTM para rastrear campanha
+  utmSource        String?
+  utmMedium        String?
+  utmCampaign      String?
+  /// Notas internas
+  notas            String?       @db.Text
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  mensagens        CrmMensagem[]
+
+  @@index([whatsapp])
+  @@index([etapa, createdAt])
+}
+
+enum LeadOrigem {
+  POPUP           // Pop-up de captura no site
+  WHATSAPP_BTN    // Clicou no botão WhatsApp de um produto
+  AGENDAMENTO     // Preencheu formulário de agendamento
+  CHECKOUT        // Abandonou o carrinho
+  MANUAL          // Adicionado manualmente pelo admin
+}
+
+enum LeadEtapa {
+  NOVO          // Acabou de ser capturado
+  CONTATADO     // Mensagem enviada
+  RESPONDEU     // Cliente respondeu no WhatsApp
+  CONVERTIDO    // Realizou uma compra ou agendamento
+  PERDIDO       // Sem resposta / desinteressado
+}
+
+/// Fila de mensagens WhatsApp via Evolution API
+model CrmMensagem {
+  id                String          @id @default(cuid())
+  /// Lead relacionado (opcional — mensagens de pedido têm userId)
+  leadId            String?
+  lead              CrmLead?        @relation(fields: [leadId], references: [id])
+  /// Usuário relacionado (opcional)
+  userId            String?
+  /// Número WhatsApp destino (com DDI, ex: 5519999999999)
+  whatsapp          String
+  nome              String
+  /// Tipo da mensagem para saber qual template usar
+  tipo              MensagemTipo
+  /// Conteúdo final da mensagem (já com variáveis substituídas)
+  conteudo          String          @db.Text
+  /// Status do envio
+  status            MensagemStatus  @default(PENDENTE)
+  /// Payload com dados extras (número pedido, rastreio, etc.)
+  payload           Json            @default("{}")
+  /// ID retornado pela Evolution API
+  evolutionId       String?
+  /// Quantidade de tentativas de envio
+  tentativas        Int             @default(0)
+  /// Erro da última tentativa
+  erro              String?         @db.Text
+  /// Quando enviar (suporte a envio agendado)
+  agendadoPara      DateTime        @default(now())
+  /// Quando foi efetivamente enviada
+  enviadaEm         DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([status, agendadoPara])
+  @@index([whatsapp])
+  @@index([createdAt])
+}
+
+enum MensagemTipo {
+  BOAS_VINDAS         // Lead capturado
+  AGENDAMENTO         // Agendamento confirmado
+  PEDIDO_CONFIRMADO   // Pagamento aprovado
+  PEDIDO_ENVIADO      // Código de rastreio disponível
+  CARRINHO_ABANDONADO // Carrinho abandonado (2h)
+  POS_VENDA           // Pós-venda D+7
+  REATIVACAO          // Cliente inativo 60 dias
+  MANUAL              // Enviada manualmente pelo admin
+}
+
+enum MensagemStatus {
+  PENDENTE    // Na fila, aguardando envio
+  ENVIANDO    // Em processo de envio
+  ENVIADA     // Evolution API confirmou envio
+  ENTREGUE    // WhatsApp confirmou entrega
+  LIDA        // Cliente leu a mensagem
+  FALHA       // Falhou após max tentativas
+  CANCELADA   // Cancelada manualmente
+}
+
 model BlogPost {
   id        String   @id @default(cuid())
   titulo    String
