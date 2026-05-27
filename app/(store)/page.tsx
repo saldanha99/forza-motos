@@ -475,6 +475,81 @@ export default async function HomePage() {
       {/* ── Marcas Parceiras — Carrossel Vertical ──────────────────────── */}
       <BrandMarquee />
 
+      {/* ── Nossa Loja em Ação ───────────────────────────────────────────── */}
+      <section className="py-16 bg-[#fafafa] border-t border-[#eee]">
+        <div className="max-w-[1280px] mx-auto px-6 md:px-12">
+          <p className="text-[#d42b2b] font-barlow font-bold uppercase tracking-[3px] text-sm mb-2 text-center">
+            Venha nos visitar
+          </p>
+          <h2
+            className="font-barlow font-black text-3xl md:text-4xl text-[#111] text-center mb-3"
+            style={{ letterSpacing: '-0.5px' }}
+          >
+            Nossa loja em ação
+          </h2>
+          <p className="text-center text-[#666] font-inter mb-10 max-w-xl mx-auto">
+            Box rápido, equipe especializada e estrutura completa para sua moto.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Fachada */}
+            <div className="relative rounded-2xl overflow-hidden aspect-[3/4] shadow-md group col-span-1 md:row-span-2 md:aspect-auto">
+              <Image
+                src="/images/loja-fachada.jpg"
+                alt="Fachada Forza Motos — Moto Service Campinas"
+                fill
+                className="object-cover group-hover:scale-105 transition-transform duration-700"
+                sizes="(max-width: 768px) 100vw, 33vw"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              <div className="absolute bottom-5 left-5">
+                <span className="text-white font-barlow font-black text-xl tracking-wide drop-shadow">Forza Motos</span>
+                <p className="text-white/80 text-sm">Campinas, SP</p>
+              </div>
+            </div>
+
+            {/* Serviço 1 */}
+            <div className="relative rounded-2xl overflow-hidden aspect-[4/3] shadow-md group md:col-span-2">
+              <Image
+                src="/images/loja-servico-1.jpg"
+                alt="Troca de pneu na Forza Motos"
+                fill
+                className="object-cover object-center group-hover:scale-105 transition-transform duration-700"
+                sizes="(max-width: 768px) 100vw, 66vw"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+              <div className="absolute bottom-4 left-5">
+                <span className="text-white font-barlow font-bold text-lg drop-shadow">Box Rápido — Troca de Pneu em 30 min</span>
+              </div>
+            </div>
+
+            {/* Serviço 2 */}
+            <div className="relative rounded-2xl overflow-hidden aspect-[4/3] shadow-md group md:col-span-2">
+              <Image
+                src="/images/loja-servico-2.jpg"
+                alt="Mecânico especializado Forza Motos"
+                fill
+                className="object-cover object-top group-hover:scale-105 transition-transform duration-700"
+                sizes="(max-width: 768px) 100vw, 66vw"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+              <div className="absolute bottom-4 left-5">
+                <span className="text-white font-barlow font-bold text-lg drop-shadow">Mão de Obra Especializada</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center mt-8">
+            <Link
+              href="/sobre"
+              className="inline-flex items-center gap-2 border border-[#d42b2b] text-[#d42b2b] hover:bg-[#d42b2b] hover:text-white font-barlow font-bold uppercase px-6 py-3 rounded-lg text-sm tracking-wider transition-colors"
+            >
+              Conheça nossa loja <ArrowRight size={15} />
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ── Reviews / Depoimentos ────────────────────────────────────────── */}
       <ReviewsSection />
     </>
