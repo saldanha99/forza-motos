@@ -336,14 +336,14 @@ export async function syncEstoquePrecos() {
  *   - Produto inativo → 0
  * Prioridade: produtos com estoque=999 ainda não verificados (recém importados)
  */
-export async function syncEstoqueLote(limite = 5) {
+export async function syncEstoqueLote(limite = 18) {
   // Prioridade 1: produtos com estoque=999 (placeholder, nunca verificados)
   // Prioridade 2: produtos com estoque=0 (podem ter sido reabastecidos)
   // Sem $queryRaw para compatibilidade com Neon Pooler (pgBouncer transaction mode)
 
   const naoVerificados = await prisma.product.findMany({
     where: { tinyId: { not: null }, estoque: 999 },
-    select: { id: true, tinyId: true, estoque: true },
+    select: { id: true, tinyId: true, temImagem: true },
     orderBy: { updatedAt: 'asc' },
     take: limite,
   })
@@ -352,7 +352,7 @@ export async function syncEstoqueLote(limite = 5) {
   const zerados = restante > 0
     ? await prisma.product.findMany({
         where: { tinyId: { not: null }, estoque: { lte: 0 } },
-        select: { id: true, tinyId: true, estoque: true },
+        select: { id: true, tinyId: true, temImagem: true },
         orderBy: { updatedAt: 'asc' },
         take: restante,
       })
@@ -367,22 +367,31 @@ export async function syncEstoqueLote(limite = 5) {
   let atualizados = 0
   let erros = 0
 
-  for (const produto of produtos) {
-    const novoEstoque = await fetchTinyProductEstoque(produto.tinyId!)
-    if (novoEstoque === -1) { erros++; continue }
-
-    const productDb = await prisma.product.findUnique({
-      where: { id: produto.id },
-      select: { temImagem: true }
-    })
-    const temImagem = productDb?.temImagem || false
-    const ativo = temImagem && novoEstoque > 0
-
-    await prisma.product.update({
-      where: { id: produto.id },
-      data: { estoque: novoEstoque, ativo },
-    })
-    atualizados++
+  // Processamento paralelo em grupos de 3 (respeita rate limit do Tiny ~60 req/min)
+  // Cada grupo faz 3 chamadas simultâneas → ~1.2s por grupo em vez de 3.6s sequencial
+  const CONCORRENCIA = 3
+  for (let i = 0; i < produtos.length; i += CONCORRENCIA) {
+    const grupo = produtos.slice(i, i + CONCORRENCIA)
+    const resultados = await Promise.allSettled(
+      grupo.map(async (produto) => {
+        const novoEstoque = await fetchTinyProductEstoque(produto.tinyId!)
+        if (novoEstoque === -1) throw new Error('API error')
+        const ativo = produto.temImagem && novoEstoque > 0
+        await prisma.product.update({
+          where: { id: produto.id },
+          data: { estoque: novoEstoque, ativo },
+        })
+        return novoEstoque
+      })
+    )
+    for (const r of resultados) {
+      if (r.status === 'fulfilled') atualizados++
+      else erros++
+    }
+    // Pausa entre grupos para não ultrapassar rate limit do Tiny
+    if (i + CONCORRENCIA < produtos.length) {
+      await new Promise(resolve => setTimeout(resolve, 400))
+    }
   }
 
   const [total, pendentes] = await Promise.all([

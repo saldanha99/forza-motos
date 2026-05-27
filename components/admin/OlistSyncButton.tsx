@@ -279,7 +279,7 @@ export function OlistSyncButton() {
         acum += data.atualizados ?? 0; setEstoqueAcum(acum)
         setEstoqueZerados(data.pendentes ?? 0); setEstoqueTotal(data.total ?? null)
         if (!data.hasMore) { setEstoqueDone(true); break }
-        await new Promise(r => setTimeout(r, 6000))
+        await new Promise(r => setTimeout(r, 1500))
       } catch { setEstoqueError('Erro de conexão'); break }
     }
     setLoadingEstoque(false)
