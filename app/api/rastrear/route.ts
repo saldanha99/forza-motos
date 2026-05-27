@@ -29,6 +29,7 @@ export async function GET(req: Request) {
     subtotal: Number(pedido.subtotal),
     frete: Number(pedido.frete),
     total: Number(pedido.total),
+    trackingCode: pedido.trackingCode ?? null,
     enderecoEntrega: pedido.enderecoEntrega,
     items: pedido.items.map((i) => ({
       nome: i.product.nome,

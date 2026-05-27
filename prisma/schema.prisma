@@ -65,6 +65,7 @@ model User {
   orders       Order[]
   appointments Appointment[]
   crm          CustomerCRM?
+  reviews      Review[]
 }
 
 enum Role {
@@ -113,6 +114,26 @@ model Product {
   updatedAt            DateTime    @updatedAt
 
   orderItems OrderItem[]
+  reviews    Review[]
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// Nome exibido (pode ser anônimo)
+  nome      String
+  nota      Int      // 1–5
+  titulo    String?
+  corpo     String   @db.Text
+  /// Moderação: só exibe se true
+  aprovado  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([aprovado])
 }
 
 model Order {
