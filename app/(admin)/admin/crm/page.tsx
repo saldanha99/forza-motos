@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { MessageCircle, Users, CheckCircle2, Clock, AlertCircle, TrendingUp } from 'lucide-react'
+import { WhatsAppConnect } from '@/components/admin/WhatsAppConnect'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'CRM WhatsApp — Admin Forza' }
@@ -68,6 +69,9 @@ export default async function CrmPage() {
           Leads capturados e automações via Evolution API
         </p>
       </div>
+
+      {/* WhatsApp Connection */}
+      <WhatsAppConnect />
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -165,25 +169,6 @@ export default async function CrmPage() {
         </div>
       </div>
 
-      {/* Config box */}
-      <div className="admin-glass rounded-xl border border-brand-border/20 p-5">
-        <h2 className="font-bold text-brand-text mb-3">⚙️ Configuração Evolution API</h2>
-        <div className="grid sm:grid-cols-3 gap-3 text-sm">
-          {[
-            { label: 'EVOLUTION_API_URL', env: process.env.EVOLUTION_API_URL ? '✅ Configurado' : '❌ Não configurado' },
-            { label: 'EVOLUTION_API_KEY', env: process.env.EVOLUTION_API_KEY ? '✅ Configurado' : '❌ Não configurado' },
-            { label: 'EVOLUTION_INSTANCE', env: process.env.EVOLUTION_INSTANCE ?? '❌ Não configurado' },
-          ].map((c) => (
-            <div key={c.label} className="bg-black/20 rounded-lg p-3">
-              <p className="text-brand-muted text-xs mb-1">{c.label}</p>
-              <p className="text-brand-text text-xs font-mono">{c.env}</p>
-            </div>
-          ))}
-        </div>
-        <p className="text-xs text-brand-muted mt-3">
-          Webhook Evolution API: <code className="text-brand-accent">https://forza-motos-app.vercel.app/api/evolution/webhook</code>
-        </p>
-      </div>
     </div>
   )
 }
