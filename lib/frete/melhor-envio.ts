@@ -51,7 +51,7 @@ export interface CotacaoResultado {
 }
 
 const ME_BASE_URL =
-  process.env.MELHOR_ENVIO_URL || 'https://sandbox.melhorenvio.com.br/api/v2'
+  process.env.MELHOR_ENVIO_URL || 'https://melhorenvio.com.br/api/v2'
 
 const ME_USER_AGENT =
   process.env.MELHOR_ENVIO_USER_AGENT || 'Forza Motos contato@forzamotos.com.br'

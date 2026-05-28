@@ -6,12 +6,20 @@ import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { formatPrice } from '@/lib/utils'
-import { calcularRegrasFrete, faltaParaFreteGratis, type OpcaoFrete } from '@/lib/frete/regras'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import { Check, Truck, Zap, Gift } from 'lucide-react'
 
 type Etapa = 'dados' | 'frete' | 'pagamento'
+
+interface OpcaoFrete {
+  id:             string
+  nome:           string
+  transportadora: string
+  preco:          number
+  prazo:          number
+  gratis?:        boolean
+}
 
 export default function CheckoutPage() {
   const { data: session } = useSession()
@@ -20,6 +28,7 @@ export default function CheckoutPage() {
 
   const [etapa, setEtapa]                   = useState<Etapa>('dados')
   const [loading, setLoading]               = useState(false)
+  const [loadingFrete, setLoadingFrete]     = useState(false)
   const [freteOpcoes, setFreteOpcoes]       = useState<OpcaoFrete[]>([])
   const [freteSelecionado, setFreteSelecionado] = useState<OpcaoFrete | null>(null)
 
@@ -39,16 +48,6 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (items.length === 0) router.replace('/carrinho')
   }, [items.length, router])
-
-  // Recalcula frete se estado ou subtotal mudar enquanto ainda na etapa de frete
-  useEffect(() => {
-    if (etapa === 'frete' && form.estado) {
-      const opcoes = calcularRegrasFrete(form.estado, subtotal())
-      setFreteOpcoes(opcoes)
-      // Auto-seleciona se só houver uma opção (frete grátis)
-      if (opcoes.length === 1) setFreteSelecionado(opcoes[0])
-    }
-  }, [form.estado, etapa]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (items.length === 0) return null
 
@@ -74,7 +73,7 @@ export default function CheckoutPage() {
     } catch {}
   }
 
-  function avancarParaFrete() {
+  async function avancarParaFrete() {
     if (!form.nome || !form.email || !form.cep || !form.rua || !form.numero) {
       toast.error('Preencha todos os campos obrigatórios')
       return
@@ -83,13 +82,30 @@ export default function CheckoutPage() {
       toast.error('CEP não encontrado. Preencha o estado manualmente.')
       return
     }
-    const opcoes = calcularRegrasFrete(form.estado, subtotal())
-    setFreteOpcoes(opcoes)
-    // Auto-seleciona frete grátis
-    if (opcoes.length === 1 && opcoes[0].gratis) {
-      setFreteSelecionado(opcoes[0])
+
+    setLoadingFrete(true)
+    try {
+      const cepLimpo = form.cep.replace(/\D/g, '')
+      const res = await fetch(
+        `/api/frete/calcular?cep=${cepLimpo}&subtotal=${subtotal()}`
+      )
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+
+      const opcoes: OpcaoFrete[] = (data.opcoes ?? []).map((op: any) => ({
+        ...op,
+        gratis: op.preco === 0,
+      }))
+
+      setFreteOpcoes(opcoes)
+      // Auto-seleciona se grátis ou única opção
+      if (opcoes.length === 1) setFreteSelecionado(opcoes[0])
+      setEtapa('frete')
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao calcular frete. Tente novamente.')
+    } finally {
+      setLoadingFrete(false)
     }
-    setEtapa('frete')
   }
 
   async function finalizarPedido() {
@@ -106,9 +122,9 @@ export default function CheckoutPage() {
             precoUnitario: i.preco,
           })),
           enderecoEntrega: form,
-          frete:    freteSelecionado.valor,
+          frete:    freteSelecionado.preco,
           subtotal: subtotal(),
-          total:    subtotal() + freteSelecionado.valor,
+          total:    subtotal() + freteSelecionado.preco,
         }),
       })
 
@@ -129,25 +145,13 @@ export default function CheckoutPage() {
     }
   }
 
-  const total      = subtotal() + (freteSelecionado?.valor ?? 0)
+  const total      = subtotal() + (freteSelecionado?.preco ?? 0)
   const etapas: Etapa[] = ['dados', 'frete', 'pagamento']
   const etapaIdx   = etapas.indexOf(etapa)
-
-  // Banner de frete grátis — quantos reais faltam (para SP)
-  const falta = faltaParaFreteGratis(form.estado, subtotal())
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <h1 className="font-grotesk font-bold text-3xl text-ink mb-8">Checkout</h1>
-
-      {/* Banner frete grátis — aparece quando estado é SP e falta pouco */}
-      {falta !== null && falta > 0 && falta <= 200 && (
-        <div className="mb-6 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium"
-          style={{ background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.25)', color: '#15803d' }}>
-          <Gift size={16} className="shrink-0" />
-          Falta <strong className="mx-1">{formatPrice(falta)}</strong> para ganhar <strong className="ml-1">Frete Grátis para SP!</strong>
-        </div>
-      )}
 
       {/* Stepper */}
       <div className="flex items-center gap-0 mb-10">
@@ -209,7 +213,7 @@ export default function CheckoutPage() {
                     placeholder="SP" maxLength={2} />
                 </div>
               </div>
-              <Button onClick={avancarParaFrete} className="w-full" size="lg">
+              <Button onClick={avancarParaFrete} loading={loadingFrete} className="w-full" size="lg">
                 Continuar para o Frete
               </Button>
             </div>
@@ -225,9 +229,9 @@ export default function CheckoutPage() {
 
               {freteOpcoes.map((op) => (
                 <label
-                  key={op.codigo}
+                  key={op.id}
                   className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${
-                    freteSelecionado?.codigo === op.codigo
+                    freteSelecionado?.id === op.id
                       ? 'border-vermelho bg-[var(--vermelho-light)]'
                       : 'border-line hover:border-line-hi'
                   }`}
@@ -236,7 +240,7 @@ export default function CheckoutPage() {
                     <input
                       type="radio"
                       name="frete"
-                      checked={freteSelecionado?.codigo === op.codigo}
+                      checked={freteSelecionado?.id === op.id}
                       onChange={() => setFreteSelecionado(op)}
                       className="accent-vermelho"
                     />
@@ -248,13 +252,16 @@ export default function CheckoutPage() {
                           ? <Zap size={14} className="text-amber-500" />
                           : <Truck size={14} className="text-dim" />
                         }
-                        {op.servico}
+                        {op.nome}
+                        {op.transportadora && (
+                          <span className="text-faint font-normal text-[11px]">· {op.transportadora}</span>
+                        )}
                       </p>
                       <p className="text-xs text-faint">Prazo: até {op.prazo} dias úteis</p>
                     </div>
                   </div>
                   <span className={`font-bold text-base ${op.gratis ? 'text-green-600' : 'text-ink'}`}>
-                    {op.valor === 0 ? 'Grátis' : formatPrice(op.valor)}
+                    {op.preco === 0 ? 'Grátis 🎉' : formatPrice(op.preco)}
                   </span>
                 </label>
               ))}
@@ -317,9 +324,9 @@ export default function CheckoutPage() {
                 <span>Frete</span>
                 <span className={freteSelecionado?.gratis ? 'text-green-600 font-semibold' : 'text-ink'}>
                   {freteSelecionado
-                    ? freteSelecionado.valor === 0
+                    ? freteSelecionado.preco === 0
                       ? 'Grátis 🎉'
-                      : formatPrice(freteSelecionado.valor)
+                      : formatPrice(freteSelecionado.preco)
                     : '–'
                   }
                 </span>
@@ -331,7 +338,7 @@ export default function CheckoutPage() {
             </div>
 
             {/* Badge frete grátis no resumo */}
-            {falta === 0 && freteSelecionado?.gratis && (
+            {freteSelecionado?.gratis && (
               <div className="text-xs text-center py-2 rounded-lg font-semibold"
                 style={{ background: 'rgba(34,197,94,0.12)', color: '#15803d' }}>
                 🎉 Frete Grátis aplicado!
