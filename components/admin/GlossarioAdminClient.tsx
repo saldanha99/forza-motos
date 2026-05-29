@@ -33,10 +33,32 @@ const IA_DEFAULT: IAConfig = {
   apiKey:    '',
 }
 
+const LS_KEY = 'forza_ia_config'
+
+function loadIAConfig(): IAConfig {
+  if (typeof window === 'undefined') return IA_DEFAULT
+  try {
+    const saved = localStorage.getItem(LS_KEY)
+    if (saved) return { ...IA_DEFAULT, ...JSON.parse(saved) }
+  } catch {}
+  return IA_DEFAULT
+}
+
+function saveIAConfig(config: IAConfig) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(config)) } catch {}
+}
+
 // ── Painel de configuração de IA ──────────────────────────────────────────────
 function PainelIA({ config, onChange }: { config: IAConfig; onChange: (c: IAConfig) => void }) {
-  const [aberto, setAberto] = useState(false)
+  const [aberto,  setAberto]  = useState(false)
+  const [salvo,   setSalvo]   = useState(false)
   const providerAtual = PROVIDERS.find((p) => p.id === config.provider) ?? PROVIDERS[0]
+
+  function handleSalvar() {
+    saveIAConfig(config)
+    setSalvo(true)
+    setTimeout(() => setSalvo(false), 2000)
+  }
 
   return (
     <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl overflow-hidden">
@@ -137,6 +159,27 @@ function PainelIA({ config, onChange }: { config: IAConfig; onChange: (c: IAConf
               <p className="text-[9px] text-brand-muted">Se vazio, usa a chave configurada nas variáveis de ambiente do servidor.</p>
             </div>
           </div>
+
+          {/* Botão salvar */}
+          <div className="flex items-center justify-between pt-2 border-t border-brand-border/20">
+            <p className="text-[10px] text-brand-muted">
+              Configurações salvas localmente no navegador (não vão para o banco).
+            </p>
+            <button
+              onClick={handleSalvar}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+              style={{
+                background: salvo ? 'rgba(34,197,94,0.15)' : 'var(--brand-accent, #d42b2b)',
+                color:      salvo ? '#16a34a' : '#fff',
+                border:     salvo ? '1px solid rgba(34,197,94,0.30)' : 'none',
+              }}
+            >
+              {salvo
+                ? <><Check size={14} /> Salvo!</>
+                : <><Key size={14} /> Salvar configurações</>
+              }
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -206,7 +249,7 @@ function OrigemBadge({ origem }: { origem: string }) {
 // ── Componente principal ──────────────────────────────────────────────────────
 export function GlossarioAdminClient({ initialTermos }: Props) {
   const [termos,      setTermos]     = useState<Termo[]>(initialTermos)
-  const [iaConfig,    setIaConfig]   = useState<IAConfig>(IA_DEFAULT)
+  const [iaConfig,    setIaConfig]   = useState<IAConfig>(loadIAConfig)
   const [nicho,       setNicho]      = useState('pneus, peças e acessórios para motos')
   const [letraSugerir,setLetraSugerir] = useState('A')
   const [prefixo,     setPrefixo]    = useState('Nenhum')
