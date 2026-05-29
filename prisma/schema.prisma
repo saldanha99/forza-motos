@@ -383,6 +383,10 @@ model GlossaryTerm {
   conteudo     String   @db.Text
   /// Resumo curto (até 160 chars) — usado em meta description e schema.org
   resumo       String?
+  /// Título SEO customizado (até 60 chars). Se vazio, usa "{termo} — Forza Motos"
+  seoTitle     String?
+  /// Nicho/contexto usado para geração IA. Ex: "pneus e peças de moto"
+  nicho        String?
   /// URL da imagem destacada (opcional)
   imagem       String?
   /// Nome do autor exibido no schema.org
