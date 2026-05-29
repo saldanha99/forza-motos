@@ -11,7 +11,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { slugify } from '@/lib/utils'
+import { gerarSlug } from '@/lib/glossario/queries'
 import { callAI, cleanJsonResponse } from '@/lib/glossario/multi-provider'
 
 export async function POST(req: Request) {
@@ -68,7 +68,7 @@ ${promptExtra ? `Instruções adicionais: ${promptExtra}` : ''}`
       .filter((t) => t?.trim())
       .map((t) => ({
         termo:     t.trim(),
-        slug:      slugify(t.trim()),
+        slug:      gerarSlug(t.trim()),
         letra:     letraMaiuscula,
         nicho:     nicho.trim(),
         conteudo:  '',          // será preenchido por gerar-conteudo

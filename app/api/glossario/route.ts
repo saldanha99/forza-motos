@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { slugify } from '@/lib/utils'
+import { gerarSlug } from '@/lib/glossario/queries'
 
 async function requireAdmin() {
   const session = await getServerSession(authOptions)
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     const created = await prisma.glossaryTerm.create({
       data: {
         termo:     termo.trim(),
-        slug:      slugify(termo.trim()),
+        slug:      gerarSlug(termo.trim()),
         letra:     letra.trim().toUpperCase().charAt(0),
         nicho:     nicho?.trim() || null,
         conteudo:  '',
@@ -91,7 +91,7 @@ export async function PUT(req: NextRequest) {
   if (!id) return NextResponse.json({ error: '"id" é obrigatório' }, { status: 400 })
 
   const data: any = {}
-  if (termo    !== undefined) { data.termo = termo.trim(); data.slug = slugify(termo.trim()); data.letra = termo.trim().charAt(0).toUpperCase() }
+  if (termo    !== undefined) { data.termo = termo.trim(); data.slug = gerarSlug(termo.trim()); data.letra = termo.trim().charAt(0).toUpperCase() }
   if (nicho    !== undefined) data.nicho    = nicho?.trim() || null
   if (publicado !== undefined) data.publicado = publicado
 
