@@ -251,7 +251,7 @@ export function GlossarioAdminClient({ initialTermos }: Props) {
   const toggleSelectAll = (lista: Termo[]) => {
     const ids = lista.map((t) => t.id)
     const allSelected = ids.every((id) => selectedIds.includes(id))
-    setSelectedIds(allSelected ? selectedIds.filter((id) => !ids.includes(id)) : [...new Set([...selectedIds, ...ids])])
+    setSelectedIds(allSelected ? selectedIds.filter((id) => !ids.includes(id)) : Array.from(new Set([...selectedIds, ...ids])))
   }
 
   // ── Filtros aplicados ─────────────────────────────────────────────────────────
