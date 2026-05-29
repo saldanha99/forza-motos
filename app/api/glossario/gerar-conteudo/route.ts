@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json().catch(() => ({}))
-  const { id, provider, modelo } = body
+  const { id, provider, modelo, maxTokens = 4096, apiKey } = body
 
   if (!id) {
     return NextResponse.json({ error: '"id" é obrigatório' }, { status: 400 })
@@ -67,7 +67,7 @@ Retorne APENAS um objeto JSON válido:
 }`
 
   try {
-    const raw     = await callAI({ prompt, maxTokens: 4096, provider, modelo })
+    const raw     = await callAI({ prompt, maxTokens, provider, modelo, apiKey: apiKey || undefined })
     const cleaned = cleanJsonResponse(raw)
     const parsed  = JSON.parse(cleaned)
 

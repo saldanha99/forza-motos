@@ -4,7 +4,7 @@
  * Sugere entre 15–30 nomes de termos para uma letra e nicho via IA.
  * Salva no banco como status "pendente" (sem conteúdo ainda).
  *
- * Body: { nicho, letra, prefixo?, promptExtra?, provider?, modelo? }
+ * Body: { nicho, letra, prefixo?, promptExtra?, provider?, modelo?, maxTokens?, apiKey? }
  */
 
 import { NextResponse } from 'next/server'
@@ -28,6 +28,8 @@ export async function POST(req: Request) {
     promptExtra = '',
     provider,
     modelo,
+    maxTokens   = 1024,
+    apiKey,
   } = body
 
   if (!nicho?.trim() || !letra?.trim()) {
@@ -54,7 +56,7 @@ Gere entre 15 e 30 termos altamente relevantes para ranqueamento no Google.
 ${promptExtra ? `Instruções adicionais: ${promptExtra}` : ''}`
 
   try {
-    const raw     = await callAI({ prompt, maxTokens: 1024, provider, modelo })
+    const raw     = await callAI({ prompt, maxTokens, provider, modelo, apiKey: apiKey || undefined })
     const cleaned = cleanJsonResponse(raw)
     const parsed  = JSON.parse(cleaned)
     const sugeridos: string[] = parsed.termos ?? []

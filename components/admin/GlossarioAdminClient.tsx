@@ -4,9 +4,144 @@ import { useState, useCallback } from 'react'
 import {
   BookOpen, Plus, Search, Bot, Sparkles, Trash2,
   Loader2, CheckCircle2, AlertCircle, ExternalLink, Eye,
-  ChevronDown, ChevronUp, Pencil, Check, X,
+  ChevronDown, ChevronUp, Pencil, Check, X, Settings, Key,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+
+// ── Providers disponíveis ─────────────────────────────────────────────────────
+const PROVIDERS = [
+  { id: 'gemini',     label: 'Gemini (Google)',    modelos: ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'] },
+  { id: 'openai',     label: 'OpenAI',             modelos: ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'] },
+  { id: 'anthropic',  label: 'Anthropic (Claude)', modelos: ['claude-3-5-haiku-20241022', 'claude-3-5-sonnet-20241022', 'claude-3-opus-20240229'] },
+  { id: 'openrouter', label: 'OpenRouter',          modelos: ['openai/gpt-4o-mini', 'google/gemini-2.0-flash-001', 'meta-llama/llama-3.3-70b-instruct'] },
+  { id: 'groq',       label: 'Groq (rápido)',       modelos: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'] },
+  { id: 'deepseek',   label: 'DeepSeek',            modelos: ['deepseek-chat', 'deepseek-reasoner'] },
+]
+
+// ── Config de IA ──────────────────────────────────────────────────────────────
+interface IAConfig {
+  provider:  string
+  modelo:    string
+  maxTokens: number
+  apiKey:    string
+}
+
+const IA_DEFAULT: IAConfig = {
+  provider:  'gemini',
+  modelo:    'gemini-2.0-flash',
+  maxTokens: 4096,
+  apiKey:    '',
+}
+
+// ── Painel de configuração de IA ──────────────────────────────────────────────
+function PainelIA({ config, onChange }: { config: IAConfig; onChange: (c: IAConfig) => void }) {
+  const [aberto, setAberto] = useState(false)
+  const providerAtual = PROVIDERS.find((p) => p.id === config.provider) ?? PROVIDERS[0]
+
+  return (
+    <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl overflow-hidden">
+      <button
+        onClick={() => setAberto((v) => !v)}
+        className="w-full flex items-center justify-between px-5 py-4 text-sm font-bold text-brand-text hover:bg-white/[0.02] transition-colors"
+      >
+        <span className="flex items-center gap-2">
+          <Settings size={14} className="text-brand-accent" />
+          Configurações de IA
+          <span className="text-brand-muted font-normal text-xs">
+            ({providerAtual.label} · {config.modelo} · {config.maxTokens} tokens)
+          </span>
+        </span>
+        {aberto ? <ChevronUp size={14} className="text-brand-muted" /> : <ChevronDown size={14} className="text-brand-muted" />}
+      </button>
+
+      {aberto && (
+        <div className="px-5 pb-5 space-y-4 border-t border-brand-border/20">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+
+            {/* Provider */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-brand-muted uppercase tracking-wider">Provider</label>
+              <select
+                value={config.provider}
+                onChange={(e) => {
+                  const prov = PROVIDERS.find((p) => p.id === e.target.value)!
+                  onChange({ ...config, provider: e.target.value, modelo: prov.modelos[0] })
+                }}
+                className="w-full bg-white/5 border border-brand-border/40 rounded-xl px-3 py-2.5 text-brand-text text-sm focus:outline-none focus:border-brand-accent/50 transition-colors"
+              >
+                {PROVIDERS.map((p) => (
+                  <option key={p.id} value={p.id}>{p.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Modelo */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-brand-muted uppercase tracking-wider">Modelo</label>
+              <select
+                value={config.modelo}
+                onChange={(e) => onChange({ ...config, modelo: e.target.value })}
+                className="w-full bg-white/5 border border-brand-border/40 rounded-xl px-3 py-2.5 text-brand-text text-sm focus:outline-none focus:border-brand-accent/50 transition-colors"
+              >
+                {providerAtual.modelos.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+                {/* Campo livre para modelo custom */}
+                <option value="__custom__">Outro (digitar abaixo)</option>
+              </select>
+            </div>
+
+            {/* Modelo custom */}
+            {config.modelo === '__custom__' && (
+              <div className="sm:col-span-2 space-y-1">
+                <label className="text-[10px] font-semibold text-brand-muted uppercase tracking-wider">Modelo customizado</label>
+                <input
+                  type="text"
+                  placeholder="Ex: meta-llama/llama-3.3-70b-instruct"
+                  onChange={(e) => onChange({ ...config, modelo: e.target.value || '__custom__' })}
+                  className="w-full bg-white/5 border border-brand-border/40 rounded-xl px-3 py-2 text-brand-text text-sm focus:outline-none focus:border-brand-accent/50 transition-colors"
+                />
+              </div>
+            )}
+
+            {/* Max tokens */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-brand-muted uppercase tracking-wider flex justify-between">
+                <span>Tokens máximos</span>
+                <span className="text-brand-accent font-mono">{config.maxTokens.toLocaleString()}</span>
+              </label>
+              <input
+                type="range" min={512} max={8192} step={256}
+                value={config.maxTokens}
+                onChange={(e) => onChange({ ...config, maxTokens: Number(e.target.value) })}
+                className="w-full accent-brand-accent"
+              />
+              <div className="flex justify-between text-[9px] text-brand-muted">
+                <span>512 (rápido)</span><span>4096 (padrão)</span><span>8192 (longo)</span>
+              </div>
+            </div>
+
+            {/* API Key */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-brand-muted uppercase tracking-wider flex items-center gap-1.5">
+                <Key size={10} />
+                API Key (opcional — usa .env se vazio)
+              </label>
+              <input
+                type="password"
+                value={config.apiKey}
+                onChange={(e) => onChange({ ...config, apiKey: e.target.value })}
+                placeholder="sk-... ou AIza..."
+                className="w-full bg-white/5 border border-brand-border/40 rounded-xl px-3 py-2 text-brand-text text-sm focus:outline-none focus:border-brand-accent/50 transition-colors font-mono"
+              />
+              <p className="text-[9px] text-brand-muted">Se vazio, usa a chave configurada nas variáveis de ambiente do servidor.</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface Termo {
   id: string
@@ -71,6 +206,7 @@ function OrigemBadge({ origem }: { origem: string }) {
 // ── Componente principal ──────────────────────────────────────────────────────
 export function GlossarioAdminClient({ initialTermos }: Props) {
   const [termos,      setTermos]     = useState<Termo[]>(initialTermos)
+  const [iaConfig,    setIaConfig]   = useState<IAConfig>(IA_DEFAULT)
   const [nicho,       setNicho]      = useState('pneus, peças e acessórios para motos')
   const [letraSugerir,setLetraSugerir] = useState('A')
   const [prefixo,     setPrefixo]    = useState('Nenhum')
@@ -116,7 +252,13 @@ export function GlossarioAdminClient({ initialTermos }: Props) {
       const res  = await fetch('/api/glossario/gerar-termos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nicho, letra: letraSugerir, prefixo, promptExtra }),
+        body: JSON.stringify({
+          nicho, letra: letraSugerir, prefixo, promptExtra,
+          provider:  iaConfig.provider,
+          modelo:    iaConfig.modelo === '__custom__' ? '' : iaConfig.modelo,
+          maxTokens: iaConfig.maxTokens,
+          apiKey:    iaConfig.apiKey || undefined,
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -181,7 +323,13 @@ export function GlossarioAdminClient({ initialTermos }: Props) {
       const res  = await fetch('/api/glossario/gerar-conteudo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({
+          id,
+          provider:  iaConfig.provider,
+          modelo:    iaConfig.modelo === '__custom__' ? '' : iaConfig.modelo,
+          maxTokens: iaConfig.maxTokens,
+          apiKey:    iaConfig.apiKey || undefined,
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -231,7 +379,13 @@ export function GlossarioAdminClient({ initialTermos }: Props) {
         const res = await fetch('/api/glossario/gerar-conteudo', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: t.id }),
+          body: JSON.stringify({
+            id: t.id,
+            provider:  iaConfig.provider,
+            modelo:    iaConfig.modelo === '__custom__' ? '' : iaConfig.modelo,
+            maxTokens: iaConfig.maxTokens,
+            apiKey:    iaConfig.apiKey || undefined,
+          }),
         })
         if (res.ok) ok++
       } catch {}
@@ -265,6 +419,9 @@ export function GlossarioAdminClient({ initialTermos }: Props) {
 
   return (
     <div className="space-y-6">
+
+      {/* ── Configurações de IA ── */}
+      <PainelIA config={iaConfig} onChange={setIaConfig} />
 
       {/* ── Barra de progresso do lote ── */}
       {isGeneratingBulk && (

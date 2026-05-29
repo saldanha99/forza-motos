@@ -19,6 +19,8 @@ interface CallOptions {
   maxTokens?: number
   provider?: string
   modelo?:   string
+  /** API key passada pelo frontend (sobrescreve a env var) */
+  apiKey?:   string
 }
 
 // ── Mapeamento de base URLs ────────────────────────────────────────────────────
@@ -133,51 +135,56 @@ export function cleanJsonResponse(text: string): string {
  * Chama o provider de IA configurado.
  * Detecta automaticamente pelo env var disponível se provider não for passado.
  */
-export async function callAI({ prompt, maxTokens = 2048, provider, modelo }: CallOptions): Promise<string> {
+export async function callAI({ prompt, maxTokens = 2048, provider, modelo, apiKey: apiKeyOverride }: CallOptions): Promise<string> {
   const prov = (provider ?? '').toLowerCase().trim()
 
+  // Helper: usa apiKey do frontend se fornecida, senão cai para env var
+  const getKey = (envVar: string) => apiKeyOverride || process.env[envVar] || ''
+
   // ── Gemini ──────────────────────────────────────────────────────────────────
-  if (prov === 'gemini' || (!prov && process.env.GEMINI_API_KEY)) {
-    const key   = process.env.GEMINI_API_KEY!
-    const model = modelo ?? process.env.GEMINI_MODEL ?? DEFAULT_MODELS.gemini
+  if (prov === 'gemini' || (!prov && (apiKeyOverride || process.env.GEMINI_API_KEY))) {
+    const key   = getKey('GEMINI_API_KEY')
+    if (!key) throw new Error('GEMINI_API_KEY não configurada')
+    const model = modelo || process.env.GEMINI_MODEL || DEFAULT_MODELS.gemini
     return callGemini(model, key, prompt, maxTokens)
   }
 
   // ── Anthropic ───────────────────────────────────────────────────────────────
   if (prov === 'anthropic') {
-    const key   = process.env.ANTHROPIC_API_KEY!
+    const key = getKey('ANTHROPIC_API_KEY')
     if (!key) throw new Error('ANTHROPIC_API_KEY não configurada')
-    const model = modelo ?? DEFAULT_MODELS.anthropic
+    const model = modelo || DEFAULT_MODELS.anthropic
     return callAnthropic(model, key, prompt, maxTokens)
   }
 
   // ── OpenRouter ──────────────────────────────────────────────────────────────
   if (prov === 'openrouter') {
-    const key = process.env.OPENROUTER_API_KEY!
+    const key = getKey('OPENROUTER_API_KEY')
     if (!key) throw new Error('OPENROUTER_API_KEY não configurada')
-    return callOpenAICompat(PROVIDER_BASES.openrouter, modelo ?? DEFAULT_MODELS.openrouter, key, prompt, maxTokens)
+    return callOpenAICompat(PROVIDER_BASES.openrouter, modelo || DEFAULT_MODELS.openrouter, key, prompt, maxTokens)
   }
 
   // ── Groq ────────────────────────────────────────────────────────────────────
   if (prov === 'groq') {
-    const key = process.env.GROQ_API_KEY!
+    const key = getKey('GROQ_API_KEY')
     if (!key) throw new Error('GROQ_API_KEY não configurada')
-    return callOpenAICompat(PROVIDER_BASES.groq, modelo ?? DEFAULT_MODELS.groq, key, prompt, maxTokens)
+    return callOpenAICompat(PROVIDER_BASES.groq, modelo || DEFAULT_MODELS.groq, key, prompt, maxTokens)
   }
 
   // ── DeepSeek ────────────────────────────────────────────────────────────────
   if (prov === 'deepseek') {
-    const key = process.env.DEEPSEEK_API_KEY!
+    const key = getKey('DEEPSEEK_API_KEY')
     if (!key) throw new Error('DEEPSEEK_API_KEY não configurada')
-    return callOpenAICompat(PROVIDER_BASES.deepseek, modelo ?? DEFAULT_MODELS.deepseek, key, prompt, maxTokens)
+    return callOpenAICompat(PROVIDER_BASES.deepseek, modelo || DEFAULT_MODELS.deepseek, key, prompt, maxTokens)
   }
 
   // ── OpenAI (default se OPENAI_API_KEY disponível) ──────────────────────────
-  if (prov === 'openai' || (!prov && process.env.OPENAI_API_KEY)) {
-    const key   = process.env.OPENAI_API_KEY!
-    const model = modelo ?? process.env.OPENAI_MODEL ?? DEFAULT_MODELS.openai
+  if (prov === 'openai' || (!prov && (apiKeyOverride || process.env.OPENAI_API_KEY))) {
+    const key   = getKey('OPENAI_API_KEY')
+    if (!key) throw new Error('OPENAI_API_KEY não configurada')
+    const model = modelo || process.env.OPENAI_MODEL || DEFAULT_MODELS.openai
     return callOpenAICompat(PROVIDER_BASES.openai, model, key, prompt, maxTokens)
   }
 
-  throw new Error('Nenhum provider de IA configurado. Adicione GEMINI_API_KEY ou OPENAI_API_KEY nas variáveis de ambiente.')
+  throw new Error('Nenhum provider de IA configurado. Adicione a API Key nas Configurações de IA ou nas variáveis de ambiente.')
 }
