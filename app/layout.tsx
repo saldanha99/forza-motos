@@ -64,9 +64,9 @@ export const metadata: Metadata = {
     images: ['/og-image.jpg'],
   },
   alternates: { canonical: BASE_URL },
-  ...(process.env.GOOGLE_SITE_VERIFICATION && {
-    verification: { google: process.env.GOOGLE_SITE_VERIFICATION },
-  }),
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION || '_8sjwB9Xjxovr-vSoY1wBvk4y4wm_MFLHdWen5IUWbY',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
