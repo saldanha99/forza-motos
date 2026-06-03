@@ -16,9 +16,12 @@ import {
   BookOpen,
   FileText,
   Package,
+  Settings,
 } from 'lucide-react'
 import { SEO_CONFIG } from '@/lib/seo/config'
 import { ReindexNowButton } from '@/components/admin/seo/ReindexNowButton'
+import { getSetting } from '@/lib/settings'
+import { SeoConfigSection } from '@/components/admin/seo/SeoConfigSection'
 
 export const metadata = { title: 'SEO Dashboard — Forza Admin' }
 
@@ -276,7 +279,7 @@ export default async function SeoDashboardPage() {
       </div>
 
       {/* Links rápidos */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <QuickLink
           icon={<Link2 size={18} />}
           label="Gerenciar Redirects 301"
@@ -290,6 +293,9 @@ export default async function SeoDashboardPage() {
           href="/admin/seo/404"
         />
       </div>
+
+      {/* Configurações SEO */}
+      <SeoConfigSection />
     </div>
   )
 }
