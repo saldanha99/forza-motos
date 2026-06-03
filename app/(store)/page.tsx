@@ -23,6 +23,9 @@ export const metadata: Metadata = {
     description: 'Credenciada Pirelli, Metzeler e Michelin em Campinas/SP. Entrega em todo Brasil.',
     type: 'website',
   },
+  verification: {
+    google: 'dmGEEQvLRduatzq9ARaEw20b9azY3c_spUs_CTLW4kE',
+  },
 }
 
 async function getHomeData() {
