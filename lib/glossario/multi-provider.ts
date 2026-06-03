@@ -1,5 +1,5 @@
 /**
- * Multi-provider AI — Forza Motos Glossário
+ * Multi-provider AI — 2time SEO Glossário
  *
  * Suporta: Gemini · OpenAI · OpenRouter · Groq · DeepSeek · Anthropic
  *
@@ -55,7 +55,7 @@ async function callOpenAICompat(
       'Content-Type':  'application/json',
       Authorization:   `Bearer ${apiKey}`,
       'HTTP-Referer':  'https://forza-motos-app.vercel.app',
-      'X-Title':       'Forza Motos Admin',
+      'X-Title':       '2time SEO',
     },
     body: JSON.stringify({
       model,

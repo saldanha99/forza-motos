@@ -1,6 +1,6 @@
 /**
- * Configuração central de SEO do Forza Motos.
- * Fonte única de verdade — edite aqui que reflete em todo o site.
+ * Configuração central de SEO — fonte única de verdade do 2time SEO.
+ * Edite aqui e reflete em todo o site: sitemap, robots, schema.org, meta tags.
  */
 export const SEO_CONFIG = {
   // Identidade do site
@@ -12,49 +12,50 @@ export const SEO_CONFIG = {
   locale: 'pt_BR',
   language: 'pt-BR',
 
+  // Nicho para prompts de IA no glossário
+  niche: 'pneus, peças e acessórios para motos',
+
+  // Token de verificação do Google Search Console.
+  // Cole aqui o valor do "content" da meta google-site-verification.
+  googleSiteVerification: '',
+
   // Branding
   logo: '/logo.png',
   ogImage: '/og-default.jpg',
-  twitterHandle: '@forzamotos',
+  twitterHandle: '',
 
-  // Empresa
+  // Empresa (schema.org LocalBusiness)
   business: {
     name: 'Forza Motos',
     legalName: 'Forza Motos',
     type: 'AutoPartsStore' as const,
     cnpj: '',
-    telephone: '+55-19-0000-0000',
+    telephone: '+55-19-97404-9445',
     email: 'contato@forzamotos.com.br',
     address: {
-      streetAddress: '',
+      streetAddress: 'R. Funilense, 110',
       addressLocality: 'Campinas',
       addressRegion: 'SP',
-      postalCode: '',
+      postalCode: '13060-080',
       addressCountry: 'BR',
     },
     geo: {
-      // Coordenadas de Campinas — atualize com o endereço exato
-      latitude: -22.9056,
-      longitude: -47.0608,
+      latitude: -22.9068,
+      longitude: -47.0626,
     },
     openingHours: ['Mo-Fr 08:00-18:00', 'Sa 08:00-13:00'],
     sameAs: [
-      // redes sociais — adicionar quando tiver
-      // 'https://www.instagram.com/forzamotos',
-      // 'https://www.facebook.com/forzamotos',
+      'https://www.instagram.com/forzamotos',
+      'https://www.facebook.com/forzamotos',
     ],
   },
 
+  // Autor padrão nos schema.org dos termos do glossário
+  defaultAuthor: 'Equipe Forza',
+
   // Defaults de robots
   robots: {
-    disallow: [
-      '/admin/',
-      '/api/',
-      '/minha-conta/',
-      '/carrinho/',
-      '/checkout/',
-      '/login',
-    ],
+    disallow: ['/admin/', '/api/', '/minha-conta/', '/carrinho/', '/checkout/', '/login'],
   },
 } as const
 

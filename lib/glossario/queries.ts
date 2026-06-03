@@ -103,7 +103,7 @@ export async function criarTermo(input: CriarTermoInput) {
       resumo: input.resumo,
       imagem: input.imagem,
       categoria: input.categoria,
-      autor: input.autor || 'Equipe Forza',
+      autor: input.autor || SEO_CONFIG.defaultAuthor,
       origem: input.origem || 'MANUAL',
       publicado: input.publicado ?? false,
     },

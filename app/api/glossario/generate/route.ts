@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { assertLicense, LicenseError } from '@/lib/license'
 import { generateGlossaryTerm } from '@/lib/glossario/ai-providers'
 import { criarTermo } from '@/lib/glossario/queries'
 import { triggerIndexing } from '@/lib/seo/indexing'
@@ -19,6 +20,14 @@ export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
   if (!session || (session.user as any)?.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Trava de licenca 2time SEO
+  try {
+    await assertLicense(req.headers.get('host'))
+  } catch (e) {
+    if (e instanceof LicenseError) return NextResponse.json({ error: e.message }, { status: 403 })
+    throw e
   }
 
   const body = await req.json().catch(() => ({}))
