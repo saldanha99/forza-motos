@@ -64,14 +64,14 @@ export const metadata: Metadata = {
     images: ['/og-image.jpg'],
   },
   alternates: { canonical: BASE_URL },
-  verification: {
-    google: process.env.GOOGLE_SITE_VERIFICATION || '_8sjwB9Xjxovr-vSoY1wBvk4y4wm_MFLHdWen5IUWbY',
-  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" className={`${barlowCondensed.variable} ${inter.variable}`}>
+      <head>
+        <meta name="google-site-verification" content="_8sjwB9Xjxovr-vSoY1wBvk4y4wm_MFLHdWen5IUWbY" />
+      </head>
       <body className="bg-white text-[#111] font-inter antialiased">
         {/* SEO — JSON-LD global (Organization + WebSite + LocalBusiness) */}
         <JsonLd
