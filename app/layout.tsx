@@ -70,7 +70,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR" className={`${barlowCondensed.variable} ${inter.variable}`}>
       <head>
-        <meta name="google-site-verification" content="_8sjwB9Xjxovr-vSoY1wBvk4y4wm_MFLHdWen5IUWbY" />
+        <meta name="google-site-verification" content="dmGEEQvLRduatzq9ARaEw20b9azY3c_spUs_CTLW4kE" />
       </head>
       <body className="bg-white text-[#111] font-inter antialiased">
         {/* SEO — JSON-LD global (Organization + WebSite + LocalBusiness) */}
