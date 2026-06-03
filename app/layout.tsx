@@ -10,6 +10,7 @@ import {
   websiteSchema,
   localBusinessSchema,
 } from '@/lib/seo/schema'
+import { getSetting } from '@/lib/settings'
 
 const barlowCondensed = Barlow_Condensed({
   subsets: ['latin'],
@@ -24,9 +25,17 @@ const inter = Inter({
   display: 'swap',
 })
 
-const BASE_URL = 'https://forza-motos-app.vercel.app'
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://forza-motos-app.vercel.app'
 
-export const metadata: Metadata = {
+// Token hardcoded como fallback — editável pelo admin em /admin/configuracoes
+const GOOGLE_VERIFICATION_FALLBACK = 'dmGEEQvLRduatzq9ARaEw20b9azY3c_spUs_CTLW4kE'
+
+export async function generateMetadata(): Promise<Metadata> {
+  // Lê token do banco (admin pode atualizar sem redeploy)
+  const googleVerification =
+    (await getSetting('google_site_verification')) || GOOGLE_VERIFICATION_FALLBACK
+
+  return {
   metadataBase: new URL(BASE_URL),
   title: {
     default: 'Forza Motos — Pneus e Peças para Moto em Campinas/SP',
@@ -65,8 +74,9 @@ export const metadata: Metadata = {
   },
   alternates: { canonical: BASE_URL },
   verification: {
-    google: 'dmGEEQvLRduatzq9ARaEw20b9azY3c_spUs_CTLW4kE',
+    google: googleVerification,
   },
+  }
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

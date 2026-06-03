@@ -551,3 +551,11 @@ enum SeoIndexingStatus {
   IGNORADO
 }
 
+
+// Configurações editáveis pelo painel admin (chave/valor).
+// Usado para Google Site Verification, nome do site, URL, etc.
+model Setting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}
