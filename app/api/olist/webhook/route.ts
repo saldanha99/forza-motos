@@ -27,6 +27,16 @@ const STATUS_MAP: Record<string, string> = {
 
 export async function POST(req: Request) {
   try {
+    // Proteção opcional por token na URL (?secret=...).
+    // Configure OLIST_WEBHOOK_SECRET e cadastre a URL do webhook com ?secret=<valor>.
+    const segredo = process.env.OLIST_WEBHOOK_SECRET
+    if (segredo) {
+      const url = new URL(req.url)
+      if (url.searchParams.get('secret') !== segredo) {
+        return NextResponse.json({ error: 'não autorizado' }, { status: 401 })
+      }
+    }
+
     // Tiny envia JSON ou form-encoded dependendo da configuração
     const contentType = req.headers.get('content-type') ?? ''
     let body: any

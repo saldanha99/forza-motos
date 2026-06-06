@@ -3,7 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { replicarPedidoOlist } from '@/lib/olist/sync-orders'
 import { triggerIndexing } from '@/lib/seo/indexing'
 import { SEO_CONFIG } from '@/lib/seo/config'
-import { verificarEstoqueTiny } from '@/lib/tiny/verificar-estoque'
+import { verificarEstoqueTiny, restaurarEstoquePedido } from '@/lib/tiny/verificar-estoque'
+import { validarAssinaturaMP } from '@/lib/mercadopago'
 import { enfileirarMensagem } from '@/lib/evolution/queue'
 import { normalizarWhatsApp } from '@/lib/evolution/client'
 
@@ -33,6 +34,19 @@ export async function POST(req: Request) {
 
     const paymentId = body.data?.id
     if (!paymentId) return NextResponse.json({ ok: true })
+
+    // Valida a assinatura HMAC do Mercado Pago (anti-spoofing/replay).
+    // Se MERCADOPAGO_WEBHOOK_SECRET não estiver configurado, apenas registra
+    // um aviso e segue (não quebra o fluxo enquanto o segredo não é setado).
+    const assinaturaOk = validarAssinaturaMP({
+      xSignature: req.headers.get('x-signature'),
+      xRequestId: req.headers.get('x-request-id'),
+      dataId: String(paymentId),
+    })
+    if (!assinaturaOk) {
+      console.warn('[mp-webhook] Assinatura inválida — requisição rejeitada')
+      return NextResponse.json({ error: 'assinatura inválida' }, { status: 401 })
+    }
 
     // Consulta detalhes do pagamento no MP
     const token = process.env.MERCADOPAGO_ACCESS_TOKEN
@@ -64,8 +78,11 @@ export async function POST(req: Request) {
       // 1) Verificação final de estoque no Tiny antes de confirmar o pedido
       //    Garante que, mesmo que o produto tenha sido vendido no físico
       //    entre o checkout e o pagamento, não entregamos o que não temos.
+      // atualizarBanco:false → só checa disponibilidade; NÃO reverte a reserva
+      // de estoque feita na criação do pedido (evita oversell — ver Fix #4).
       const verificacao = await verificarEstoqueTiny(
-        order.items.map((i) => ({ productId: i.productId, quantidade: i.quantidade }))
+        order.items.map((i) => ({ productId: i.productId, quantidade: i.quantidade })),
+        { atualizarBanco: false },
       ).catch(() => ({ ok: true, esgotados: [] })) // em caso de falha na API, libera
 
       if (!verificacao.ok) {
@@ -162,9 +179,17 @@ export async function POST(req: Request) {
     if (payment.status === 'rejected' || payment.status === 'cancelled') {
       const order = await prisma.order.findUnique({
         where: { id: orderId },
-        select: { status: true },
+        select: {
+          status: true,
+          items: { select: { productId: true, quantidade: true } },
+        },
       })
       if (order && order.status !== 'CANCELADO') {
+        // Devolve ao estoque a reserva feita na criação do pedido.
+        // O pedido nunca chegou ao Olist (replicação só em 'approved'),
+        // então o saldo físico continua existindo — restaurar é seguro.
+        await restaurarEstoquePedido(order.items)
+
         await prisma.order.update({
           where: { id: orderId },
           data: {
@@ -172,7 +197,7 @@ export async function POST(req: Request) {
             tracking: {
               create: {
                 status: 'CANCELADO',
-                descricao: `Pagamento ${payment.status}.`,
+                descricao: `Pagamento ${payment.status}. Estoque reservado devolvido.`,
               },
             },
           },

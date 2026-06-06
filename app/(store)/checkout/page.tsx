@@ -36,6 +36,7 @@ export default function CheckoutPage() {
     nome:        session?.user?.name  ?? '',
     email:       session?.user?.email ?? '',
     telefone:    '',
+    cpf:         '',
     cep:         '',
     rua:         '',
     numero:      '',
@@ -76,6 +77,10 @@ export default function CheckoutPage() {
   async function avancarParaFrete() {
     if (!form.nome || !form.email || !form.cep || !form.rua || !form.numero) {
       toast.error('Preencha todos os campos obrigatórios')
+      return
+    }
+    if (form.cpf.replace(/\D/g, '').length !== 11) {
+      toast.error('Informe um CPF válido (11 dígitos) para a nota fiscal')
       return
     }
     if (!form.estado) {
@@ -122,7 +127,11 @@ export default function CheckoutPage() {
             precoUnitario: i.preco,
           })),
           enderecoEntrega: form,
+          cpf:      form.cpf,
           frete:    freteSelecionado.preco,
+          freteServico:        freteSelecionado.id,
+          freteTransportadora: freteSelecionado.transportadora,
+          fretePrazo:          freteSelecionado.prazo,
           subtotal: subtotal(),
           total:    subtotal() + freteSelecionado.preco,
         }),
@@ -191,6 +200,9 @@ export default function CheckoutPage() {
                 onChange={(e) => updateForm('email', e.target.value)} />
               <Input label="Telefone" value={form.telefone}
                 onChange={(e) => updateForm('telefone', e.target.value)} placeholder="(19) 99999-9999" />
+              <Input label="CPF *" value={form.cpf}
+                onChange={(e) => updateForm('cpf', e.target.value)} placeholder="000.000.000-00"
+                maxLength={14} />
               <Input label="CEP *" value={form.cep}
                 onChange={(e) => updateForm('cep', e.target.value)}
                 onBlur={buscarCEP} placeholder="00000-000" />

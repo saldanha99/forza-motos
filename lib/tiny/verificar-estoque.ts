@@ -23,12 +23,19 @@ export interface ResultadoVerificacao {
 
 /**
  * Verifica estoque real no Tiny para uma lista de itens.
- * Atualiza o banco com os valores reais encontrados.
  * Retorna quais produtos não têm estoque suficiente.
+ *
+ * @param opts.atualizarBanco  Quando true (default), grava o saldo real no banco.
+ *   Use `false` ao CONFIRMAR um pedido já reservado (ex.: webhook do Mercado Pago):
+ *   nesse momento o estoque local já foi debitado na criação do pedido e o Olist
+ *   ainda não baixou, então sobrescrever com o valor do Olist REVERTERIA a reserva
+ *   e abriria janela de oversell. Aqui só queremos checar disponibilidade.
  */
 export async function verificarEstoqueTiny(
   itens: ItemParaVerificar[],
+  opts: { atualizarBanco?: boolean } = {},
 ): Promise<ResultadoVerificacao> {
+  const { atualizarBanco = true } = opts
   const esgotados: ResultadoVerificacao['esgotados'] = []
 
   // Busca os produtos no banco (com tinyId para checar na API)
@@ -72,12 +79,15 @@ export async function verificarEstoqueTiny(
         return
       }
 
-      // Atualiza DB com valor real (mantém banco sincronizado)
-      const ativo = produto.temImagem && estoqueReal > 0
-      await prisma.product.update({
-        where: { id: produto.id },
-        data: { estoque: estoqueReal, ativo },
-      }).catch(() => {}) // não bloqueia o checkout se falhar
+      // Atualiza DB com valor real (mantém banco sincronizado) — exceto em
+      // modo somente-checagem, para não reverter reservas de pedidos pendentes.
+      if (atualizarBanco) {
+        const ativo = produto.temImagem && estoqueReal > 0
+        await prisma.product.update({
+          where: { id: produto.id },
+          data: { estoque: estoqueReal, ativo },
+        }).catch(() => {}) // não bloqueia o checkout se falhar
+      }
 
       // Dropshipping (999) = sempre disponível via fornecedor
       if (estoqueReal === 999) return
@@ -97,4 +107,35 @@ export async function verificarEstoqueTiny(
     ok: esgotados.length === 0,
     esgotados,
   }
+}
+
+/**
+ * Devolve ao estoque local as quantidades reservadas por um pedido.
+ *
+ * Usado quando um pagamento é recusado/cancelado/expira: como o estoque é
+ * debitado na criação do pedido (reserva) e o pedido nunca chegou ao Olist,
+ * precisamos restaurar a reserva para o produto voltar a ficar disponível.
+ *
+ * Reativa o produto se voltar a ter saldo e tiver imagem.
+ */
+export async function restaurarEstoquePedido(
+  itens: Array<{ productId: string; quantidade: number }>,
+): Promise<void> {
+  await Promise.allSettled(
+    itens.map(async (item) => {
+      const produto = await prisma.product.findUnique({
+        where: { id: item.productId },
+        select: { estoque: true, temImagem: true },
+      })
+      if (!produto) return
+      const novoEstoque = produto.estoque + item.quantidade
+      await prisma.product.update({
+        where: { id: item.productId },
+        data: {
+          estoque: novoEstoque,
+          ativo: novoEstoque > 0 && produto.temImagem,
+        },
+      })
+    }),
+  )
 }

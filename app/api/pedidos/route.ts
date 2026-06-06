@@ -15,6 +15,18 @@ export async function POST(req: Request) {
     const session = await getServerSession(authOptions)
     const body = await req.json()
     const { items, enderecoEntrega, frete, subtotal, total } = body
+    // CPF é obrigatório para o Olist emitir NF. Frete escolhido é replicado ao Olist.
+    const { cpf, freteServico, freteTransportadora, fretePrazo } = body
+
+    const cpfLimpo = String(cpf ?? enderecoEntrega?.cpf ?? '').replace(/\D/g, '')
+    if (cpfLimpo.length !== 11 && cpfLimpo.length !== 14) {
+      return NextResponse.json(
+        { error: 'CPF inválido. Informe um CPF válido para emissão da nota fiscal.' },
+        { status: 400 },
+      )
+    }
+    // Garante que o CPF fica salvo no endereço do pedido (usado na replicação ao Olist)
+    const enderecoComCpf = { ...enderecoEntrega, cpf: cpfLimpo }
 
     // Gera número sequencial do pedido
     const ano = new Date().getFullYear()
@@ -47,7 +59,11 @@ export async function POST(req: Request) {
         subtotal,
         frete,
         total,
-        enderecoEntrega,
+        enderecoEntrega: enderecoComCpf,
+        // Frete escolhido pelo cliente — replicado ao Olist na confirmação
+        freteServico:        freteServico ?? undefined,
+        freteTransportadora: freteTransportadora ?? undefined,
+        fretePrazo:          fretePrazo != null ? Number(fretePrazo) : undefined,
         status: 'AGUARDANDO_PAGAMENTO',
         items: {
           create: items.map((i: any) => ({
@@ -83,6 +99,14 @@ export async function POST(req: Request) {
           },
         })
       }
+    }
+
+    // Persiste o CPF no cadastro do cliente logado (para próximas compras / NF)
+    if (session?.user?.id) {
+      await prisma.user.update({
+        where: { id: session.user.id },
+        data: { cpf: cpfLimpo },
+      }).catch(() => {})
     }
 
     // Atualiza CRM
