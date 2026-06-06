@@ -11,6 +11,7 @@
 
 import { NextResponse } from 'next/server'
 import { syncDeltaEstoque, syncDeltaProdutos } from '@/lib/olist/sync-products'
+import { replicarPedidosPendentes } from '@/lib/olist/sync-orders'
 
 export const maxDuration = 60
 
@@ -25,14 +26,16 @@ export async function GET(req: Request) {
   try {
     console.log('[cron] Iniciando sync delta (estoque + produtos alterados)...')
 
-    const [estoque, produtos] = await Promise.allSettled([
+    const [estoque, produtos, pedidos] = await Promise.allSettled([
       syncDeltaEstoque(1),   // últimas 24h
       syncDeltaProdutos(1),
+      replicarPedidosPendentes(20), // retry de pedidos pagos não replicados
     ])
 
     const result = {
       estoque:  estoque.status  === 'fulfilled' ? estoque.value  : { erro: (estoque  as any).reason?.message },
       produtos: produtos.status === 'fulfilled' ? produtos.value : { erro: (produtos as any).reason?.message },
+      pedidos:  pedidos.status  === 'fulfilled' ? pedidos.value  : { erro: (pedidos  as any).reason?.message },
     }
 
     console.log('[cron] Concluído:', result)
