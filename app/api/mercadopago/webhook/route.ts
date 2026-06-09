@@ -28,14 +28,17 @@ export async function POST(req: Request) {
   try {
     const body = await req.json()
 
-    // LOG TEMPORÁRIO — remove após diagnóstico
-    console.log('[mp-webhook] body.type:', body.type, '| data.id:', body.data?.id)
-
-    if (body.type !== 'payment') {
-      return NextResponse.json({ ok: true, ignored: body.type })
+    // Suporte a dois formatos de webhook do MP:
+    //   Novo: { type: 'payment', data: { id: '123' } }
+    //   Antigo: { topic: 'payment', id: '123' }
+    // Qualquer outro tipo (merchant_order, etc.) é ignorado.
+    const isNewFormat  = body.type === 'payment'
+    const isOldFormat  = body.topic === 'payment'
+    if (!isNewFormat && !isOldFormat) {
+      return NextResponse.json({ ok: true, ignored: body.type ?? body.topic })
     }
 
-    const paymentId = body.data?.id
+    const paymentId = isNewFormat ? body.data?.id : body.id
     if (!paymentId) return NextResponse.json({ ok: true })
 
     // Valida a assinatura HMAC do Mercado Pago (anti-spoofing/replay).
@@ -59,8 +62,6 @@ export async function POST(req: Request) {
     const payment = await res.json()
 
     const orderId = payment.external_reference
-    // LOG TEMPORÁRIO
-    console.log('[mp-webhook] payment.status:', payment.status, '| orderId:', orderId)
     if (!orderId) return NextResponse.json({ ok: true })
 
     // ── PAGAMENTO APROVADO ─────────────────────────────────────────────────
@@ -80,9 +81,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true, status: order.status })
       }
 
-      // LOG TEMPORÁRIO
-      console.log('[mp-webhook] approved → pedido:', order.orderNumber, 'status atual:', order.status)
-
       // 1) Verificação final de estoque no Tiny antes de confirmar o pedido
       //    Garante que, mesmo que o produto tenha sido vendido no físico
       //    entre o checkout e o pagamento, não entregamos o que não temos.
@@ -92,9 +90,6 @@ export async function POST(req: Request) {
         order.items.map((i) => ({ productId: i.productId, quantidade: i.quantidade })),
         { atualizarBanco: false },
       ).catch(() => ({ ok: true, esgotados: [] })) // em caso de falha na API, libera
-
-      // LOG TEMPORÁRIO
-      console.log('[mp-webhook] verificacao.ok:', verificacao.ok, 'esgotados:', verificacao.esgotados.length)
 
       if (!verificacao.ok) {
         // Estoque insuficiente: cancela e solicita reembolso automático no MP
