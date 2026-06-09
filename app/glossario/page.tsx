@@ -30,8 +30,8 @@ export default async function GlossarioPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
-      <h1 className="text-4xl font-bold mb-2">{SEO_CONFIG.siteName} — Glossário</h1>
-      <p className="text-lg mb-10" style={{ color: 'var(--muted)' }}>
+      <h1 className="font-barlow font-black text-4xl text-[#111] mb-2">{SEO_CONFIG.siteName} — Glossário</h1>
+      <p className="text-lg mb-10 text-[#666]">
         {termos.length} termos{SEO_CONFIG.niche ? ` sobre ${SEO_CONFIG.niche}` : ''}
       </p>
 
@@ -39,8 +39,8 @@ export default async function GlossarioPage() {
       <div className="flex flex-wrap gap-2 mb-10">
         {letras.map((l) => (
           <a key={l} href={`#letra-${l}`}
-            className="w-9 h-9 flex items-center justify-center rounded-lg text-sm font-bold transition-all"
-            style={{ background: 'rgba(99,102,241,0.12)', color: '#818cf8' }}>
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-sm font-bold transition-all hover:brightness-95"
+            style={{ background: 'rgba(212,43,43,0.10)', color: '#d42b2b' }}>
             {l}
           </a>
         ))}
@@ -51,16 +51,16 @@ export default async function GlossarioPage() {
         <section key={letra} id={`letra-${letra}`} className="mb-10">
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-3">
             <span className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black"
-              style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
+              style={{ background: 'linear-gradient(135deg,#d42b2b,#8a1818)' }}>
               {letra}
             </span>
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {porLetra[letra].map((t) => (
               <Link key={t.id} href={`/glossario/${t.slug}`}
-                className="glass rounded-xl p-4 hover:border-indigo-500/40 transition-all group">
-                <h3 className="font-semibold text-white group-hover:text-indigo-300 transition-colors">{t.termo}</h3>
-                {t.resumo && <p className="text-xs mt-1 line-clamp-2" style={{ color: 'var(--muted)' }}>{t.resumo}</p>}
+                className="rounded-xl p-4 border border-[#eee] bg-white hover:border-[#d42b2b]/40 hover:shadow-md transition-all group">
+                <h3 className="font-semibold text-[#111] group-hover:text-[#d42b2b] transition-colors">{t.termo}</h3>
+                {t.resumo && <p className="text-xs mt-1 line-clamp-2 text-[#888]">{t.resumo}</p>}
               </Link>
             ))}
           </div>
@@ -68,7 +68,7 @@ export default async function GlossarioPage() {
       ))}
 
       {termos.length === 0 && (
-        <p className="text-center py-20" style={{ color: 'var(--muted)' }}>
+        <p className="text-center py-20 text-[#888]">
           Nenhum verbete publicado ainda.
         </p>
       )}
