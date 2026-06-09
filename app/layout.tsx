@@ -25,7 +25,7 @@ const inter = Inter({
   display: 'swap',
 })
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://forza-motos-app.vercel.app'
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://forzamotos.com.br'
 
 // Token hardcoded como fallback — editável pelo admin em /admin/configuracoes
 const GOOGLE_VERIFICATION_FALLBACK = 'dmGEEQvLRduatzq9ARaEw20b9azY3c_spUs_CTLW4kE'
