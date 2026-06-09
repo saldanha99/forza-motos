@@ -59,7 +59,7 @@ O sandbox usa um token separado — gere em https://sandbox.melhorenvio.com.br
 ## Passo 4 — Testar cotação
 
 ```bash
-curl -X POST https://forza-motos-app.vercel.app/api/frete/cotar \
+curl -X POST https://forzamotos.com.br/api/frete/cotar \
   -H "Content-Type: application/json" \
   -d '{
     "cepDestino": "01310100",
@@ -136,7 +136,7 @@ Conforme você sincronizar produtos com o Olist, os campos do banco vão se pree
 
 ```bash
 # Re-sincroniza um produto específico
-curl -X POST https://forza-motos-app.vercel.app/api/admin/produtos/<id>/sync
+curl -X POST https://forzamotos.com.br/api/admin/produtos/<id>/sync
 
 # Re-sincroniza tudo (cron Olist diário)
 # Já roda automaticamente às 06:00 UTC via vercel.json

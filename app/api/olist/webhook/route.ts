@@ -7,7 +7,7 @@
  *
  * Para registrar este webhook no Tiny:
  *   Menu → Configurações → API → Webhooks
- *   URL: https://forza-motos-app.vercel.app/api/olist/webhook
+ *   URL: https://forzamotos.com.br/api/olist/webhook
  */
 
 import { NextResponse } from 'next/server'

@@ -6,7 +6,7 @@ import { ProductCard } from '@/components/store/ProductCard'
 import { Breadcrumb } from '@/components/store/Breadcrumb'
 import type { Metadata } from 'next'
 
-const BASE = 'https://forza-motos-app.vercel.app'
+const BASE = 'https://forzamotos.com.br'
 
 interface Props {
   params: { slug: string }

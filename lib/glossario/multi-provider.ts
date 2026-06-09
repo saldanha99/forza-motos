@@ -54,7 +54,7 @@ async function callOpenAICompat(
     headers: {
       'Content-Type':  'application/json',
       Authorization:   `Bearer ${apiKey}`,
-      'HTTP-Referer':  'https://forza-motos-app.vercel.app',
+      'HTTP-Referer':  'https://forzamotos.com.br',
       'X-Title':       '2time SEO',
     },
     body: JSON.stringify({

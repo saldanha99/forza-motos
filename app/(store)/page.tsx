@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   title: 'Forza Motos — Pneus e Peças para Moto em Campinas/SP',
   description:
     'Credenciada Pirelli, Metzeler e Michelin. Troca de pneu em 30 min sem agendamento. Loja online com +2.800 produtos e entrega em todo Brasil.',
-  alternates: { canonical: 'https://forza-motos-app.vercel.app' },
+  alternates: { canonical: 'https://forzamotos.com.br' },
   openGraph: {
     title: 'Forza Motos — Pneus e Peças para Moto',
     description: 'Credenciada Pirelli, Metzeler e Michelin em Campinas/SP. Entrega em todo Brasil.',

@@ -7,7 +7,7 @@
  * Endereço oficial: R. Funilense, 110 — Campinas/SP — CEP 13060-080
  */
 
-export const SITE_URL = 'https://forza-motos-app.vercel.app'
+export const SITE_URL = 'https://forzamotos.com.br'
 export const SITE_NAME = 'Forza Motos'
 export const SITE_PHONE = '+55-19-97404-9445'
 export const SITE_WHATSAPP = '5519974049445'

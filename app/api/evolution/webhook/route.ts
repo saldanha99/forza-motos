@@ -1,7 +1,7 @@
 /**
  * POST /api/evolution/webhook
  * Recebe eventos da Evolution API (mensagens enviadas, entregues, lidas, recebidas)
- * Configura no painel da Evolution: URL = https://forza-motos-app.vercel.app/api/evolution/webhook
+ * Configura no painel da Evolution: URL = https://forzamotos.com.br/api/evolution/webhook
  */
 
 import { NextResponse } from 'next/server'

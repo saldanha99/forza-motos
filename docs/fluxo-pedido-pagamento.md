@@ -6,7 +6,7 @@ Documentação do ciclo completo de uma venda no Forza Motos.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  CLIENTE NO CHECKOUT (forza-motos-app.vercel.app/checkout)  │
+│  CLIENTE NO CHECKOUT (forzamotos.com.br/checkout)  │
 └────────────────────┬────────────────────────────────────────┘
                      │
                      │ Digita CEP
