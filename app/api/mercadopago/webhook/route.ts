@@ -177,37 +177,41 @@ export async function POST(req: Request) {
 
     // ── PAGAMENTO REJEITADO / CANCELADO ────────────────────────────────────
     if (payment.status === 'rejected' || payment.status === 'cancelled') {
-      const order = await prisma.order.findUnique({
-        where: { id: orderId },
-        select: {
-          status: true,
-          items: { select: { productId: true, quantidade: true } },
-        },
+      // updateMany com WHERE condicional é atômico no banco:
+      // se count=0, outra instância do webhook já cancelou → sem ação.
+      // Evita race condition quando o MP dispara múltiplos retries simultâneos.
+      const statusFinaisParaCancelar = ['CANCELADO', 'CONFIRMADO', 'SEPARANDO', 'ENVIADO', 'ENTREGUE']
+      const atualizado = await prisma.order.updateMany({
+        where: { id: orderId, status: { notIn: statusFinaisParaCancelar as any } },
+        data: { status: 'CANCELADO' },
       })
-      if (order && order.status !== 'CANCELADO') {
-        // Devolve ao estoque a reserva feita na criação do pedido.
-        // O pedido nunca chegou ao Olist (replicação só em 'approved'),
-        // então o saldo físico continua existindo — restaurar é seguro.
-        await restaurarEstoquePedido(order.items)
 
-        await prisma.order.update({
+      if (atualizado.count > 0) {
+        // Esta instância "ganhou" o lock — restaura estoque e cria tracking
+        const orderItens = await prisma.order.findUnique({
           where: { id: orderId },
-          data: {
-            status: 'CANCELADO',
-            tracking: {
-              create: {
-                status: 'CANCELADO',
-                descricao: `Pagamento ${payment.status}. Estoque reservado devolvido.`,
-              },
-            },
-          },
+          select: { items: { select: { productId: true, quantidade: true } } },
         })
+        if (orderItens) {
+          // Devolve ao estoque a reserva feita na criação do pedido.
+          // O pedido nunca chegou ao Olist (replicação só em 'approved'),
+          // então o saldo físico continua existindo — restaurar é seguro.
+          await restaurarEstoquePedido(orderItens.items)
 
-        // Sinaliza ao Google que a página do pedido (se publicada) não existe mais
-        triggerIndexing(`${SEO_CONFIG.siteUrl}/pedidos/${orderId}`, {
-          action: 'URL_DELETED',
-          origem: 'mp-webhook-cancel',
-        })
+          await prisma.orderTracking.create({
+            data: {
+              orderId,
+              status: 'CANCELADO',
+              descricao: `Pagamento ${payment.status}. Estoque reservado devolvido.`,
+            },
+          })
+
+          // Sinaliza ao Google que a página do pedido (se publicada) não existe mais
+          triggerIndexing(`${SEO_CONFIG.siteUrl}/pedidos/${orderId}`, {
+            action: 'URL_DELETED',
+            origem: 'mp-webhook-cancel',
+          })
+        }
       }
     }
 
