@@ -12,6 +12,8 @@ export interface CartItem {
 
 interface CartStore {
   items: CartItem[]
+  _hasHydrated: boolean
+  setHasHydrated: (v: boolean) => void
   adicionarItem: (item: Omit<CartItem, 'quantidade'>) => void
   removerItem: (id: string) => void
   atualizarQuantidade: (id: string, quantidade: number) => void
@@ -23,6 +25,8 @@ export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
+      _hasHydrated: false,
+      setHasHydrated: (v) => set({ _hasHydrated: v }),
 
       adicionarItem: (item) =>
         set((state) => {
@@ -53,6 +57,11 @@ export const useCartStore = create<CartStore>()(
       subtotal: () =>
         get().items.reduce((acc, i) => acc + i.preco * i.quantidade, 0),
     }),
-    { name: 'forza-cart' }
+    {
+      name: 'forza-cart',
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true)
+      },
+    }
   )
 )

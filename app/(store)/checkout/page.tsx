@@ -23,7 +23,7 @@ interface OpcaoFrete {
 
 export default function CheckoutPage() {
   const { data: session } = useSession()
-  const { items, subtotal, limpar } = useCartStore()
+  const { items, subtotal, limpar, _hasHydrated } = useCartStore()
   const router = useRouter()
 
   const [etapa, setEtapa]                   = useState<Etapa>('dados')
@@ -46,10 +46,14 @@ export default function CheckoutPage() {
     estado:      '',
   })
 
+  // Só redireciona após o store ter hidratado do localStorage.
+  // Sem este guard, o useEffect disparava antes da hidratação e
+  // redirecionava erroneamente carrinho → checkout → carrinho.
   useEffect(() => {
-    if (items.length === 0) router.replace('/carrinho')
-  }, [items.length, router])
+    if (_hasHydrated && items.length === 0) router.replace('/carrinho')
+  }, [_hasHydrated, items.length, router])
 
+  if (!_hasHydrated) return null
   if (items.length === 0) return null
 
   function updateForm(field: string, value: string) {
