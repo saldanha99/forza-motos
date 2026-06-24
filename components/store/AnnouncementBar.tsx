@@ -18,7 +18,7 @@ export function AnnouncementBar() {
       }}
     >
       <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        🏍️ <span style={{ color: '#d42b2b', fontWeight: 600 }}>Frete grátis</span> em compras acima de R$ 299
+        🏍️ <span style={{ color: '#d42b2b', fontWeight: 600 }}>Frete grátis</span> em compras acima de R$ 499
       </span>
       <span style={{ opacity: 0.4 }}>·</span>
       <a
