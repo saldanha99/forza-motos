@@ -61,8 +61,29 @@ export async function POST(req: Request) {
     })
     const payment = await res.json()
 
-    const orderId = payment.external_reference
-    if (!orderId) return NextResponse.json({ ok: true })
+    const externalRef = payment.external_reference
+    if (!externalRef) return NextResponse.json({ ok: true })
+
+    // ── INSCRIÇÃO EM EVENTO ────────────────────────────────────────────────
+    if (externalRef.startsWith('evento_')) {
+      const inscricaoId = externalRef.replace('evento_', '')
+
+      if (payment.status === 'approved') {
+        await prisma.eventoInscricao.updateMany({
+          where: { id: inscricaoId, status: 'PENDENTE' },
+          data: { status: 'PAGO', mpPagamentoId: String(paymentId) },
+        })
+      } else if (payment.status === 'rejected' || payment.status === 'cancelled') {
+        await prisma.eventoInscricao.updateMany({
+          where: { id: inscricaoId, status: 'PENDENTE' },
+          data: { status: 'CANCELADO' },
+        })
+      }
+
+      return NextResponse.json({ ok: true, type: 'evento', status: payment.status })
+    }
+
+    const orderId = externalRef
 
     // ── PAGAMENTO APROVADO ─────────────────────────────────────────────────
     if (payment.status === 'approved') {

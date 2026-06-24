@@ -586,6 +586,35 @@ model Evento {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  inscricoes  EventoInscricao[]
+
   @@index([publicado, dataInicio])
   @@index([categoria, publicado])
+}
+
+model EventoInscricao {
+  id              String                @id @default(cuid())
+  eventoId        String
+  evento          Evento                @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  nome            String
+  email           String
+  telefone        String
+  quantidade      Int                   @default(1)
+  total           Decimal               @db.Decimal(10, 2)
+  status          EventoInscricaoStatus @default(PENDENTE)
+  /// ID da preferência no Mercado Pago
+  mpPreferenciaId String?
+  /// ID do pagamento aprovado no Mercado Pago
+  mpPagamentoId   String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@index([eventoId, status])
+  @@index([email])
+}
+
+enum EventoInscricaoStatus {
+  PENDENTE
+  PAGO
+  CANCELADO
 }

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { Breadcrumb } from '@/components/store/Breadcrumb'
 import { SITE_URL } from '@/lib/schema'
+import { ComprarEventoBtn } from '@/components/store/ComprarEventoBtn'
 import { Calendar, MapPin, Tag, Users, ArrowLeft, ExternalLink } from 'lucide-react'
 
 interface Props {
@@ -160,6 +161,7 @@ export default async function EventoDetailPage({ params }: Props) {
               {/* Botões de ação */}
               <div className="space-y-3">
                 {evento.linkExterno ? (
+                  // Tem link externo → usa o link externo como CTA principal
                   <a
                     href={evento.linkExterno}
                     target="_blank"
@@ -170,14 +172,13 @@ export default async function EventoDetailPage({ params }: Props) {
                     {preco === 0 ? 'Inscrever-se' : 'Comprar ingresso'}
                   </a>
                 ) : (
-                  <a
-                    href={waUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 w-full bg-[#d42b2b] hover:bg-red-700 text-white font-barlow font-bold uppercase text-sm tracking-wider px-6 py-4 rounded-xl transition-colors"
-                  >
-                    {preco === 0 ? 'Quero participar' : 'Comprar via WhatsApp'}
-                  </a>
+                  // Sem link externo → botão integrado (MP ou inscrição gratuita)
+                  <ComprarEventoBtn
+                    slug={evento.slug}
+                    preco={preco}
+                    titulo={evento.titulo}
+                    gratuito={preco === 0}
+                  />
                 )}
                 <a
                   href={waUrl}
