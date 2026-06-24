@@ -3,27 +3,28 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export const dynamic = 'force-dynamic'
+
+export async function PUT(req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
   const body = await req.json()
+
   const agendamento = await prisma.appointment.update({
     where: { id: params.id },
-    data: body.status !== undefined
-      ? { status: body.status }
-      : {
-          nome: body.nome,
-          telefone: body.telefone,
-          servico: body.servico,
-          motoModelo: body.motoModelo,
-          dataPreferida: new Date(body.dataPreferida),
-          horarioPreferido: body.horarioPreferido,
-          notas: body.notas ?? null,
-          status: body.status_update ?? undefined,
-        },
+    data: {
+      nome: body.nome,
+      telefone: body.telefone,
+      servico: body.servico,
+      motoModelo: body.motoModelo,
+      dataPreferida: new Date(body.dataPreferida),
+      horarioPreferido: body.horarioPreferido,
+      notas: body.notas ?? null,
+      status: body.status,
+    },
   })
 
   return NextResponse.json(agendamento)
@@ -32,7 +33,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
   await prisma.appointment.delete({ where: { id: params.id } })

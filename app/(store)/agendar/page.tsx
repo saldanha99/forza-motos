@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import toast from 'react-hot-toast'
 import { whatsappLink } from '@/lib/utils'
-import { CheckCircle, Calendar, Clock, Wrench } from 'lucide-react'
+import { Calendar, Clock, Wrench } from 'lucide-react'
 
 const SERVICOS = [
   'Troca de Pneu Dianteiro',
@@ -22,7 +22,6 @@ const HORARIOS = ['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00',
 
 export default function AgendarPage() {
   const [loading, setLoading] = useState(false)
-  const [sucesso, setSucesso] = useState(false)
   const [form, setForm] = useState({
     nome: '',
     telefone: '',
@@ -52,39 +51,17 @@ export default function AgendarPage() {
         body: JSON.stringify(form),
       })
       if (!res.ok) throw new Error()
-      setSucesso(true)
+
+      // Abre WhatsApp do admin direto com mensagem pré-pronta
+      const dataFmt = new Date(form.dataPreferida + 'T00:00:00').toLocaleDateString('pt-BR', {
+        weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
+      })
+      const msg = `Olá! Vi vocês no site e gostaria de agendar um serviço:\n\n*Serviço:* ${form.servico}\n*Moto:* ${form.motoModelo}\n*Data preferida:* ${dataFmt}\n*Horário:* ${form.horarioPreferido}\n*Nome:* ${form.nome}${form.notas ? `\n*Obs:* ${form.notas}` : ''}`
+      window.location.href = whatsappLink('5519974049445', msg)
     } catch {
       toast.error('Erro ao enviar agendamento. Tente pelo WhatsApp.')
-    } finally {
       setLoading(false)
     }
-  }
-
-  const data = form.dataPreferida ? new Date(form.dataPreferida + 'T00:00:00').toLocaleDateString('pt-BR') : ''
-  const whatsMsg = `Olá! Gostaria de agendar:\n\n*Serviço:* ${form.servico}\n*Moto:* ${form.motoModelo}\n*Data:* ${data}\n*Horário:* ${form.horarioPreferido}\n*Nome:* ${form.nome}`
-
-  if (sucesso) {
-    return (
-      <div className="max-w-lg mx-auto px-4 py-20 text-center">
-        <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-          <CheckCircle size={36} className="text-green-600" />
-        </div>
-        <h1 className="font-grotesk font-bold text-3xl text-ink mb-3">Agendamento enviado!</h1>
-        <p className="text-dim mb-8 leading-relaxed">
-          Recebemos seu pedido. Em breve nossa equipe entrará em contato para confirmar.
-          Você também pode confirmar agora pelo WhatsApp:
-        </p>
-        <a
-          href={whatsappLink('5519974049445', whatsMsg)}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Button size="lg" className="bg-green-600 hover:bg-green-700 border-0">
-            Confirmar no WhatsApp
-          </Button>
-        </a>
-      </div>
-    )
   }
 
   return (
