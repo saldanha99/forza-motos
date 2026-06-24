@@ -6,10 +6,7 @@ import { SEO_CONFIG } from '@/lib/seo/config'
 import { verificarEstoqueTiny, restaurarEstoquePedido } from '@/lib/tiny/verificar-estoque'
 import { validarAssinaturaMP } from '@/lib/mercadopago'
 import { enfileirarMensagem } from '@/lib/evolution/queue'
-import { enviarMensagem, normalizarWhatsApp } from '@/lib/evolution/client'
-
-// Número do WhatsApp da loja para notificação interna de novos pedidos
-const ADMIN_WA = process.env.ADMIN_WHATSAPP ?? '5519974049445'
+import { normalizarWhatsApp } from '@/lib/evolution/client'
 
 /**
  * Webhook do Mercado Pago.
@@ -64,29 +61,8 @@ export async function POST(req: Request) {
     })
     const payment = await res.json()
 
-    const externalRef = payment.external_reference
-    if (!externalRef) return NextResponse.json({ ok: true })
-
-    // ── INSCRIÇÃO EM EVENTO ────────────────────────────────────────────────
-    if (externalRef.startsWith('evento_')) {
-      const inscricaoId = externalRef.replace('evento_', '')
-
-      if (payment.status === 'approved') {
-        await prisma.eventoInscricao.updateMany({
-          where: { id: inscricaoId, status: 'PENDENTE' },
-          data: { status: 'PAGO', mpPagamentoId: String(paymentId) },
-        })
-      } else if (payment.status === 'rejected' || payment.status === 'cancelled') {
-        await prisma.eventoInscricao.updateMany({
-          where: { id: inscricaoId, status: 'PENDENTE' },
-          data: { status: 'CANCELADO' },
-        })
-      }
-
-      return NextResponse.json({ ok: true, type: 'evento', status: payment.status })
-    }
-
-    const orderId = externalRef
+    const orderId = payment.external_reference
+    if (!orderId) return NextResponse.json({ ok: true })
 
     // ── PAGAMENTO APROVADO ─────────────────────────────────────────────────
     if (payment.status === 'approved') {
@@ -94,12 +70,7 @@ export async function POST(req: Request) {
         where: { id: orderId },
         select: {
           id: true, status: true, olistOrderId: true, orderNumber: true, total: true,
-          items: {
-            select: {
-              productId: true, quantidade: true,
-              product: { select: { nome: true } },
-            },
-          },
+          items: { select: { productId: true, quantidade: true, product: { select: { nome: true } } } },
         },
       })
       if (!order) return NextResponse.json({ ok: true })
@@ -172,26 +143,6 @@ export async function POST(req: Request) {
         include: { user: { select: { nome: true, telefone: true, email: true } } },
       })
 
-      // ── Notificação interna da loja ──────────────────────────
-      // Envia direto (sem fila) para garantir entrega imediata
-      const nomeCliente = orderComUser.user?.nome ?? 'Cliente não logado'
-      const totalFmt = `R$ ${Number(order.total).toFixed(2).replace('.', ',')}`
-      const itensFmt = order.items
-        .map((i) => `  • ${i.product?.nome ?? i.productId} (${i.quantidade}x)`)
-        .join('\n')
-      const msgAdmin =
-        `🛒 *NOVO PEDIDO PAGO — Forza Motos*\n\n` +
-        `📦 Pedido: *${order.orderNumber}*\n` +
-        `👤 Cliente: ${nomeCliente}\n` +
-        `💳 Forma: ${payment.payment_method_id}\n` +
-        `💰 Total: *${totalFmt}*\n\n` +
-        `*Itens:*\n${itensFmt}\n\n` +
-        `✅ Já foi replicado no Olist.\n` +
-        `👉 Separar, embalar e despachar!`
-      enviarMensagem({ whatsapp: ADMIN_WA, mensagem: msgAdmin }).catch((e) =>
-        console.error('[mp-webhook] Falha ao notificar admin:', e)
-      )
-
       // Dispara WhatsApp de confirmação se o usuário tem telefone
       if (orderComUser.user?.telefone) {
         const wa = normalizarWhatsApp(orderComUser.user.telefone)
@@ -206,7 +157,33 @@ export async function POST(req: Request) {
         }).catch(() => {})
       }
 
-      // 3) Replica no Olist — só se ainda não foi replicado (idempotência)
+      // 3) Notifica admin via WhatsApp
+      const adminPhone = process.env.ADMIN_WHATSAPP ?? '5519974049445'
+      const itensTexto = order.items
+        .map((i: { productId: string; quantidade: number; product: { nome: string } | null }) =>
+          `  • ${i.product?.nome ?? i.productId} (${i.quantidade}x)`)
+        .join('\n')
+      const totalFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+        Number(orderComUser.total ?? 0),
+      )
+      await enfileirarMensagem({
+        whatsapp: adminPhone,
+        nome: 'Admin',
+        tipo: 'MANUAL',
+        payload: {
+          conteudo:
+            `🛒 *NOVO PEDIDO PAGO — Forza Motos*\n\n` +
+            `📦 Pedido: ${order.orderNumber}\n` +
+            `👤 Cliente: ${orderComUser.user?.nome ?? 'Guest'}\n` +
+            `💳 Forma: ${payment.payment_method_id}\n` +
+            `💰 Total: ${totalFmt}\n\n` +
+            `Itens:\n${itensTexto}\n\n` +
+            `✅ Replicado no Olist.\n` +
+            `👉 Separar, embalar e despachar!`,
+        },
+      }).catch((e) => console.error('[mp-webhook] Falha ao notificar admin:', e))
+
+      // 4) Replica no Olist — só se ainda não foi replicado (idempotência)
       if (!order.olistOrderId) {
         try {
           await replicarPedidoOlist(orderId)
