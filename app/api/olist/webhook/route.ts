@@ -15,6 +15,7 @@ import { prisma } from '@/lib/prisma'
 import { syncProdutoUnico, syncEstoqueProduto } from '@/lib/olist/sync-products'
 import { enfileirarMensagem } from '@/lib/evolution/queue'
 import { normalizarWhatsApp } from '@/lib/evolution/client'
+import { enviarEmailRastreio } from '@/lib/email/send'
 
 const STATUS_MAP: Record<string, string> = {
   new: 'CONFIRMADO',
@@ -160,12 +161,14 @@ export async function POST(req: Request) {
               (trackingCode ? ` (rastreio: ${trackingCode})` : '')
           )
 
-          // Dispara WhatsApp com rastreio quando pedido é enviado
+          // Dispara WhatsApp + e-mail com rastreio quando pedido é enviado
           if (novoStatus === 'ENVIADO' && trackingCode && pedido) {
             const orderFull = await prisma.order.findUnique({
               where: { id: pedido.id },
-              include: { user: { select: { nome: true, telefone: true } } },
+              include: { user: { select: { nome: true, telefone: true, email: true } } },
             })
+
+            // WhatsApp
             if (orderFull?.user?.telefone) {
               const wa = normalizarWhatsApp(orderFull.user.telefone)
               const lead = await prisma.crmLead.findFirst({ where: { whatsapp: wa } })
@@ -182,6 +185,20 @@ export async function POST(req: Request) {
                 },
               }).catch(() => {})
             }
+
+            // E-mail de rastreio
+            const emailDestinatario = orderFull?.user?.email ?? (orderFull?.enderecoEntrega as any)?.email
+            if (emailDestinatario) {
+              await enviarEmailRastreio({
+                para: emailDestinatario,
+                nomeCliente: orderFull?.user?.nome ?? 'Cliente',
+                numeroPedido: pedido.orderNumber,
+                rastreio: String(trackingCode),
+                transportadora: String(transportadora ?? 'Transportadora'),
+                prazo: orderFull?.fretePrazo ?? null,
+              }).catch((e) => console.error('[olist-webhook] Falha ao enviar e-mail rastreio:', e))
+            }
+
           }
         }
       }

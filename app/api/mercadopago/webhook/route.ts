@@ -7,6 +7,7 @@ import { verificarEstoqueTiny, restaurarEstoquePedido } from '@/lib/tiny/verific
 import { validarAssinaturaMP } from '@/lib/mercadopago'
 import { enfileirarMensagem } from '@/lib/evolution/queue'
 import { normalizarWhatsApp } from '@/lib/evolution/client'
+import { enviarEmailConfirmacao } from '@/lib/email/send'
 
 /**
  * Webhook do Mercado Pago.
@@ -140,7 +141,11 @@ export async function POST(req: Request) {
             },
           },
         },
-        include: { user: { select: { nome: true, telefone: true, email: true } } },
+        include: {
+          user: { select: { nome: true, telefone: true, email: true } },
+        },
+        // campos extras para e-mail
+        // (subtotal, frete, total, freteTransportadora, fretePrazo, enderecoEntrega já existem no model)
       })
 
       // Dispara WhatsApp de confirmação se o usuário tem telefone
@@ -157,7 +162,27 @@ export async function POST(req: Request) {
         }).catch(() => {})
       }
 
-      // 3) Notifica admin via WhatsApp
+      // 3) E-mail de confirmação para o cliente
+      const emailCliente = orderComUser.user?.email ?? (orderComUser.enderecoEntrega as any)?.email
+      if (emailCliente) {
+        await enviarEmailConfirmacao({
+          para: emailCliente,
+          nomeCliente: orderComUser.user?.nome ?? 'Cliente',
+          numeroPedido: order.orderNumber,
+          itens: order.items.map((i: { product: { nome: string } | null; quantidade: number; precoUnitario: unknown }) => ({
+            nome: i.product?.nome ?? 'Produto',
+            quantidade: i.quantidade,
+            precoUnitario: Number(i.precoUnitario),
+          })),
+          subtotal: Number(orderComUser.subtotal ?? 0),
+          frete: Number(orderComUser.frete ?? 0),
+          total: Number(orderComUser.total ?? 0),
+          freteTransportadora: orderComUser.freteTransportadora,
+          fretePrazo: orderComUser.fretePrazo,
+        }).catch((e) => console.error('[mp-webhook] Falha ao enviar e-mail confirmação:', e))
+      }
+
+      // 4) Notifica admin via WhatsApp
       const adminPhone = process.env.ADMIN_WHATSAPP ?? '5519974049445'
       const itensTexto = order.items
         .map((i: { productId: string; quantidade: number; product: { nome: string } | null }) =>
