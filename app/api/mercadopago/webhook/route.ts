@@ -71,7 +71,7 @@ export async function POST(req: Request) {
         where: { id: orderId },
         select: {
           id: true, status: true, olistOrderId: true, orderNumber: true, total: true,
-          items: { select: { productId: true, quantidade: true, product: { select: { nome: true } } } },
+          items: { select: { productId: true, quantidade: true, precoUnitario: true, product: { select: { nome: true } } } },
         },
       })
       if (!order) return NextResponse.json({ ok: true })
