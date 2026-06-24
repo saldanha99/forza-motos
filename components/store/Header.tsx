@@ -18,6 +18,7 @@ const CATS = [
   { id: 'correntes',   label: 'Correntes',   href: '/produtos?categoria=Transmissão' },
   { id: 'capacetes',   label: 'Capacetes',   href: '/produtos?categoria=Capacetes' },
   { id: 'acessorios',  label: 'Acessórios',  href: '/produtos?categoria=Acessórios' },
+  { id: 'eventos',     label: '🎯 Eventos',  href: '/calendario' },
 ]
 
 function CatIcon({ id, active }: { id: string; active: boolean }) {

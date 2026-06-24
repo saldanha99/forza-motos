@@ -83,10 +83,16 @@ async function getHomeData() {
       LIMIT 12
     ` as any[]
 
-    return { destaque, promos: promos as any[], maisVendidos: maisVendidos as any[], temVendasReais }
+    const proximosEventos = await prisma.evento.findMany({
+      where: { publicado: true, ativo: true, dataInicio: { gte: new Date() } },
+      orderBy: { dataInicio: 'asc' },
+      take: 3,
+    })
+
+    return { destaque, promos: promos as any[], maisVendidos: maisVendidos as any[], temVendasReais, proximosEventos }
   } catch (e) {
     console.error('[home] getHomeData error:', e)
-    return { destaque: [], promos: [], maisVendidos: [], temVendasReais: false }
+    return { destaque: [], promos: [], maisVendidos: [], temVendasReais: false, proximosEventos: [] }
   }
 }
 
@@ -175,7 +181,7 @@ const SERVICOS = [
 const LOCAL_BUSINESS_LD = getLocalBusinessSchema()
 
 export default async function HomePage() {
-  const { destaque, promos, maisVendidos, temVendasReais } = await getHomeData()
+  const { destaque, promos, maisVendidos, temVendasReais, proximosEventos } = await getHomeData()
 
   return (
     <>
@@ -546,6 +552,70 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── Próximos Eventos ─────────────────────────────────────────────── */}
+      {proximosEventos.length > 0 && (
+        <section className="py-14 bg-[#0d0d1a]">
+          <div className="max-w-[1280px] mx-auto px-6 md:px-12">
+            <div className="flex items-end justify-between mb-8">
+              <div>
+                <span className="text-[11px] font-barlow font-bold uppercase tracking-[2px] text-[#d42b2b] block mb-1.5">Agenda</span>
+                <h2 className="font-barlow font-black text-3xl md:text-4xl text-white" style={{ letterSpacing: '-0.5px' }}>
+                  Próximos Eventos
+                </h2>
+              </div>
+              <Link href="/calendario" className="hidden md:flex items-center gap-1.5 text-[#d42b2b] text-sm font-inter font-medium hover:gap-2.5 transition-all">
+                Ver calendário completo <ArrowRight size={14} />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {proximosEventos.map((ev) => {
+                const preco = Number(ev.preco)
+                const data = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).format(ev.dataInicio)
+                return (
+                  <Link
+                    key={ev.id}
+                    href={`/eventos/${ev.slug}`}
+                    className="group flex flex-col bg-white/5 border border-white/10 hover:border-[#d42b2b]/50 rounded-2xl overflow-hidden transition-all duration-200 hover:bg-white/8"
+                  >
+                    {ev.imagemUrl ? (
+                      <div className="h-40 overflow-hidden">
+                        <img src={ev.imagemUrl} alt={ev.titulo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      </div>
+                    ) : (
+                      <div className="h-40 bg-gradient-to-br from-[#d42b2b]/20 to-[#1a1a2e] flex items-center justify-center">
+                        <span className="text-4xl">🏍️</span>
+                      </div>
+                    )}
+                    <div className="p-5 flex flex-col flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-[#d42b2b] uppercase tracking-wider">{ev.categoria}</span>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${preco === 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-[#d42b2b]/20 text-[#d42b2b]'}`}>
+                          {preco === 0 ? 'Gratuito' : `R$ ${preco.toFixed(2)}`}
+                        </span>
+                      </div>
+                      <h3 className="font-barlow font-bold text-white text-base leading-tight mb-3 group-hover:text-[#d42b2b] transition-colors line-clamp-2">
+                        {ev.titulo}
+                      </h3>
+                      <div className="mt-auto flex items-center justify-between text-xs text-white/40 font-inter">
+                        <span>📅 {data}</span>
+                        <span className="truncate ml-2">📍 {ev.local}</span>
+                      </div>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+
+            <div className="text-center mt-8 md:hidden">
+              <Link href="/calendario" className="text-[#d42b2b] text-sm font-semibold hover:underline">
+                Ver calendário completo →
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── Reviews / Depoimentos ────────────────────────────────────────── */}
       <ReviewsSection />
