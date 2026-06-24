@@ -1,15 +1,33 @@
 /**
  * Cliente Evolution API — WhatsApp automático
  *
- * Variáveis de ambiente necessárias:
- *   EVOLUTION_API_URL     → URL base da instância (ex: https://api.minhawapi.com)
- *   EVOLUTION_API_KEY     → API Key da Evolution
- *   EVOLUTION_INSTANCE    → Nome da instância (ex: forza-motos)
+ * Variáveis de ambiente (fallback quando não há setting no banco):
+ *   EVOLUTION_API_URL     → URL base da instância
+ *   EVOLUTION_API_KEY     → API Key global
+ *   EVOLUTION_INSTANCE    → Nome da instância (sobrescrito pelo setting evolution_instance)
  */
 
-const BASE_URL = process.env.EVOLUTION_API_URL ?? ''
-const API_KEY  = process.env.EVOLUTION_API_KEY ?? ''
-const INSTANCE = process.env.EVOLUTION_INSTANCE ?? 'forza-motos'
+import { prisma } from '@/lib/prisma'
+
+const BASE_URL = () => process.env.EVOLUTION_API_URL ?? ''
+const API_KEY  = () => process.env.EVOLUTION_API_KEY ?? ''
+
+// Cache simples: evita query ao banco em cada mensagem enviada
+let _instanceCache: { value: string; expiresAt: number } | null = null
+
+async function getEvolutionInstance(): Promise<string> {
+  const now = Date.now()
+  if (_instanceCache && now < _instanceCache.expiresAt) return _instanceCache.value
+
+  try {
+    const setting = await prisma.setting.findUnique({ where: { key: 'evolution_instance' } })
+    const value = setting?.value || process.env.EVOLUTION_INSTANCE || 'forza-motos'
+    _instanceCache = { value, expiresAt: now + 5 * 60 * 1000 } // TTL 5 min
+    return value
+  } catch {
+    return process.env.EVOLUTION_INSTANCE || 'forza-motos'
+  }
+}
 
 /** Normaliza número para formato WhatsApp: 5519999999999 */
 export function normalizarWhatsApp(tel: string): string {
@@ -37,19 +55,20 @@ interface EvolutionResponse {
 
 /** Envia mensagem de texto via Evolution API */
 export async function enviarMensagem(params: SendTextParams): Promise<{ ok: boolean; id?: string; erro?: string }> {
-  if (!BASE_URL || !API_KEY) {
+  if (!BASE_URL() || !API_KEY()) {
     console.warn('[Evolution] EVOLUTION_API_URL ou EVOLUTION_API_KEY não configurados')
     return { ok: false, erro: 'Evolution API não configurada' }
   }
 
   const numero = normalizarWhatsApp(params.whatsapp)
+  const instance = await getEvolutionInstance()
 
   try {
-    const res = await fetch(`${BASE_URL}/message/sendText/${INSTANCE}`, {
+    const res = await fetch(`${BASE_URL()}/message/sendText/${instance}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        apikey: API_KEY,
+        apikey: API_KEY(),
       },
       body: JSON.stringify({
         number: numero,
@@ -72,11 +91,12 @@ export async function enviarMensagem(params: SendTextParams): Promise<{ ok: bool
 
 /** Verifica se a instância está conectada */
 export async function verificarConexao(): Promise<{ conectado: boolean; estado?: string }> {
-  if (!BASE_URL || !API_KEY) return { conectado: false, estado: 'não configurado' }
+  if (!BASE_URL() || !API_KEY()) return { conectado: false, estado: 'não configurado' }
 
+  const instance = await getEvolutionInstance()
   try {
-    const res = await fetch(`${BASE_URL}/instance/connectionState/${INSTANCE}`, {
-      headers: { apikey: API_KEY },
+    const res = await fetch(`${BASE_URL()}/instance/connectionState/${instance}`, {
+      headers: { apikey: API_KEY() },
     })
     const data = await res.json()
     const estado = data?.instance?.state ?? data?.state ?? 'unknown'
@@ -88,12 +108,13 @@ export async function verificarConexao(): Promise<{ conectado: boolean; estado?:
 
 /** Configura webhook da Evolution para receber atualizações de mensagens */
 export async function configurarWebhook(url: string): Promise<boolean> {
-  if (!BASE_URL || !API_KEY) return false
+  if (!BASE_URL() || !API_KEY()) return false
 
+  const instance = await getEvolutionInstance()
   try {
-    const res = await fetch(`${BASE_URL}/webhook/set/${INSTANCE}`, {
+    const res = await fetch(`${BASE_URL()}/webhook/set/${instance}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: API_KEY },
+      headers: { 'Content-Type': 'application/json', apikey: API_KEY() },
       body: JSON.stringify({
         url,
         webhook_by_events: true,
