@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Save, Globe, Search, RefreshCw, Key } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { WhatsAppQRCard } from '@/components/admin/WhatsAppQRCard'
 
 // Configurações editáveis do painel admin.
 // Os valores são salvos no banco (model Setting) e lidos dinamicamente pelo layout.
@@ -110,6 +111,14 @@ export default function ConfiguracoesPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* WhatsApp / Evolution API */}
+      <div className="mt-8">
+        <h2 className="text-brand-text font-semibold text-sm mb-3 flex items-center gap-2">
+          <span className="text-green-400">●</span> WhatsApp
+        </h2>
+        <WhatsAppQRCard />
       </div>
 
       {/* Instrução Google Search Console */}
