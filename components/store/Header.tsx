@@ -18,7 +18,7 @@ const CATS = [
   { id: 'correntes',   label: 'Correntes',   href: '/produtos?categoria=Transmissão' },
   { id: 'capacetes',   label: 'Capacetes',   href: '/produtos?categoria=Capacetes' },
   { id: 'acessorios',  label: 'Acessórios',  href: '/produtos?categoria=Acessórios' },
-  { id: 'eventos',     label: '🎯 Eventos',  href: '/calendario' },
+  { id: 'eventos',     label: 'Eventos',     href: '/calendario' },
 ]
 
 function CatIcon({ id, active }: { id: string; active: boolean }) {
@@ -85,6 +85,18 @@ function CatIcon({ id, active }: { id: string; active: boolean }) {
       <path d="M3.5 18h21" stroke={c} strokeWidth="2"/>
       <path d="M6.5 18c0 2.5 2 4.5 7.5 4.5s7.5-2 7.5-4.5" stroke={c} strokeWidth="1.8" fill="none"/>
       <rect x="6" y="12.5" width="16" height="5.5" rx="1.5" fill={c} opacity="0.35"/>
+    </svg>
+  )
+
+  if (id === 'eventos') return (
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ opacity: op }}>
+      <rect x="3" y="6" width="22" height="19" rx="2.5" stroke={c} strokeWidth="2"/>
+      <line x1="3" y1="12" x2="25" y2="12" stroke={c} strokeWidth="2"/>
+      <line x1="9" y1="3" x2="9" y2="9" stroke={c} strokeWidth="2" strokeLinecap="round"/>
+      <line x1="19" y1="3" x2="19" y2="9" stroke={c} strokeWidth="2" strokeLinecap="round"/>
+      <circle cx="9" cy="18" r="1.5" fill={c}/>
+      <circle cx="14" cy="18" r="1.5" fill={c}/>
+      <circle cx="19" cy="18" r="1.5" fill={c}/>
     </svg>
   )
 
