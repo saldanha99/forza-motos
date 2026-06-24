@@ -1,5 +1,5 @@
 import { getResend, EMAIL_FROM } from './client'
-import { htmlPedidoConfirmado, htmlPedidoEnviado } from './templates'
+import { htmlPedidoConfirmado, htmlPedidoEnviado, htmlIngressoConfirmado } from './templates'
 
 export async function enviarEmailConfirmacao(opts: {
   para: string
@@ -55,5 +55,33 @@ export async function enviarEmailRastreio(opts: {
     console.error('[email] Falha ao enviar rastreio:', error)
   } else {
     console.log(`[email] Rastreio enviado para ${opts.para} (pedido ${opts.numeroPedido})`)
+  }
+}
+
+export async function enviarEmailIngresso(opts: {
+  para: string
+  nomeCliente: string
+  tituloEvento: string
+  dataEvento: string
+  localEvento: string
+  quantidade: number
+  total: number
+}) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('[email] RESEND_API_KEY não configurada — e-mail não enviado')
+    return
+  }
+
+  const { error } = await getResend().emails.send({
+    from: EMAIL_FROM(),
+    to: opts.para,
+    subject: `🎟️ Ingresso confirmado — ${opts.tituloEvento}`,
+    html: htmlIngressoConfirmado(opts),
+  })
+
+  if (error) {
+    console.error('[email] Falha ao enviar ingresso:', error)
+  } else {
+    console.log(`[email] Ingresso enviado para ${opts.para} (${opts.tituloEvento})`)
   }
 }

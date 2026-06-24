@@ -15,6 +15,7 @@ import {
   msgCarrinhoAbandonado,
   msgPosVenda,
   msgReativacao,
+  msgIngressoConfirmado,
 } from './templates'
 
 type MensagemTipo =
@@ -25,6 +26,7 @@ type MensagemTipo =
   | 'CARRINHO_ABANDONADO'
   | 'POS_VENDA'
   | 'REATIVACAO'
+  | 'INGRESSO_CONFIRMADO'
   | 'MANUAL'
 
 interface EnfileirarParams {
@@ -65,6 +67,13 @@ function gerarConteudo(tipo: MensagemTipo, nome: string, payload: Record<string,
       return msgPosVenda(nome)
     case 'REATIVACAO':
       return msgReativacao(nome)
+    case 'INGRESSO_CONFIRMADO':
+      return msgIngressoConfirmado(
+        nome,
+        String(payload.tituloEvento ?? ''),
+        Number(payload.quantidade ?? 1),
+        String(payload.total ?? ''),
+      )
     case 'MANUAL':
       return String(payload.conteudo ?? '')
     default:

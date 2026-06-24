@@ -85,3 +85,15 @@ A *Forza Motos* tem novidades e promoções esperando por você!
 
 Precisando de qualquer coisa — pode chamar! 🔧`
 }
+
+export function msgIngressoConfirmado(nome: string, tituloEvento: string, quantidade: number, total: string): string {
+  return `🎉 *${nome}*, seu ingresso está confirmado!
+
+🏁 *${tituloEvento}*
+
+🎟️ ${quantidade} ingresso${quantidade > 1 ? 's' : ''} — *${total}*
+
+Em breve enviaremos mais detalhes sobre o evento por aqui.
+
+Qualquer dúvida é só chamar — *Forza Motos* 🏍️`
+}

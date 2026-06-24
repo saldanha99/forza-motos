@@ -138,6 +138,104 @@ export function htmlPedidoConfirmado(opts: {
 </html>`
 }
 
+// ─── E-mail de confirmação de ingresso ───────────────────────────────────────
+
+export function htmlIngressoConfirmado(opts: {
+  nomeCliente: string
+  tituloEvento: string
+  dataEvento: string
+  localEvento: string
+  quantidade: number
+  total: number
+}) {
+  const { nomeCliente, tituloEvento, dataEvento, localEvento, quantidade, total } = opts
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:32px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;max-width:600px;width:100%;">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:#e63946;padding:24px 32px;text-align:center;">
+            <h1 style="color:#fff;margin:0;font-size:24px;font-weight:700;letter-spacing:-0.5px;">FORZA MOTOS</h1>
+            <p style="color:rgba(255,255,255,0.85);margin:4px 0 0;font-size:13px;">Eventos & Experiências</p>
+          </td>
+        </tr>
+
+        <!-- Hero -->
+        <tr>
+          <td style="padding:32px 32px 16px;text-align:center;">
+            <div style="font-size:48px;margin-bottom:12px;">🎟️</div>
+            <h2 style="color:#1a1a1a;margin:0 0 8px;font-size:22px;font-weight:700;">Ingresso Confirmado!</h2>
+            <p style="color:#555;margin:0;font-size:15px;">Olá, <strong>${nomeCliente}</strong>! Seu ingresso foi confirmado com sucesso.</p>
+          </td>
+        </tr>
+
+        <!-- Detalhes do evento -->
+        <tr>
+          <td style="padding:16px 32px 24px;">
+            <div style="background:#fff8f0;border:1px solid #ffe0b2;border-left:4px solid #e63946;border-radius:6px;padding:20px;">
+              <h3 style="margin:0 0 16px;color:#e63946;font-size:16px;font-weight:700;">🏁 ${tituloEvento}</h3>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="color:#777;font-size:13px;padding:4px 0;width:40%;">📅 Data</td>
+                  <td style="color:#1a1a1a;font-size:13px;font-weight:600;padding:4px 0;">${dataEvento}</td>
+                </tr>
+                <tr>
+                  <td style="color:#777;font-size:13px;padding:4px 0;">📍 Local</td>
+                  <td style="color:#1a1a1a;font-size:13px;font-weight:600;padding:4px 0;">${localEvento}</td>
+                </tr>
+                <tr>
+                  <td style="color:#777;font-size:13px;padding:4px 0;">🎟️ Ingressos</td>
+                  <td style="color:#1a1a1a;font-size:13px;font-weight:600;padding:4px 0;">${quantidade} ingresso${quantidade > 1 ? 's' : ''}</td>
+                </tr>
+                <tr>
+                  <td style="color:#777;font-size:13px;padding:4px 0;border-top:1px solid #ffe0b2;padding-top:12px;margin-top:8px;">💰 Total pago</td>
+                  <td style="color:#e63946;font-size:16px;font-weight:700;padding:4px 0;border-top:1px solid #ffe0b2;">${formatPrice(total)}</td>
+                </tr>
+              </table>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Informações -->
+        <tr>
+          <td style="padding:0 32px 24px;">
+            <div style="background:#f8f9fa;border-radius:6px;padding:20px;">
+              <h3 style="margin:0 0 12px;color:#1a1a1a;font-size:14px;font-weight:700;">ℹ️ Informações importantes</h3>
+              <p style="margin:0 0 8px;color:#555;font-size:13px;">• Guarde este e-mail como comprovante de inscrição</p>
+              <p style="margin:0 0 8px;color:#555;font-size:13px;">• Apresente o e-mail ou CPF na entrada do evento</p>
+              <p style="margin:0;color:#555;font-size:13px;">• Em breve entraremos em contato com mais detalhes</p>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Contato -->
+        <tr>
+          <td style="padding:0 32px 32px;text-align:center;">
+            <p style="color:#777;font-size:13px;margin:0 0 8px;">Dúvidas sobre o evento?</p>
+            <a href="https://wa.me/5519974049445" style="display:inline-block;background:#25D366;color:#fff;text-decoration:none;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;">💬 Falar no WhatsApp</a>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f5f5f5;padding:20px 32px;text-align:center;border-top:1px solid #e0e0e0;">
+            <p style="margin:0;color:#999;font-size:12px;">Forza Motos — Campinas/SP | (19) 3254-0547 | forzamotos.com.br</p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
+}
+
 // ─── E-mail de rastreio / pedido enviado ───────────────────────────────────
 
 export function htmlPedidoEnviado(opts: {

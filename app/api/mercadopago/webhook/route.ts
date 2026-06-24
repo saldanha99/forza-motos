@@ -7,7 +7,7 @@ import { verificarEstoqueTiny, restaurarEstoquePedido } from '@/lib/tiny/verific
 import { validarAssinaturaMP } from '@/lib/mercadopago'
 import { enfileirarMensagem } from '@/lib/evolution/queue'
 import { normalizarWhatsApp } from '@/lib/evolution/client'
-import { enviarEmailConfirmacao } from '@/lib/email/send'
+import { enviarEmailConfirmacao, enviarEmailIngresso } from '@/lib/email/send'
 
 /**
  * Webhook do Mercado Pago.
@@ -62,8 +62,88 @@ export async function POST(req: Request) {
     })
     const payment = await res.json()
 
-    const orderId = payment.external_reference
-    if (!orderId) return NextResponse.json({ ok: true })
+    const externalRef = payment.external_reference as string | undefined
+    if (!externalRef) return NextResponse.json({ ok: true })
+
+    // ── PAGAMENTO DE INGRESSO (external_reference = "evento_<inscricaoId>") ──
+    if (externalRef.startsWith('evento_')) {
+      const inscricaoId = externalRef.replace('evento_', '')
+
+      if (payment.status === 'approved') {
+        const inscricao = await prisma.eventoInscricao.findUnique({
+          where: { id: inscricaoId },
+          include: { evento: true },
+        })
+        if (!inscricao || inscricao.status === 'PAGO') {
+          return NextResponse.json({ ok: true })
+        }
+
+        await prisma.eventoInscricao.update({
+          where: { id: inscricaoId },
+          data: { status: 'PAGO', mpPagamentoId: String(paymentId) },
+        })
+
+        const totalFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+          Number(inscricao.total),
+        )
+        const dataEvento = inscricao.evento.dataInicio
+          ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeStyle: 'short' }).format(
+              new Date(inscricao.evento.dataInicio),
+            )
+          : 'A confirmar'
+        const localEvento = inscricao.evento.local ?? 'Campinas/SP'
+
+        // E-mail de confirmação do ingresso
+        await enviarEmailIngresso({
+          para: inscricao.email,
+          nomeCliente: inscricao.nome,
+          tituloEvento: inscricao.evento.titulo,
+          dataEvento,
+          localEvento,
+          quantidade: inscricao.quantidade,
+          total: Number(inscricao.total),
+        }).catch((e) => console.error('[mp-webhook] Falha ao enviar e-mail ingresso:', e))
+
+        // WhatsApp para o lead
+        const tel = inscricao.telefone
+        if (tel) {
+          const wa = normalizarWhatsApp(tel)
+          await enfileirarMensagem({
+            whatsapp: wa,
+            nome: inscricao.nome,
+            tipo: 'INGRESSO_CONFIRMADO',
+            payload: {
+              tituloEvento: inscricao.evento.titulo,
+              quantidade: inscricao.quantidade,
+              total: totalFmt,
+            },
+          }).catch(() => {})
+        }
+
+        // Notifica admin
+        const adminPhone = process.env.ADMIN_WHATSAPP ?? '5519974049445'
+        await enfileirarMensagem({
+          whatsapp: adminPhone,
+          nome: 'Admin',
+          tipo: 'MANUAL',
+          payload: {
+            conteudo:
+              `🎟️ *NOVO INGRESSO PAGO — Forza Motos*\n\n` +
+              `🏁 Evento: ${inscricao.evento.titulo}\n` +
+              `👤 Nome: ${inscricao.nome}\n` +
+              `📧 E-mail: ${inscricao.email}\n` +
+              `📱 Tel: ${inscricao.telefone}\n` +
+              `🎟️ Ingressos: ${inscricao.quantidade}\n` +
+              `💰 Total: ${totalFmt}`,
+          },
+        }).catch(() => {})
+      }
+
+      return NextResponse.json({ ok: true, tipo: 'evento', status: payment.status })
+    }
+
+    // ── PAGAMENTO DE PEDIDO (ecommerce) ───────────────────────────────────
+    const orderId = externalRef
 
     // ── PAGAMENTO APROVADO ─────────────────────────────────────────────────
     if (payment.status === 'approved') {

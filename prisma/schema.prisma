@@ -339,6 +339,7 @@ enum MensagemTipo {
   CARRINHO_ABANDONADO // Carrinho abandonado (2h)
   POS_VENDA           // Pós-venda D+7
   REATIVACAO          // Cliente inativo 60 dias
+  INGRESSO_CONFIRMADO // Ingresso de evento confirmado
   MANUAL              // Enviada manualmente pelo admin
 }
 
