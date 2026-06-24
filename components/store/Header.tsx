@@ -137,7 +137,7 @@ export function Header() {
         <span>Envio em 24h</span>
         <span className="opacity-20 mx-2 hidden sm:inline">|</span>
         <span className="hidden sm:inline">
-          Frete Grátis acima de <strong className="text-white ml-1">R$299</strong>
+          Frete Grátis acima de <strong className="text-white ml-1">R$499</strong> <span className="opacity-60">(SP)</span>
         </span>
       </div>
 

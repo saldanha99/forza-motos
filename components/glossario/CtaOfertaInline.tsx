@@ -21,7 +21,7 @@ export function CtaOfertaInline() {
               <Gift size={13} /> Oferta Forza Motos
             </span>
             <p className="font-barlow font-black text-2xl leading-tight mt-1.5">
-              Frete grátis acima de R$299
+              Frete grátis acima de R$499 (SP)
             </p>
             <p className="text-sm opacity-90 mt-1 flex items-center gap-1.5">
               <ShieldCheck size={14} />
