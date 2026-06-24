@@ -1,4 +1,4 @@
-import { resend, EMAIL_FROM } from './client'
+import { getResend, EMAIL_FROM } from './client'
 import { htmlPedidoConfirmado, htmlPedidoEnviado } from './templates'
 
 export async function enviarEmailConfirmacao(opts: {
@@ -17,8 +17,8 @@ export async function enviarEmailConfirmacao(opts: {
     return
   }
 
-  const { error } = await resend.emails.send({
-    from: EMAIL_FROM,
+  const { error } = await getResend().emails.send({
+    from: EMAIL_FROM(),
     to: opts.para,
     subject: `✅ Pedido ${opts.numeroPedido} confirmado — Forza Motos`,
     html: htmlPedidoConfirmado(opts),
@@ -44,8 +44,8 @@ export async function enviarEmailRastreio(opts: {
     return
   }
 
-  const { error } = await resend.emails.send({
-    from: EMAIL_FROM,
+  const { error } = await getResend().emails.send({
+    from: EMAIL_FROM(),
     to: opts.para,
     subject: `🚚 Seu pedido ${opts.numeroPedido} foi enviado — Forza Motos`,
     html: htmlPedidoEnviado(opts),
