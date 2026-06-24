@@ -60,7 +60,7 @@ export default async function PneusModeloPage({
     where: {
       ativo: true,
       estoque: { gt: 0 },
-      
+      preco: { gt: 0, not: 999 },
       OR: [
         { categoria: { contains: 'pneu', mode: 'insensitive' } },
         { nome: { contains: 'pneu', mode: 'insensitive' } },

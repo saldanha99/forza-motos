@@ -122,6 +122,7 @@ export async function produtosRelacionadosAoTermo(
     ativo: true,
     temImagem: true,
     estoque: { gt: 0 },
+    preco: { gt: 0, not: 999 },
   } as const
 
   const select = {

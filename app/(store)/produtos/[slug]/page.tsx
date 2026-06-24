@@ -54,7 +54,7 @@ export default async function ProdutoPage({ params }: Props) {
       categoria: produto.categoria,
       ativo: true,
       estoque: { gt: 0 },
-      
+      preco: { gt: 0, not: 999 },
       id: { not: produto.id },
     },
     take: 4,

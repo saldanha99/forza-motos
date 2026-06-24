@@ -135,7 +135,7 @@ export function Footer() {
       {/* Bottom bar */}
       <div className="max-w-[1280px] mx-auto px-6 md:px-12 py-[18px] flex flex-col sm:flex-row items-center justify-between gap-3 flex-wrap">
         <span className="text-[12px] text-[#555] font-inter">
-          © {new Date().getFullYear()} Forza Motos – Todos os direitos reservados · CNPJ 00.000.000/0001-00
+          © {new Date().getFullYear()} Forza Motos – Todos os direitos reservados · CNPJ 00.857.031/0001-63
         </span>
         <div className="flex gap-3 items-center flex-wrap justify-center">
           {['Visa', 'Master', 'Pix', 'Boleto'].map((pay) => (

@@ -46,7 +46,7 @@ async function getHomeData() {
       temVendasReais = true
       const ids = topSold.map(t => t.productId)
       const prods = await prisma.product.findMany({
-        where: { id: { in: ids }, ativo: true, estoque: { gt: 0 } },
+        where: { id: { in: ids }, ativo: true, estoque: { gt: 0 }, preco: { gt: 0, not: 999 } },
       })
       // Preserva ordem do ranking de vendas
       const map = new Map(prods.map(p => [p.id, p]))
@@ -56,7 +56,7 @@ async function getHomeData() {
       maisVendidos = await prisma.$queryRaw`
         SELECT id, nome, slug, preco, "precoPromocional", imagens, estoque, marca, categoria, ativo
         FROM "Product"
-        WHERE ativo = true AND estoque > 0
+        WHERE ativo = true AND estoque > 0 AND preco != 999
         ORDER BY
           CASE WHEN "precoPromocional" IS NOT NULL THEN 0 ELSE 1 END,
           estoque DESC,
@@ -69,7 +69,7 @@ async function getHomeData() {
     const promos = await prisma.$queryRaw`
       SELECT id, nome, slug, preco, "precoPromocional", imagens, estoque, marca, categoria, ativo
       FROM "Product"
-      WHERE ativo = true AND estoque > 0 AND "precoPromocional" IS NOT NULL
+      WHERE ativo = true AND estoque > 0 AND preco != 999 AND "precoPromocional" IS NOT NULL
       ORDER BY (1 - "precoPromocional"::float / preco::float) DESC
       LIMIT 4
     ` as any[]
@@ -78,7 +78,7 @@ async function getHomeData() {
     const destaque = await prisma.$queryRaw`
       SELECT id, nome, slug, preco, "precoPromocional", imagens, estoque, marca, categoria, ativo
       FROM "Product"
-      WHERE ativo = true AND estoque > 0
+      WHERE ativo = true AND estoque > 0 AND preco != 999
       ORDER BY "updatedAt" DESC
       LIMIT 12
     ` as any[]
