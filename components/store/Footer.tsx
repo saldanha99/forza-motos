@@ -7,6 +7,7 @@ const COLS = [
     links: [
       { label: 'Sobre a Forza Motos', href: '#' },
       { label: 'Blog e Novidades', href: '/blog' },
+      { label: 'Eventos e Calendário', href: '/calendario' },
       { label: 'Trabalhe Conosco', href: '#' },
       { label: 'Política de Privacidade', href: '#' },
       { label: 'Termos de Uso', href: '#' },

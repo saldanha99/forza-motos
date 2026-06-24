@@ -559,3 +559,33 @@ model Setting {
   value     String   @db.Text
   updatedAt DateTime @updatedAt
 }
+
+// ============================================================
+// MÓDULO CALENDÁRIO DE EVENTOS
+// ============================================================
+
+model Evento {
+  id          String   @id @default(cuid())
+  titulo      String
+  slug        String   @unique
+  descricao   String   @db.Text
+  conteudo    String   @db.Text
+  dataInicio  DateTime
+  dataFim     DateTime?
+  local       String
+  endereco    String?
+  imagemUrl   String?
+  /// 0 = gratuito
+  preco       Decimal  @default(0) @db.Decimal(10, 2)
+  categoria   String   @default("Evento")
+  vagas       Int?
+  linkExterno String?
+  ativo       Boolean  @default(true)
+  publicado   Boolean  @default(false)
+  destaque    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([publicado, dataInicio])
+  @@index([categoria, publicado])
+}

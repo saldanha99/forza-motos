@@ -7,7 +7,7 @@ import { signOut } from 'next-auth/react'
 import {
   LayoutDashboard, ShoppingBag, Package, Users, Calendar,
   FileText, LogOut, ImagePlus, RefreshCw, ExternalLink,
-  BookOpen, Search, MessageCircle,
+  BookOpen, Search, MessageCircle, Ticket,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -20,13 +20,14 @@ const NAV_ITEMS = [
   { href: '/admin/crm',           label: 'CRM WhatsApp',  icon: MessageCircle },
   { href: '/admin/clientes',      label: 'CRM Clientes',  icon: Users },
   { href: '/admin/agendamentos',  label: 'Agendamentos',  icon: Calendar },
+  { href: '/admin/eventos',       label: 'Eventos',       icon: Ticket },
   { href: '/admin/blog',          label: 'Blog / CMS',    icon: FileText },
   { href: '/admin/glossario',     label: 'Glossário',     icon: BookOpen },
   { href: '/admin/seo',           label: 'SEO',           icon: Search },
 ]
 
 // 5 items for mobile bottom bar — Dashboard / Pedidos / Produtos / Glossário / SEO
-const BOTTOM_NAV = [NAV_ITEMS[0], NAV_ITEMS[1], NAV_ITEMS[2], NAV_ITEMS[8], NAV_ITEMS[9]]
+const BOTTOM_NAV = [NAV_ITEMS[0], NAV_ITEMS[1], NAV_ITEMS[2], NAV_ITEMS[9], NAV_ITEMS[10]]
 
 export function AdminSidebar({ user }: { user: any }) {
   const pathname = usePathname()

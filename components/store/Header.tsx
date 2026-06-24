@@ -243,6 +243,10 @@ export function Header() {
             ))}
           </div>
           <div className="border-t border-[#222] px-4 py-2 flex flex-col gap-1">
+            <Link href="/calendario" onClick={() => setMobileOpen(false)}
+              className="py-2.5 px-3 text-sm text-[#d42b2b] hover:text-white font-inter font-semibold">
+              Eventos / Calendário
+            </Link>
             <Link href="/agendar" onClick={() => setMobileOpen(false)}
               className="py-2.5 px-3 text-sm text-[#aaa] hover:text-white font-inter">
               Agendar Serviço
