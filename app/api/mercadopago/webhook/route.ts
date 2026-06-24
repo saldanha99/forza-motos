@@ -6,7 +6,10 @@ import { SEO_CONFIG } from '@/lib/seo/config'
 import { verificarEstoqueTiny, restaurarEstoquePedido } from '@/lib/tiny/verificar-estoque'
 import { validarAssinaturaMP } from '@/lib/mercadopago'
 import { enfileirarMensagem } from '@/lib/evolution/queue'
-import { normalizarWhatsApp } from '@/lib/evolution/client'
+import { enviarMensagem, normalizarWhatsApp } from '@/lib/evolution/client'
+
+// Número do WhatsApp da loja para notificação interna de novos pedidos
+const ADMIN_WA = process.env.ADMIN_WHATSAPP ?? '5519974049445'
 
 /**
  * Webhook do Mercado Pago.
@@ -90,8 +93,13 @@ export async function POST(req: Request) {
       const order = await prisma.order.findUnique({
         where: { id: orderId },
         select: {
-          id: true, status: true, olistOrderId: true, orderNumber: true,
-          items: { select: { productId: true, quantidade: true } },
+          id: true, status: true, olistOrderId: true, orderNumber: true, total: true,
+          items: {
+            select: {
+              productId: true, quantidade: true,
+              product: { select: { nome: true } },
+            },
+          },
         },
       })
       if (!order) return NextResponse.json({ ok: true })
@@ -163,6 +171,26 @@ export async function POST(req: Request) {
         },
         include: { user: { select: { nome: true, telefone: true, email: true } } },
       })
+
+      // ── Notificação interna da loja ──────────────────────────
+      // Envia direto (sem fila) para garantir entrega imediata
+      const nomeCliente = orderComUser.user?.nome ?? 'Cliente não logado'
+      const totalFmt = `R$ ${Number(order.total).toFixed(2).replace('.', ',')}`
+      const itensFmt = order.items
+        .map((i) => `  • ${i.product?.nome ?? i.productId} (${i.quantidade}x)`)
+        .join('\n')
+      const msgAdmin =
+        `🛒 *NOVO PEDIDO PAGO — Forza Motos*\n\n` +
+        `📦 Pedido: *${order.orderNumber}*\n` +
+        `👤 Cliente: ${nomeCliente}\n` +
+        `💳 Forma: ${payment.payment_method_id}\n` +
+        `💰 Total: *${totalFmt}*\n\n` +
+        `*Itens:*\n${itensFmt}\n\n` +
+        `✅ Já foi replicado no Olist.\n` +
+        `👉 Separar, embalar e despachar!`
+      enviarMensagem({ whatsapp: ADMIN_WA, mensagem: msgAdmin }).catch((e) =>
+        console.error('[mp-webhook] Falha ao notificar admin:', e)
+      )
 
       // Dispara WhatsApp de confirmação se o usuário tem telefone
       if (orderComUser.user?.telefone) {
