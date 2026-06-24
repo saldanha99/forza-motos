@@ -12,4 +12,4 @@ export function getResend(): Resend {
 }
 
 export const EMAIL_FROM = () =>
-  process.env.EMAIL_FROM ?? 'Forza Motos <contato@forzamotos.com.br>'
+  process.env.EMAIL_FROM ?? 'Forza Motos <caio@forzamotos.com.br>'
