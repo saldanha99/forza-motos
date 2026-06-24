@@ -50,11 +50,12 @@ export interface CotacaoResultado {
   error?: string
 }
 
-const ME_BASE_URL =
-  process.env.MELHOR_ENVIO_URL || 'https://melhorenvio.com.br/api/v2'
+// Lidas dentro das funções para garantir runtime env (evita inlining build-time)
+const getMeBaseUrl = () =>
+  process.env.MELHOR_ENVIO_URL || 'https://www.melhorenvio.com.br/api/v2'
 
-const ME_USER_AGENT =
-  process.env.MELHOR_ENVIO_USER_AGENT || 'Forza Motos contato@forzamotos.com.br'
+const getMeUserAgent = () =>
+  process.env.MELHOR_ENVIO_USER_AGENT || 'Forza Motos caio@forzamotos.com.br'
 
 function limparCEP(cep: string): string {
   return cep.replace(/\D/g, '')
@@ -91,13 +92,13 @@ export async function cotarMelhorEnvio(input: CotacaoInput): Promise<CotacaoResu
     ...(input.servicos && { services: input.servicos.join(',') }),
   }
 
-  const res = await fetch(`${ME_BASE_URL}/me/shipment/calculate`, {
+  const res = await fetch(`${getMeBaseUrl()}/me/shipment/calculate`, {
     method: 'POST',
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
-      'User-Agent': ME_USER_AGENT,
+      'User-Agent': getMeUserAgent(),
     },
     body: JSON.stringify(body),
   })
@@ -193,13 +194,13 @@ export async function adicionarAoCarrinhoME(input: {
     },
   }
 
-  const res = await fetch(`${ME_BASE_URL}/me/cart`, {
+  const res = await fetch(`${getMeBaseUrl()}/me/cart`, {
     method: 'POST',
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
-      'User-Agent': ME_USER_AGENT,
+      'User-Agent': getMeUserAgent(),
     },
     body: JSON.stringify(body),
   })
