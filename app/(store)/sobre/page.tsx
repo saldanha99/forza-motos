@@ -118,7 +118,7 @@ export default function SobrePage() {
               Hoje somos credenciados pelas principais marcas do mercado — <strong>Pirelli, Metzeler, Michelin, Bridgestone</strong> — e oferecemos um catálogo com mais de 2.800 produtos, atendendo desde a moto do entregador até a esportiva de alta cilindrada.
             </p>
             <p>
-              Nosso diferencial: <strong>box rápido sem agendamento</strong>. Troca de pneu em 30 minutos, óleo em 20 minutos. Atendimento técnico de verdade, sem firula. Você chega, escolhe, instala e sai rodando.
+              Nosso diferencial: <strong>box rápido com agendamento online</strong>. Troca de pneu em 30 minutos, óleo em 20 minutos. Atendimento técnico de verdade, sem firula. Você chega, escolhe, instala e sai rodando.
             </p>
           </div>
         </div>
@@ -206,7 +206,7 @@ export default function SobrePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
               { titulo: 'Credenciada oficial', desc: 'Distribuidor autorizado Pirelli, Metzeler e Michelin.' },
-              { titulo: 'Box rápido', desc: 'Troca de pneu em 30 min sem agendamento.' },
+              { titulo: 'Box rápido', desc: 'Troca de pneu em 30 min com agendamento online.' },
               { titulo: 'Mecânicos especializados', desc: 'Equipe treinada em motos de todas as marcas.' },
               { titulo: 'Garantia em tudo', desc: '60 dias na mão de obra. Garantia oficial nas peças.' },
             ].map((d, i) => (

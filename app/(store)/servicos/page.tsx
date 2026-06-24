@@ -25,7 +25,7 @@ import {
 export const metadata: Metadata = {
   title: 'Oficina de Motos em Campinas — Troca de Pneu, Óleo e Revisão',
   description:
-    'Oficina especializada em motos em Campinas/SP. Troca de pneu (instalação inclusa), óleo, pastilhas, revisão e manutenção. Box rápido sem agendamento. (19) 97404-9445.',
+    'Oficina especializada em motos em Campinas/SP. Troca de pneu (instalação inclusa), óleo, pastilhas, revisão e manutenção. Box rápido com agendamento online. (19) 97404-9445.',
   keywords: [
     'oficina motos Campinas',
     'mecânica de motos',

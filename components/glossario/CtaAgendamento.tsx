@@ -26,7 +26,7 @@ export function CtaAgendamento() {
             </p>
             <p className="text-sm text-[#555] mt-1 flex items-center gap-1.5">
               <Clock size={14} className="text-[#d42b2b]" />
-              Box rápido em Campinas — pneu, freio e óleo em ~30 min, sem agendamento prévio.
+              Box rápido em Campinas — pneu, freio e óleo em ~30 min, com agendamento online.
             </p>
           </div>
         </div>

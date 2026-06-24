@@ -16,7 +16,7 @@ import { BrandMarquee } from '@/components/store/BrandMarquee'
 export const metadata: Metadata = {
   title: 'Forza Motos — Pneus e Peças para Moto em Campinas/SP',
   description:
-    'Credenciada Pirelli, Metzeler e Michelin. Troca de pneu em 30 min sem agendamento. Loja online com +2.800 produtos e entrega em todo Brasil.',
+    'Credenciada Pirelli, Metzeler e Michelin. Troca de pneu em 30 min com agendamento online. Loja online com +2.800 produtos e entrega em todo Brasil.',
   alternates: { canonical: 'https://forzamotos.com.br' },
   openGraph: {
     title: 'Forza Motos — Pneus e Peças para Moto',
@@ -344,7 +344,7 @@ export default async function HomePage() {
             {[
               { titulo: '+10 Anos de Experiência', sub: 'Fundada em 2015, referência em Campinas/SP' },
               { titulo: 'Ferramental Italiano', sub: 'Máquinas de pneu renovadas anualmente com emborrachadas novas' },
-              { titulo: 'Sem Agendamento', sub: 'Chegou, atendemos. Box rápido sem burocracia' },
+              { titulo: 'Agendamento Online', sub: 'Agende pelo WhatsApp. Box rápido sem burocracia' },
             ].map(d => (
               <div key={d.titulo} className="flex items-start gap-4 bg-[#f9f9f9] border border-[#eee] rounded-lg p-4">
                 <div className="w-2 h-2 rounded-full bg-[#d42b2b] mt-2 shrink-0" />

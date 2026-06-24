@@ -14,7 +14,7 @@ import { LogoPirelli, LogoMichelin, LogoMetzeler, LogoBridgestone } from '@/comp
 export const metadata: Metadata = {
   title: 'Pneus de Moto em Campinas — Credenciada Pirelli, Metzeler e Michelin',
   description:
-    'Revenda oficial Pirelli, Metzeler e Michelin em Campinas/SP. Instalação inclusa, troca em 30min, sem agendamento. Mais de 400 modelos em estoque. (19) 97404-9445.',
+    'Revenda oficial Pirelli, Metzeler e Michelin em Campinas/SP. Instalação inclusa, troca em 30min com agendamento online. Mais de 400 modelos em estoque. (19) 97404-9445.',
   keywords: [
     'pneu moto Campinas',
     'pneu Pirelli moto',
@@ -278,7 +278,7 @@ export default async function PneusPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               { icon: <Wrench size={32} />, title: 'Instalação inclusa', desc: 'Comprou? Já sai rodando. Sem cobrança extra pela montagem.' },
-              { icon: <Clock size={32} />, title: 'Box rápido', desc: 'Troca em 30 minutos sem agendamento. Box dedicado para motos.' },
+              { icon: <Clock size={32} />, title: 'Box rápido', desc: 'Troca em 30 minutos com agendamento online. Box dedicado para motos.' },
               { icon: <Shield size={32} />, title: 'Garantia oficial', desc: 'Todos os pneus com garantia de fábrica. Pirelli, Metzeler, Michelin.' },
             ].map((item, idx) => (
               <div key={idx} className="text-center">

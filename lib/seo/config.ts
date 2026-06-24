@@ -8,7 +8,7 @@ export const SEO_CONFIG = {
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://forzamotos.com.br',
   defaultTitle: 'Forza Motos — Pneus e Peças para Moto em Campinas/SP',
   defaultDescription:
-    'Credenciada Pirelli, Metzeler e Michelin em Campinas/SP. Troca de pneu em 30 min sem agendamento. Box rápido: pneu, freio, óleo e transmissão. Loja online com entrega em todo Brasil.',
+    'Credenciada Pirelli, Metzeler e Michelin em Campinas/SP. Troca de pneu em 30 min com agendamento online. Box rápido: pneu, freio, óleo e transmissão. Loja online com entrega em todo Brasil.',
   locale: 'pt_BR',
   language: 'pt-BR',
 

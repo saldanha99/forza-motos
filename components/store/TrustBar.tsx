@@ -22,7 +22,7 @@ const ITEMS = [
   {
     icon: Wrench,
     title: 'Oficina Própria',
-    sub: 'Box rápido sem agendamento',
+    sub: 'Box rápido com agendamento online',
   },
 ]
 

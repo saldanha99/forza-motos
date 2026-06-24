@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
   } catch (err: any) {
     console.error('[frete/calcular]', err?.message)
     return NextResponse.json(
-      { error: err?.message ?? 'Não foi possível calcular o frete.' },
+      { error: 'Não foi possível calcular o frete. Tente novamente.' },
       { status: 502 },
     )
   }
