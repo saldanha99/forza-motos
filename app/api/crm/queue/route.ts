@@ -10,10 +10,11 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
 export async function GET(req: Request) {
-  // Segurança: aceita só chamadas do cron (header CRON_SECRET) ou admin
+  // Segurança: aceita só chamadas do cron (header CRON_SECRET)
+  // Fail-closed: sem CRON_SECRET configurado, endpoint fica bloqueado
   const auth = req.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
-  if (cronSecret && auth !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || auth !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

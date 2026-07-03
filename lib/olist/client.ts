@@ -105,16 +105,21 @@ export async function fetchTinyProdutosDelta(
   return { produtos, totalPaginas }
 }
 
-/** Helper: retorna data formatada dd/mm/yyyy HH:MM:SS para N dias atrás */
+/**
+ * Helper: retorna data formatada dd/mm/yyyy HH:MM:SS para N dias atrás.
+ * O Tiny interpreta a data no fuso de Brasília — formatar com o relógio do
+ * servidor (UTC na Vercel) encurtaria a janela em ~3h e perderia mudanças.
+ */
 export function dataDiasAtras(dias: number): string {
   const d = new Date(Date.now() - dias * 24 * 60 * 60 * 1000)
-  const dd = String(d.getDate()).padStart(2, '0')
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const yyyy = d.getFullYear()
-  const hh = String(d.getHours()).padStart(2, '0')
-  const mi = String(d.getMinutes()).padStart(2, '0')
-  const ss = String(d.getSeconds()).padStart(2, '0')
-  return `${dd}/${mm}/${yyyy} ${hh}:${mi}:${ss}`
+  const parts = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false,
+  }).formatToParts(d)
+  const get = (t: string) => parts.find(p => p.type === t)?.value ?? '00'
+  return `${get('day')}/${get('month')}/${get('year')} ${get('hour')}:${get('minute')}:${get('second')}`
 }
 
 /**

@@ -19,7 +19,8 @@ export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  // Fail-closed: sem CRON_SECRET configurado, endpoint fica bloqueado
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
@@ -27,8 +28,8 @@ export async function GET(req: Request) {
     console.log('[cron] Iniciando sync delta (estoque + produtos alterados)...')
 
     const [estoque, produtos, pedidos] = await Promise.allSettled([
-      syncDeltaEstoque(1),   // últimas 24h
-      syncDeltaProdutos(1),
+      syncDeltaEstoque(2),   // 2 dias: margem p/ timezone e falha do cron anterior
+      syncDeltaProdutos(2),
       replicarPedidosPendentes(20), // retry de pedidos pagos não replicados
     ])
 

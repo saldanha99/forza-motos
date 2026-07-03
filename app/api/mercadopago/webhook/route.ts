@@ -262,36 +262,13 @@ export async function POST(req: Request) {
         }).catch((e) => console.error('[mp-webhook] Falha ao enviar e-mail confirmação:', e))
       }
 
-      // 4) Notifica admin via WhatsApp
-      const adminPhone = process.env.ADMIN_WHATSAPP ?? '5519974049445'
-      const itensTexto = order.items
-        .map((i: { productId: string; quantidade: number; product: { nome: string } | null }) =>
-          `  • ${i.product?.nome ?? i.productId} (${i.quantidade}x)`)
-        .join('\n')
-      const totalFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-        Number(orderComUser.total ?? 0),
-      )
-      await enfileirarMensagem({
-        whatsapp: adminPhone,
-        nome: 'Admin',
-        tipo: 'MANUAL',
-        payload: {
-          conteudo:
-            `🛒 *NOVO PEDIDO PAGO — Forza Motos*\n\n` +
-            `📦 Pedido: ${order.orderNumber}\n` +
-            `👤 Cliente: ${orderComUser.user?.nome ?? 'Guest'}\n` +
-            `💳 Forma: ${payment.payment_method_id}\n` +
-            `💰 Total: ${totalFmt}\n\n` +
-            `Itens:\n${itensTexto}\n\n` +
-            `✅ Replicado no Olist.\n` +
-            `👉 Separar, embalar e despachar!`,
-        },
-      }).catch((e) => console.error('[mp-webhook] Falha ao notificar admin:', e))
-
-      // 4) Replica no Olist — só se ainda não foi replicado (idempotência)
+      // 4) Replica no Olist — só se ainda não foi replicado (idempotência).
+      // Roda ANTES do aviso ao admin, para a mensagem refletir o resultado real.
+      let replicadoOk = Boolean(order.olistOrderId)
       if (!order.olistOrderId) {
         try {
           await replicarPedidoOlist(orderId)
+          replicadoOk = true
           console.log(`[mp-webhook] Pedido ${order.orderNumber} replicado no Olist`)
         } catch (e) {
           console.error('[mp-webhook] Falha ao replicar Olist:', e)
@@ -308,6 +285,34 @@ export async function POST(req: Request) {
           })
         }
       }
+
+      // 5) Notifica admin via WhatsApp — com o status verdadeiro da replicação
+      const adminPhone = process.env.ADMIN_WHATSAPP ?? '5519974049445'
+      const itensTexto = order.items
+        .map((i: { productId: string; quantidade: number; product: { nome: string } | null }) =>
+          `  • ${i.product?.nome ?? i.productId} (${i.quantidade}x)`)
+        .join('\n')
+      const totalFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+        Number(orderComUser.total ?? 0),
+      )
+      const statusOlist = replicadoOk
+        ? `✅ Replicado no Olist.\n👉 Separar, embalar e despachar!`
+        : `🚨 *FALHA ao replicar no Olist* — pedido NÃO está no ERP.\n👉 Replicar manualmente no painel admin antes de despachar!`
+      await enfileirarMensagem({
+        whatsapp: adminPhone,
+        nome: 'Admin',
+        tipo: 'MANUAL',
+        payload: {
+          conteudo:
+            `🛒 *NOVO PEDIDO PAGO — Forza Motos*\n\n` +
+            `📦 Pedido: ${order.orderNumber}\n` +
+            `👤 Cliente: ${orderComUser.user?.nome ?? 'Guest'}\n` +
+            `💳 Forma: ${payment.payment_method_id}\n` +
+            `💰 Total: ${totalFmt}\n\n` +
+            `Itens:\n${itensTexto}\n\n` +
+            statusOlist,
+        },
+      }).catch((e) => console.error('[mp-webhook] Falha ao notificar admin:', e))
 
       return NextResponse.json({ ok: true, status: 'approved' })
     }
