@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.vercel
+.claude
+_backup_glossario_antes_plugin
+worker/node_modules
+*.log
+.env.local
+.env.example

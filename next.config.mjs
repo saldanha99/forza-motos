@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Build autocontido p/ rodar em Docker na VPS (node .next/standalone/server.js)
+  output: 'standalone',
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**.vercel-storage.com' },
@@ -21,6 +23,8 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: [
         'localhost:3000',
+        'forzamotos.com.br',
+        'www.forzamotos.com.br',
         'forza-motos-app.vercel.app',
         '*.vercel.app',
       ],
