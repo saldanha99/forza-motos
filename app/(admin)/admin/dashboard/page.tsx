@@ -2,17 +2,55 @@ export const dynamic = 'force-dynamic'
 import { prisma } from '@/lib/prisma'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { statusBadge } from '@/components/ui/Badge'
-import { OlistSyncButton } from '@/components/admin/OlistSyncButton'
 import { KpiCard } from '@/components/admin/KpiCard'
 import { FadeIn } from '@/components/admin/FadeIn'
 import Link from 'next/link'
-import { ShoppingBag, DollarSign, Users, AlertTriangle } from 'lucide-react'
+import {
+  ShoppingBag, DollarSign, Users, AlertTriangle,
+  CloudOff, CalendarClock, MessageCircleWarning, CheckCircle2,
+} from 'lucide-react'
 
 export const metadata = { title: 'Dashboard — Forza Admin' }
+
+/** Card acionável: vermelho/âmbar quando exige ação, verde quando está tudo ok */
+function ActionCard({
+  count, label, ok, href, icon: Icon, urgente = false,
+}: {
+  count: number; label: string; ok: string; href: string; icon: any; urgente?: boolean
+}) {
+  const precisaAcao = count > 0
+  return (
+    <Link
+      href={href}
+      className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 transition-all duration-200 hover:scale-[1.02] ${
+        precisaAcao
+          ? urgente
+            ? 'bg-red-500/10 border-red-500/40 hover:border-red-400'
+            : 'bg-amber-500/10 border-amber-500/40 hover:border-amber-400'
+          : 'bg-emerald-500/[0.06] border-emerald-500/20 hover:border-emerald-500/40'
+      }`}
+    >
+      {precisaAcao ? (
+        <Icon size={22} className={urgente ? 'text-red-400' : 'text-amber-400'} />
+      ) : (
+        <CheckCircle2 size={22} className="text-emerald-500/70" />
+      )}
+      <div className="min-w-0">
+        <p className={`font-barlow font-black text-xl leading-none ${
+          precisaAcao ? (urgente ? 'text-red-300' : 'text-amber-300') : 'text-emerald-400/80'
+        }`}>
+          {precisaAcao ? count : '✓'}
+        </p>
+        <p className="text-xs text-brand-muted mt-1 truncate">{precisaAcao ? label : ok}</p>
+      </div>
+    </Link>
+  )
+}
 
 export default async function DashboardPage() {
   const hoje = new Date()
   hoje.setHours(0, 0, 0, 0)
+  const seteAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
 
   const [
     pedidosHoje,
@@ -20,6 +58,11 @@ export default async function DashboardPage() {
     clientesNovos,
     produtosBaixoEstoque,
     ultimosPedidos,
+    // "Precisa de ação"
+    aDespachar,
+    replicacaoFalhou,
+    agendamentosPendentes,
+    whatsappFalhas,
   ] = await Promise.all([
     prisma.order.count({
       where: { createdAt: { gte: hoje }, status: { not: 'CANCELADO' } },
@@ -42,6 +85,14 @@ export default async function DashboardPage() {
       orderBy: { createdAt: 'desc' },
       include: { user: true, items: true },
     }),
+    // Pedidos pagos aguardando separação/despacho
+    prisma.order.count({ where: { status: { in: ['CONFIRMADO', 'SEPARANDO'] } } }),
+    // Pagos que NÃO chegaram ao Olist (sem NF nem baixa de estoque no ERP!)
+    prisma.order.count({ where: { status: 'CONFIRMADO', olistOrderId: null } }),
+    // Agendamentos aguardando confirmação
+    prisma.appointment.count({ where: { status: 'pendente', dataPreferida: { gte: hoje } } }),
+    // Mensagens WhatsApp que falharam nos últimos 7 dias
+    prisma.crmMensagem.count({ where: { status: 'FALHA', updatedAt: { gte: seteAtras } } }),
   ])
 
   const receitaNum = Number(receitaMes._sum.total ?? 0)
@@ -57,6 +108,44 @@ export default async function DashboardPage() {
           Visão geral do dia — atualizado agora
         </p>
       </div>
+
+      {/* Precisa de ação */}
+      <FadeIn delay={0} className="mb-8">
+        <p className="text-[11px] font-bold uppercase tracking-widest text-brand-muted/70 mb-2">
+          Precisa de ação
+        </p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <ActionCard
+            count={replicacaoFalhou}
+            urgente
+            label="pedidos pagos SEM replicar no Olist"
+            ok="Todos os pagos estão no Olist"
+            href="/admin/pedidos?filtro=sem-olist"
+            icon={CloudOff}
+          />
+          <ActionCard
+            count={aDespachar}
+            label="pedidos aguardando despacho"
+            ok="Nenhum pedido esperando despacho"
+            href="/admin/pedidos"
+            icon={ShoppingBag}
+          />
+          <ActionCard
+            count={agendamentosPendentes}
+            label="agendamentos p/ confirmar"
+            ok="Agendamentos em dia"
+            href="/admin/agendamentos"
+            icon={CalendarClock}
+          />
+          <ActionCard
+            count={whatsappFalhas}
+            label="WhatsApp com falha (7d)"
+            ok="WhatsApp 100% entregue"
+            href="/admin/crm"
+            icon={MessageCircleWarning}
+          />
+        </div>
+      </FadeIn>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -91,11 +180,6 @@ export default async function DashboardPage() {
           />
         </FadeIn>
       </div>
-
-      {/* OLIST Sync */}
-      <FadeIn delay={300} className="mb-8">
-        <OlistSyncButton />
-      </FadeIn>
 
       {/* Últimos pedidos */}
       <FadeIn delay={380}>

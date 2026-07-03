@@ -442,19 +442,86 @@ async function jobEspelhar() {
   return { espelhados, jaOk, semDownload }
 }
 
+// ─── Status: persistido em Setting (lido pelo admin) + HTTP :3000 ───────────
+const http = require('http')
+
+const STATUS = {
+  versao: 3,
+  iniciadoEm: new Date().toISOString(),
+  heartbeat: null,
+  jobAtual: null,
+  ciclos: 0,
+  jobs: {}, // { estoque: { fim, duracaoSeg, resumo, erro } }
+}
+
+async function salvarStatus() {
+  STATUS.heartbeat = new Date().toISOString()
+  try {
+    const value = JSON.stringify(STATUS)
+    await prisma.setting.upsert({
+      where: { key: 'sync_worker_status' },
+      update: { value },
+      create: { key: 'sync_worker_status', value },
+    })
+  } catch (e) {
+    log('[status] erro ao salvar:', e.message)
+  }
+}
+
+async function rodarJob(nome, fn) {
+  STATUS.jobAtual = nome
+  await salvarStatus()
+  const t0 = Date.now()
+  try {
+    const resumo = await fn()
+    STATUS.jobs[nome] = {
+      fim: new Date().toISOString(),
+      duracaoSeg: Math.round((Date.now() - t0) / 1000),
+      resumo,
+      erro: null,
+    }
+  } catch (e) {
+    STATUS.jobs[nome] = {
+      fim: new Date().toISOString(),
+      duracaoSeg: Math.round((Date.now() - t0) / 1000),
+      resumo: null,
+      erro: e.message,
+    }
+    throw e
+  } finally {
+    STATUS.jobAtual = null
+    await salvarStatus()
+  }
+}
+
+http
+  .createServer((req, res) => {
+    if (req.url === '/health') { res.writeHead(200); return res.end('ok') }
+    if (req.url === '/' || req.url === '/status') {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+      return res.end(JSON.stringify(STATUS, null, 2))
+    }
+    res.writeHead(404)
+    res.end()
+  })
+  .listen(3000, () => log('[http] servidor de status na porta 3000'))
+
 // ─── Loop principal ─────────────────────────────────────────────────────────
 async function main() {
   log('═══ Forza Sync Worker iniciado ═══')
+  await salvarStatus()
+  setInterval(salvarStatus, 60_000) // heartbeat p/ o admin detectar worker vivo
   let ultimoCatalogo = 0
   for (;;) {
     try {
       if (Date.now() - ultimoCatalogo > FANTASMAS_INTERVALO_H * 3600_000) {
-        await jobCatalogo() // importa faltantes do Tiny + desativa fantasmas
+        await rodarJob('catalogo', jobCatalogo) // importa faltantes + desativa fantasmas
         ultimoCatalogo = Date.now()
       }
-      await jobImagens()   // destrava pendentes (já espelha no Blob)
-      await jobEspelhar()  // migra imagens hot-linkadas antigas pro Blob
-      await jobEstoque()   // converge estoque do catálogo inteiro
+      await rodarJob('imagens', jobImagens)     // destrava pendentes (já espelha no Blob)
+      await rodarJob('espelhar', jobEspelhar)   // migra imagens hot-linkadas pro Blob
+      await rodarJob('estoque', jobEstoque)     // converge estoque do catálogo inteiro
+      STATUS.ciclos++
     } catch (e) {
       log('[main] erro no ciclo:', e.message, '— aguardando 10min')
       await sleep(600_000)

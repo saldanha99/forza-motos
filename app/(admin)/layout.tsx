@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
+import { CommandPalette } from '@/components/admin/CommandPalette'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)
@@ -16,6 +17,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
       {/* Sidebar */}
       <AdminSidebar user={session.user} />
+
+      {/* Busca global ⌘K */}
+      <CommandPalette />
 
       {/* Main Content */}
       <main className="flex-1 min-w-0 p-6 lg:p-8 overflow-auto pb-24 lg:pb-8 relative z-10">
