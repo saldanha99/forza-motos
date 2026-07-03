@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { formatDate, formatPrice } from '@/lib/utils'
 import { statusBadge } from '@/components/ui/Badge'
 import { AlterarStatusPedido } from '@/components/admin/AlterarStatusPedido'
+import { PedidoStepper } from '@/components/admin/PedidoStepper'
 
 export default async function PedidoDetalhePage({ params }: { params: { id: string } }) {
   const pedido = await prisma.order.findUnique({
@@ -21,10 +22,18 @@ export default async function PedidoDetalhePage({ params }: { params: { id: stri
 
   return (
     <div className="max-w-4xl">
-      <div className="flex items-center gap-4 mb-8">
+      <div className="flex items-center gap-4 mb-6">
         <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">{pedido.orderNumber}</h1>
         {statusBadge(pedido.status)}
       </div>
+
+      {/* Linha do tempo com próxima ação */}
+      <PedidoStepper
+        pedidoId={pedido.id}
+        status={pedido.status}
+        olistOrderId={pedido.olistOrderId}
+        trackingCode={pedido.trackingCode}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

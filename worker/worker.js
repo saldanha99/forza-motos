@@ -442,6 +442,44 @@ async function jobEspelhar() {
   return { espelhados, jaOk, semDownload }
 }
 
+// ─── Alerta WhatsApp (Evolution API) — avisa o admin quando o sync falha ────
+const ALERTA_COOLDOWN_H = 6
+const ultimoAlerta = new Map() // chave → timestamp
+
+async function alertarAdmin(chave, mensagem) {
+  const base = process.env.EVOLUTION_API_URL
+  const apikey = process.env.EVOLUTION_API_KEY
+  const numero = (process.env.ADMIN_WHATSAPP ?? '5519974049445').replace(/\D/g, '')
+  if (!base || !apikey) return
+
+  // Rate limit: 1 alerta por tipo a cada 6h (evita metralhadora em pane longa)
+  const agora = Date.now()
+  if (agora - (ultimoAlerta.get(chave) ?? 0) < ALERTA_COOLDOWN_H * 3600_000) return
+  ultimoAlerta.set(chave, agora)
+
+  // Instância: Setting do banco tem prioridade (mesma regra do app)
+  let instance = process.env.EVOLUTION_INSTANCE || 'forza-motos'
+  try {
+    const s = await prisma.setting.findUnique({ where: { key: 'evolution_instance' } })
+    if (s?.value) instance = s.value
+  } catch {}
+
+  try {
+    const res = await fetch(`${base}/message/sendText/${instance}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey },
+      body: JSON.stringify({
+        number: numero,
+        text: `🤖 *Robô de Sync — Forza Motos*\n\n${mensagem}\n\nDetalhes: https://sync.forzamotos.com.br/status`,
+        delay: 1200,
+      }),
+    })
+    log(`[alerta] WhatsApp ${chave}: HTTP ${res.status}`)
+  } catch (e) {
+    log(`[alerta] falha ao enviar WhatsApp:`, e.message)
+  }
+}
+
 // ─── Status: persistido em Setting (lido pelo admin) + HTTP :3000 ───────────
 const http = require('http')
 
@@ -487,6 +525,10 @@ async function rodarJob(nome, fn) {
       resumo: null,
       erro: e.message,
     }
+    await alertarAdmin(
+      `job-${nome}`,
+      `⚠️ O job *${nome}* falhou:\n_${e.message}_\n\nVou tentar de novo no próximo ciclo. Se o alerta repetir, verificar a VPS.`
+    )
     throw e
   } finally {
     STATUS.jobAtual = null
