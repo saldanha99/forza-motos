@@ -1,0 +1,16 @@
+{
+  "name": "forza-sync-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Worker de sincronização Olist/Tiny ↔ e-commerce Forza Motos (roda na VPS)",
+  "main": "worker.js",
+  "scripts": {
+    "start": "node worker.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0"
+  }
+}

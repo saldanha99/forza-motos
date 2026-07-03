@@ -1,0 +1,621 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model User {
+  id            String      @id @default(cuid())
+  nome          String?
+  email         String      @unique
+  emailVerified DateTime?
+  image         String?
+  senha         String?
+  telefone      String?
+  cpf           String?
+  role          Role        @default(CUSTOMER)
+  /// Origem do cadastro do cliente
+  origem        OrigemCliente @default(ECOMMERCE)
+  /// ID do cliente no Tiny ERP (quando importado do ML)
+  tinyClienteId String?
+  createdAt     DateTime    @default(now())
+
+  accounts     Account[]
+  sessions     Session[]
+  orders       Order[]
+  appointments Appointment[]
+  crm          CustomerCRM?
+  reviews      Review[]
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+/// Origem do cliente para separar e-commerce próprio de Mercado Livre
+enum OrigemCliente {
+  ECOMMERCE       // Comprou direto no nosso site
+  MERCADOLIVRE    // Cliente do ML importado do Tiny
+  AGENDAMENTO     // Entrou via agendamento de serviço
+  MANUAL          // Cadastrado manualmente pelo admin
+}
+
+model Product {
+  id                   String      @id @default(cuid())
+  sku                  String      @unique
+  nome                 String
+  slug                 String      @unique
+  descricao            String      @db.Text
+  preco                Decimal     @db.Decimal(10, 2)
+  precoPromocional     Decimal?    @db.Decimal(10, 2)
+  estoque              Int         @default(0)
+  categoria            String
+  marca                String
+  compatibilidadeMotos Json        @default("[]")
+  imagens              Json        @default("[]")
+  ativo                Boolean     @default(true)
+  destaque             Boolean     @default(false)
+  /// ID do produto no Tiny ERP
+  tinyId               String?
+  /// Marca true após verificar imagens no Tiny (mesmo que não tenha nenhuma)
+  imagensVerificadas   Boolean     @default(false)
+  /// True quando o produto tem pelo menos 1 imagem — usado para filtrar exibição
+  temImagem            Boolean     @default(false)
+  /// Peso em kg (para cotação de frete)
+  peso                 Decimal?    @db.Decimal(8, 3)
+  /// Altura em cm
+  altura               Decimal?    @db.Decimal(8, 2)
+  /// Largura em cm
+  largura              Decimal?    @db.Decimal(8, 2)
+  /// Comprimento em cm
+  comprimento          Decimal?    @db.Decimal(8, 2)
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  orderItems OrderItem[]
+  reviews    Review[]
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// Nome exibido (pode ser anônimo)
+  nome      String
+  nota      Int      // 1–5
+  titulo    String?
+  corpo     String   @db.Text
+  /// Moderação: só exibe se true
+  aprovado  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([aprovado])
+}
+
+model Order {
+  id                 String      @id @default(cuid())
+  orderNumber        String      @unique
+  userId             String?
+  user               User?       @relation(fields: [userId], references: [id])
+  status             OrderStatus @default(AGUARDANDO_PAGAMENTO)
+  subtotal           Decimal     @db.Decimal(10, 2)
+  frete              Decimal     @db.Decimal(10, 2)
+  desconto           Decimal     @default(0) @db.Decimal(10, 2)
+  total              Decimal     @db.Decimal(10, 2)
+  enderecoEntrega    Json
+  pagamentoMetodo    String?
+  pagamentoIdExterno String?
+  olistOrderId       String?
+  /// Serviço de frete escolhido pelo cliente (ex: "pac", "sedex", "jadlog", "jet")
+  freteServico       String?
+  /// Nome da transportadora exibido ao cliente (ex: "Correios PAC", "Jadlog Package")
+  freteTransportadora String?
+  /// Prazo estimado em dias úteis informado na cotação
+  fretePrazo         Int?
+  /// Código de rastreamento informado pela transportadora (preenchido após envio)
+  trackingCode       String?
+  /// Canal de origem do pedido
+  canal              CanalVenda  @default(ECOMMERCE)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  items    OrderItem[]
+  tracking OrderTracking[]
+}
+
+enum CanalVenda {
+  ECOMMERCE
+  MERCADOLIVRE
+}
+
+enum OrderStatus {
+  AGUARDANDO_PAGAMENTO
+  CONFIRMADO
+  SEPARANDO
+  ENVIADO
+  ENTREGUE
+  CANCELADO
+}
+
+model OrderItem {
+  id            String  @id @default(cuid())
+  orderId       String
+  order         Order   @relation(fields: [orderId], references: [id])
+  productId     String
+  product       Product @relation(fields: [productId], references: [id])
+  quantidade    Int
+  precoUnitario Decimal @db.Decimal(10, 2)
+}
+
+model OrderTracking {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  status    String
+  descricao String
+  createdAt DateTime @default(now())
+}
+
+model CustomerCRM {
+  id              String       @id @default(cuid())
+  userId          String       @unique
+  user            User         @relation(fields: [userId], references: [id])
+  /// Categoria principal do relacionamento com este cliente
+  categoria       CRMCategoria @default(VENDA_ECOMMERCE)
+  totalPedidos    Int          @default(0)
+  totalGasto      Decimal      @default(0) @db.Decimal(10, 2)
+  totalServicos   Int          @default(0)    // agendamentos realizados
+  ultimaCompra    DateTime?
+  ultimoServico   DateTime?
+  notas           String?      @db.Text
+  etapaFunil      Funil        @default(LEAD)
+  updatedAt       DateTime     @updatedAt
+}
+
+/// Categorias do CRM
+enum CRMCategoria {
+  VENDA_ECOMMERCE   // Clientes que compraram no nosso site
+  VENDA_ML          // Clientes do Mercado Livre
+  SERVICO           // Clientes que agendaram serviços (box rápido)
+  MISTO             // Comprou E agendou serviço
+}
+
+enum Funil {
+  LEAD
+  ORCAMENTO
+  FECHADO
+  RECORRENTE
+}
+
+model Appointment {
+  id               String   @id @default(cuid())
+  userId           String?
+  user             User?    @relation(fields: [userId], references: [id])
+  nome             String
+  telefone         String
+  servico          String
+  motoModelo       String
+  dataPreferida    DateTime
+  horarioPreferido String
+  status           String   @default("pendente")
+  notas            String?  @db.Text
+  /// Valor cobrado pelo serviço (opcional, preenchido após conclusão)
+  valorServico     Decimal? @db.Decimal(10, 2)
+  createdAt        DateTime @default(now())
+}
+
+// ============================================================
+// MÓDULO CRM INTELIGENTE — Evolution API + WhatsApp
+// ============================================================
+
+/// Lead capturado via pop-up, botão WhatsApp, agendamento ou checkout
+model CrmLead {
+  id               String        @id @default(cuid())
+  nome             String
+  whatsapp         String
+  /// Origem da captura
+  origem           LeadOrigem    @default(POPUP)
+  /// Produto que estava visualizando (opcional)
+  produtoSlug      String?
+  /// Etapa atual no funil
+  etapa            LeadEtapa     @default(NOVO)
+  /// UTM para rastrear campanha
+  utmSource        String?
+  utmMedium        String?
+  utmCampaign      String?
+  /// Notas internas
+  notas            String?       @db.Text
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  mensagens        CrmMensagem[]
+
+  @@index([whatsapp])
+  @@index([etapa, createdAt])
+}
+
+enum LeadOrigem {
+  POPUP           // Pop-up de captura no site
+  WHATSAPP_BTN    // Clicou no botão WhatsApp de um produto
+  AGENDAMENTO     // Preencheu formulário de agendamento
+  CHECKOUT        // Abandonou o carrinho
+  MANUAL          // Adicionado manualmente pelo admin
+}
+
+enum LeadEtapa {
+  NOVO          // Acabou de ser capturado
+  CONTATADO     // Mensagem enviada
+  RESPONDEU     // Cliente respondeu no WhatsApp
+  CONVERTIDO    // Realizou uma compra ou agendamento
+  PERDIDO       // Sem resposta / desinteressado
+}
+
+/// Fila de mensagens WhatsApp via Evolution API
+model CrmMensagem {
+  id                String          @id @default(cuid())
+  /// Lead relacionado (opcional — mensagens de pedido têm userId)
+  leadId            String?
+  lead              CrmLead?        @relation(fields: [leadId], references: [id])
+  /// Usuário relacionado (opcional)
+  userId            String?
+  /// Número WhatsApp destino (com DDI, ex: 5519999999999)
+  whatsapp          String
+  nome              String
+  /// Tipo da mensagem para saber qual template usar
+  tipo              MensagemTipo
+  /// Conteúdo final da mensagem (já com variáveis substituídas)
+  conteudo          String          @db.Text
+  /// Status do envio
+  status            MensagemStatus  @default(PENDENTE)
+  /// Payload com dados extras (número pedido, rastreio, etc.)
+  payload           Json            @default("{}")
+  /// ID retornado pela Evolution API
+  evolutionId       String?
+  /// Quantidade de tentativas de envio
+  tentativas        Int             @default(0)
+  /// Erro da última tentativa
+  erro              String?         @db.Text
+  /// Quando enviar (suporte a envio agendado)
+  agendadoPara      DateTime        @default(now())
+  /// Quando foi efetivamente enviada
+  enviadaEm         DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([status, agendadoPara])
+  @@index([whatsapp])
+  @@index([createdAt])
+}
+
+enum MensagemTipo {
+  BOAS_VINDAS         // Lead capturado
+  AGENDAMENTO         // Agendamento confirmado
+  PEDIDO_CONFIRMADO   // Pagamento aprovado
+  PEDIDO_ENVIADO      // Código de rastreio disponível
+  CARRINHO_ABANDONADO // Carrinho abandonado (2h)
+  POS_VENDA           // Pós-venda D+7
+  REATIVACAO          // Cliente inativo 60 dias
+  INGRESSO_CONFIRMADO // Ingresso de evento confirmado
+  MANUAL              // Enviada manualmente pelo admin
+}
+
+enum MensagemStatus {
+  PENDENTE    // Na fila, aguardando envio
+  ENVIANDO    // Em processo de envio
+  ENVIADA     // Evolution API confirmou envio
+  ENTREGUE    // WhatsApp confirmou entrega
+  LIDA        // Cliente leu a mensagem
+  FALHA       // Falhou após max tentativas
+  CANCELADA   // Cancelada manualmente
+}
+
+model BlogPost {
+  id        String   @id @default(cuid())
+  titulo    String
+  slug      String   @unique
+  capaUrl   String?
+  conteudo  String   @db.Text
+  autor     String
+  publicado Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+// ============================================================
+// MÓDULO GLOSSÁRIO — fragmento de schema.prisma
+// ============================================================
+// Cole estes models no seu schema.prisma e rode:
+//   npx prisma migrate dev --name add_glossario
+// ============================================================
+
+/// Termo do glossário (substituto do post type "glossario" do WordPress)
+model GlossaryTerm {
+  id           String   @id @default(cuid())
+  /// Título do termo. Ex: "Pneu Radial"
+  termo        String
+  /// Slug URL-friendly. Ex: "pneu-radial"
+  slug         String   @unique
+  /// Letra inicial em maiúscula (A-Z, ou "0-9" para números). Indexada para filtrar A-Z rapidamente.
+  letra        String
+  /// Conteúdo HTML/Markdown da definição. Mínimo recomendado: 300 palavras para SEO.
+  conteudo     String   @db.Text
+  /// Resumo curto (até 160 chars) — usado em meta description e schema.org
+  resumo       String?
+  /// Título SEO customizado (até 60 chars). Se vazio, usa "{termo} — Forza Motos"
+  seoTitle     String?
+  /// Nicho/contexto usado para geração IA. Ex: "pneus e peças de moto"
+  nicho        String?
+  /// URL da imagem destacada (opcional)
+  imagem       String?
+  /// Nome do autor exibido no schema.org
+  autor        String   @default("Equipe Forza")
+  /// Categoria/nicho do termo. Ex: "Pneus", "Motor", "Freios"
+  categoria    String?
+  /// Lista de termos relacionados (slugs)
+  relacionados Json     @default("[]")
+  /// Origem do conteúdo: MANUAL, AI_GEMINI, AI_OPENAI
+  origem       GlossaryOrigem @default(MANUAL)
+  /// Status de publicação
+  publicado    Boolean  @default(false)
+  /// Marca true quando o conteúdo foi revisado por humano após geração por IA
+  revisado     Boolean  @default(false)
+  /// Visualizações (incrementadas em background)
+  views        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([letra, publicado])
+  @@index([categoria, publicado])
+  @@index([createdAt])
+}
+
+enum GlossaryOrigem {
+  MANUAL
+  AI_GEMINI
+  AI_OPENAI
+  CSV_IMPORT
+}
+
+/// Fila de geração em massa de termos via IA
+model GlossaryJob {
+  id           String   @id @default(cuid())
+  titulo       String
+  letra        String
+  nicho        String
+  /// Provedor de IA a usar
+  provider     GlossaryOrigem @default(AI_GEMINI)
+  /// Modelo específico. Ex: "gemini-2.0-flash" ou "gpt-4o-mini"
+  modelo       String
+  idioma       String   @default("pt-BR")
+  estilo       String   @default("informativo e técnico")
+  /// Tokens máximos (controla tamanho)
+  maxTokens    Int      @default(2000)
+  /// Prompt customizado adicional (concatenado ao prompt base)
+  promptExtra  String?  @db.Text
+  /// Status do job
+  status       GlossaryJobStatus @default(PENDENTE)
+  /// Quando processar (suporte a agendamento)
+  agendadoPara DateTime?
+  /// ID do termo criado após sucesso
+  termoId      String?
+  /// Mensagem de erro caso falhe
+  erro         String?  @db.Text
+  /// Quantas tentativas já foram feitas
+  tentativas   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status, agendadoPara])
+}
+
+enum GlossaryJobStatus {
+  PENDENTE
+  PROCESSANDO
+  CONCLUIDO
+  ERRO
+}
+// ============================================================
+// MÓDULOS EXTRAS DE SEO — fragmento de schema.prisma
+// ============================================================
+// Adiciona suporte a Redirects e 404 Monitor (substituem os módulos
+// "Redirections" e "404 Monitor" do Rank Math).
+// ============================================================
+
+/// Redirecionamentos gerenciáveis (via middleware ou route handler)
+model SeoRedirect {
+  id        String   @id @default(cuid())
+  /// Path de origem. Ex: "/produto-antigo"
+  from      String   @unique
+  /// Path ou URL de destino
+  to        String
+  /// Código HTTP (301 permanente, 302 temporário, 307, 308)
+  statusCode Int     @default(301)
+  /// Quantas vezes esse redirect foi acessado
+  hits      Int      @default(0)
+  ativo     Boolean  @default(true)
+  notas     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([from, ativo])
+}
+
+/// Log de 404 — útil para identificar links quebrados e oportunidades de redirect
+model SeoNotFoundLog {
+  id        String   @id @default(cuid())
+  path      String
+  /// User-agent agregado
+  userAgent String?  @db.Text
+  /// Referer (de onde o usuário veio)
+  referer   String?
+  /// IP anonimizado (últimos octetos zerados)
+  ip        String?
+  /// Quantas vezes esse path foi acessado e deu 404
+  hits      Int      @default(1)
+  /// Marca true após criar um redirect para este path
+  resolvido Boolean  @default(false)
+  /// Última vez acessado
+  ultimoAcesso DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@unique([path])
+  @@index([resolvido, hits])
+}
+
+/// Log de toda notificação de indexação enviada para Google/Bing/etc.
+/// Permite auditar o que foi enviado, debugar falhas e retry de URLs que falharam.
+model SeoIndexingLog {
+  id          String   @id @default(cuid())
+  /// URL completa notificada
+  url         String
+  /// Ação enviada
+  action      SeoIndexingAction @default(URL_UPDATED)
+  /// Provedor que recebeu a notificação
+  provider    SeoIndexingProvider
+  /// Status do envio
+  status      SeoIndexingStatus @default(PENDENTE)
+  /// Mensagem de erro caso falhe
+  erro        String?  @db.Text
+  /// Quantidade de tentativas (incrementada a cada retry)
+  tentativas  Int      @default(0)
+  /// Resposta crua do provedor (útil para debug)
+  resposta    String?  @db.Text
+  /// Origem do trigger (manual, cron, hook automático)
+  origem      String?
+  /// Quando o envio foi efetivamente concluído (sucesso ou desistência)
+  enviadoEm   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([url, provider])
+  @@index([status, createdAt])
+  @@index([createdAt])
+}
+
+enum SeoIndexingAction {
+  URL_UPDATED
+  URL_DELETED
+}
+
+enum SeoIndexingProvider {
+  GOOGLE
+  INDEXNOW
+}
+
+enum SeoIndexingStatus {
+  PENDENTE
+  SUCESSO
+  FALHA
+  IGNORADO
+}
+
+
+// Configurações editáveis pelo painel admin (chave/valor).
+// Usado para Google Site Verification, nome do site, URL, etc.
+model Setting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================================
+// MÓDULO CALENDÁRIO DE EVENTOS
+// ============================================================
+
+model Evento {
+  id          String   @id @default(cuid())
+  titulo      String
+  slug        String   @unique
+  descricao   String   @db.Text
+  conteudo    String   @db.Text
+  dataInicio  DateTime
+  dataFim     DateTime?
+  local       String
+  endereco    String?
+  imagemUrl   String?
+  /// 0 = gratuito
+  preco       Decimal  @default(0) @db.Decimal(10, 2)
+  categoria   String   @default("Evento")
+  vagas       Int?
+  linkExterno String?
+  ativo       Boolean  @default(true)
+  publicado   Boolean  @default(false)
+  destaque    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  inscricoes  EventoInscricao[]
+
+  @@index([publicado, dataInicio])
+  @@index([categoria, publicado])
+}
+
+model EventoInscricao {
+  id              String                @id @default(cuid())
+  eventoId        String
+  evento          Evento                @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  nome            String
+  email           String
+  telefone        String
+  quantidade      Int                   @default(1)
+  total           Decimal               @db.Decimal(10, 2)
+  status          EventoInscricaoStatus @default(PENDENTE)
+  /// ID da preferência no Mercado Pago
+  mpPreferenciaId String?
+  /// ID do pagamento aprovado no Mercado Pago
+  mpPagamentoId   String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@index([eventoId, status])
+  @@index([email])
+}
+
+enum EventoInscricaoStatus {
+  PENDENTE
+  PAGO
+  CANCELADO
+}
