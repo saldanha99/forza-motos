@@ -5,8 +5,10 @@
  *   1. jobEstoque    — estoque real de TODOS os produtos (depósito "Loja";
  *                      depósitos dropship → 999 = disponível via fornecedor)
  *   2. jobImagens    — verifica imagens + peso/dimensões/descrição pendentes
- *   3. jobFantasmas  — varre a listagem do Tiny e desativa produtos que não
- *                      existem mais no ERP (não deleta — reversível)
+ *   3. jobCatalogo   — importa produtos do Tiny que faltam no site e desativa
+ *                      fantasmas que sumiram do ERP (não deleta — reversível)
+ *   4. jobEspelhar   — re-hospeda as imagens no Vercel Blob (fim das imagens
+ *                      quebradas por dependência do CDN do Olist)
  *
  * Ciclo: fantasmas 1x/24h; estoque + imagens em loop contínuo com pausa.
  * Rate limit do Tiny respeitado com delay fixo + retry com backoff em bloqueio.
@@ -196,7 +198,12 @@ async function jobImagens() {
         fantasmas++
         continue
       }
-      const imagens = extrairImagensTiny(detalhe)
+      let imagens = extrairImagensTiny(detalhe)
+      // Espelha no Blob já na descoberta (independência do CDN do Olist)
+      if (imagens.length > 0 && process.env.BLOB_READ_WRITE_TOKEN) {
+        const espelhadas = await subirParaBlob(p.sku, imagens)
+        if (espelhadas.length > 0) imagens = espelhadas
+      }
       const temImagem = imagens.length > 0
       if (temImagem) comImagem++
       const tinyAtivo = detalhe.situacao === 'A' || detalhe.situacao === 'Ativo'
@@ -240,10 +247,15 @@ async function jobImagens() {
   return { ok, comImagem, fantasmas, erros }
 }
 
-// ─── JOB 3: fantasmas — produtos do banco que sumiram da listagem do Tiny ───
-async function jobFantasmas() {
+// ─── JOB 3: catálogo — importa produtos que faltam + desativa fantasmas ─────
+const gerarSlug = (nome) =>
+  String(nome).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-').replace(/-+/g, '-').slice(0, 90)
+
+async function jobCatalogo() {
   const skusTiny = new Set()
   const idsTiny = new Set()
+  const payloads = []
   let pagina = 1
   let totalPaginas = 1
   while (pagina <= totalPaginas) {
@@ -253,13 +265,61 @@ async function jobFantasmas() {
     for (const p of produtos) {
       if (p.codigo) skusTiny.add(String(p.codigo).trim())
       if (p.id) idsTiny.add(String(p.id).trim())
+      payloads.push(p)
     }
     pagina++
   }
   if (skusTiny.size === 0 && idsTiny.size === 0) {
-    log('[fantasmas] listagem do Tiny veio vazia — abortando por segurança')
-    return { desativados: 0 }
+    log('[catalogo] listagem do Tiny veio vazia — abortando por segurança')
+    return { desativados: 0, importados: 0 }
   }
+
+  // IMPORTAÇÃO: produtos do Tiny que não existem no banco
+  const skusBanco = new Set(
+    (await prisma.product.findMany({ select: { sku: true } })).map((p) => p.sku.trim())
+  )
+  const idsBanco = new Set(
+    (await prisma.product.findMany({ where: { tinyId: { not: null } }, select: { tinyId: true } }))
+      .map((p) => (p.tinyId ?? '').trim())
+  )
+  const faltantes = payloads.filter((p) => {
+    const sku = String(p.codigo || p.id || '').trim()
+    return sku && !skusBanco.has(sku) && !idsBanco.has(String(p.id ?? '').trim())
+  })
+
+  let importados = 0
+  for (const p of faltantes) {
+    const sku = String(p.codigo || p.id).trim()
+    try {
+      let slug = gerarSlug(p.nome || `produto-${sku}`)
+      if (await prisma.product.findUnique({ where: { slug }, select: { id: true } })) slug = `${slug}-${sku}`
+      await prisma.product.create({
+        data: {
+          sku,
+          nome: p.nome || 'Produto sem nome',
+          slug,
+          descricao: '',
+          preco: parseNum(p.preco ?? p.preco_venda) ?? 0,
+          precoPromocional: (() => { const v = parseNum(p.preco_promocional); return v && v > 0 ? v : null })(),
+          estoque: 999, // marcador "nunca verificado" — jobEstoque prioriza e corrige
+          ativo: false, // só ativa depois de imagem + estoque verificados
+          tinyId: String(p.id),
+          categoria: p.categoria?.descricao || (typeof p.categoria === 'string' ? p.categoria : '') || 'Geral',
+          marca: p.marca || '',
+          imagens: [],
+          temImagem: false,
+          imagensVerificadas: false,
+          compatibilidadeMotos: [],
+        },
+      })
+      importados++
+      skusBanco.add(sku)
+    } catch (e) {
+      log(`[catalogo] erro ao importar ${sku}:`, e.message)
+    }
+  }
+  if (importados > 0) log(`[catalogo] ${importados} produtos novos importados do Tiny (de ${faltantes.length} faltantes)`)
+
 
   const todos = await prisma.product.findMany({
     where: { tinyId: { not: null }, ativo: true },
@@ -270,29 +330,131 @@ async function jobFantasmas() {
   )
   // Trava de segurança: se >30% do catálogo "sumiu", algo está errado na listagem
   if (fantasmas.length > todos.length * 0.3) {
-    log(`[fantasmas] ${fantasmas.length}/${todos.length} candidatos (>30%) — abortando por segurança`)
-    return { desativados: 0, suspeito: fantasmas.length }
+    log(`[catalogo] ${fantasmas.length}/${todos.length} candidatos a fantasma (>30%) — abortando por segurança`)
+    return { desativados: 0, importados, suspeito: fantasmas.length }
   }
   for (const f of fantasmas) {
     await prisma.product.update({ where: { id: f.id }, data: { ativo: false, estoque: 0 } })
-    log(`[fantasmas] desativado: ${f.sku} (tinyId ${f.tinyId})`)
+    log(`[catalogo] fantasma desativado: ${f.sku} (tinyId ${f.tinyId})`)
   }
-  log(`[fantasmas] varredura completa: ${todos.length} ativos no banco, ${skusTiny.size} SKUs no Tiny, ${fantasmas.length} desativados`)
-  return { desativados: fantasmas.length }
+  log(`[catalogo] varredura completa: ${todos.length} ativos no banco, ${skusTiny.size} SKUs no Tiny, ${importados} importados, ${fantasmas.length} fantasmas desativados`)
+  return { desativados: fantasmas.length, importados }
+}
+
+// ─── JOB 4: espelhar imagens no Vercel Blob (independência do CDN do Olist) ─
+// Imagens hoje são hot-linkadas (erp.olist.com / cdn tiny / S3): se o Olist
+// tirar do ar, quebram no site. Baixamos e re-hospedamos no Blob da Forza.
+// Política conservadora: NUNCA rebaixa produto por falha de download —
+// só promove pra Blob quando o download deu certo.
+const { put } = require('@vercel/blob')
+const BLOB_HOST = 'blob.vercel-storage.com'
+
+async function baixarImagem(url) {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 20000)
+  try {
+    const res = await fetch(url, {
+      signal: ctrl.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36' },
+      redirect: 'follow',
+    })
+    if (!res.ok) return null
+    const ct = (res.headers.get('content-type') ?? '').split(';')[0].trim()
+    if (!ct.startsWith('image/')) return null
+    const buf = Buffer.from(await res.arrayBuffer())
+    if (buf.length < 100) return null // pixel/placeholder
+    const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/avif': 'avif' }[ct] ?? 'jpg'
+    return { buf, ct, ext }
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/** Baixa e sobe as URLs pro Blob. Retorna array das que deram certo (ordem preservada). */
+async function subirParaBlob(sku, urls) {
+  const novas = []
+  for (let i = 0; i < urls.length; i++) {
+    const url = urls[i]
+    if (typeof url !== 'string' || !url) continue
+    if (url.includes(BLOB_HOST)) { novas.push(url); continue } // já espelhada
+    const img = await baixarImagem(url)
+    if (!img) continue
+    try {
+      const blob = await put(`produtos/${sku}/${i}.${img.ext}`, img.buf, {
+        access: 'public',
+        token: process.env.BLOB_READ_WRITE_TOKEN,
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        contentType: img.ct,
+      })
+      novas.push(blob.url)
+    } catch (e) {
+      log(`[blob] erro upload ${sku}/${i}:`, e.message)
+    }
+    await sleep(200)
+  }
+  return novas
+}
+
+async function jobEspelhar() {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    log('[espelhar] BLOB_READ_WRITE_TOKEN ausente — pulando')
+    return { espelhados: 0 }
+  }
+  const candidatos = await prisma.product.findMany({
+    where: { temImagem: true },
+    select: { id: true, sku: true, tinyId: true, imagens: true },
+    orderBy: { updatedAt: 'asc' },
+  })
+  let espelhados = 0, semDownload = 0, jaOk = 0
+  for (const p of candidatos) {
+    const urls = Array.isArray(p.imagens) ? p.imagens : []
+    if (urls.length === 0) continue
+    if (urls.every((u) => typeof u === 'string' && u.includes(BLOB_HOST))) { jaOk++; continue }
+
+    let novas = await subirParaBlob(p.sku, urls)
+
+    // Nenhuma imagem baixou → tenta re-extrair URLs frescas do Tiny (1x)
+    if (novas.length === 0 && p.tinyId) {
+      try {
+        const data = await tinyFetch('produto.obter.php', { id: String(p.tinyId) })
+        const frescas = extrairImagensTiny(data.retorno?.produto)
+        if (frescas.length > 0) novas = await subirParaBlob(p.sku, frescas)
+      } catch (e) {
+        log(`[espelhar] re-extração falhou ${p.sku}:`, e.message)
+      }
+    }
+
+    if (novas.length > 0) {
+      await prisma.product.update({ where: { id: p.id }, data: { imagens: novas, temImagem: true } })
+      espelhados++
+    } else {
+      // Conservador: mantém como está (pode ser bloqueio temporário do CDN)
+      semDownload++
+      log(`[espelhar] nenhuma imagem baixável p/ ${p.sku} — mantido como está`)
+    }
+    if ((espelhados + semDownload) % 100 === 0 && espelhados + semDownload > 0)
+      log(`[espelhar] progresso: ${espelhados + semDownload}/${candidatos.length - jaOk}`)
+  }
+  log(`[espelhar] passada completa: ${espelhados} espelhados no Blob, ${jaOk} já estavam, ${semDownload} sem download (mantidos)`)
+  return { espelhados, jaOk, semDownload }
 }
 
 // ─── Loop principal ─────────────────────────────────────────────────────────
 async function main() {
   log('═══ Forza Sync Worker iniciado ═══')
-  let ultimaFantasmas = 0
+  let ultimoCatalogo = 0
   for (;;) {
     try {
-      if (Date.now() - ultimaFantasmas > FANTASMAS_INTERVALO_H * 3600_000) {
-        await jobFantasmas()
-        ultimaFantasmas = Date.now()
+      if (Date.now() - ultimoCatalogo > FANTASMAS_INTERVALO_H * 3600_000) {
+        await jobCatalogo() // importa faltantes do Tiny + desativa fantasmas
+        ultimoCatalogo = Date.now()
       }
-      await jobImagens()   // primeiro: destrava os 92 invisíveis só por imagem
-      await jobEstoque()   // depois: converge estoque do catálogo inteiro
+      await jobImagens()   // destrava pendentes (já espelha no Blob)
+      await jobEspelhar()  // migra imagens hot-linkadas antigas pro Blob
+      await jobEstoque()   // converge estoque do catálogo inteiro
     } catch (e) {
       log('[main] erro no ciclo:', e.message, '— aguardando 10min')
       await sleep(600_000)
