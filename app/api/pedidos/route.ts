@@ -82,23 +82,25 @@ export async function POST(req: Request) {
       include: { items: { include: { product: true } } },
     })
 
-    // Debita estoque e desativa se zerar
+    // Debita estoque (decrement atômico — dois checkouts simultâneos do último
+    // item não podem ler o mesmo saldo) e desativa se zerar
     for (const item of pedido.items) {
-      const prod = await prisma.product.findUnique({
-        where: { id: item.productId },
-        select: { estoque: true, temImagem: true }
+      const debitado = await prisma.product.updateMany({
+        where: { id: item.productId, estoque: { gte: item.quantidade } },
+        data: { estoque: { decrement: item.quantidade } },
       })
-      if (prod) {
-        const novoEstoque = Math.max(0, prod.estoque - item.quantidade)
-        const ativo = novoEstoque > 0 && prod.temImagem
+      if (debitado.count === 0) {
+        // Saldo menor que o pedido (corrida perdida): zera sem ficar negativo
         await prisma.product.update({
           where: { id: item.productId },
-          data: {
-            estoque: novoEstoque,
-            ativo,
-          },
-        })
+          data: { estoque: 0 },
+        }).catch(() => {})
       }
+      // Desativa quem zerou
+      await prisma.product.updateMany({
+        where: { id: item.productId, estoque: { lte: 0 } },
+        data: { ativo: false },
+      })
     }
 
     // Persiste o CPF no cadastro do cliente logado (para próximas compras / NF)
