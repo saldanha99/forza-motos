@@ -200,7 +200,7 @@ async function jobImagens() {
       }
       let imagens = extrairImagensTiny(detalhe)
       // Espelha no Blob já na descoberta (independência do CDN do Olist)
-      if (imagens.length > 0 && process.env.BLOB_READ_WRITE_TOKEN) {
+      if (imagens.length > 0) {
         const espelhadas = await subirParaBlob(p.sku, imagens)
         if (espelhadas.length > 0) imagens = espelhadas
       }
@@ -341,13 +341,18 @@ async function jobCatalogo() {
   return { desativados: fantasmas.length, importados }
 }
 
-// ─── JOB 4: espelhar imagens no Vercel Blob (independência do CDN do Olist) ─
-// Imagens hoje são hot-linkadas (erp.olist.com / cdn tiny / S3): se o Olist
-// tirar do ar, quebram no site. Baixamos e re-hospedamos no Blob da Forza.
+// ─── JOB 4: espelhar imagens no disco da VPS (independência total) ──────────
+// Imagens hot-linkadas (erp.olist.com / cdn tiny / S3) quebram se o Olist
+// tirar do ar. Baixamos e servimos do nginx local (/imagens → volume).
 // Política conservadora: NUNCA rebaixa produto por falha de download —
-// só promove pra Blob quando o download deu certo.
-const { put } = require('@vercel/blob')
-const BLOB_HOST = 'blob.vercel-storage.com'
+// só promove quando o download deu certo.
+const fs = require('fs')
+const path = require('path')
+const IMG_DIR = process.env.IMG_DIR ?? '/imagens'
+const IMG_BASE = process.env.IMG_BASE_URL ?? 'https://www.forzamotos.com.br/imagens'
+const BLOB_HOST = 'blob.vercel-storage.com' // legado: migração one-shot esvaziou
+
+const urlLocal = (u) => typeof u === 'string' && u.startsWith(`${IMG_BASE}/`)
 
 async function baixarImagem(url) {
   const ctrl = new AbortController()
@@ -372,35 +377,33 @@ async function baixarImagem(url) {
   }
 }
 
-/** Baixa e sobe as URLs pro Blob. Retorna array das que deram certo (ordem preservada). */
+/** Baixa e grava as URLs no disco local. Retorna as URLs finais (ordem preservada). */
 async function subirParaBlob(sku, urls) {
   const novas = []
   for (let i = 0; i < urls.length; i++) {
     const url = urls[i]
     if (typeof url !== 'string' || !url) continue
-    if (url.includes(BLOB_HOST)) { novas.push(url); continue } // já espelhada
+    if (urlLocal(url)) { novas.push(url); continue } // já está no disco da VPS
     const img = await baixarImagem(url)
     if (!img) continue
     try {
-      const blob = await put(`produtos/${sku}/${i}.${img.ext}`, img.buf, {
-        access: 'public',
-        token: process.env.BLOB_READ_WRITE_TOKEN,
-        addRandomSuffix: false,
-        allowOverwrite: true,
-        contentType: img.ct,
-      })
-      novas.push(blob.url)
+      const dir = path.join(IMG_DIR, 'produtos', sku)
+      fs.mkdirSync(dir, { recursive: true })
+      fs.writeFileSync(path.join(dir, `${i}.${img.ext}`), img.buf)
+      novas.push(`${IMG_BASE}/produtos/${encodeURIComponent(sku)}/${i}.${img.ext}`)
     } catch (e) {
-      log(`[blob] erro upload ${sku}/${i}:`, e.message)
+      log(`[imagens-disco] erro gravando ${sku}/${i}:`, e.message)
     }
-    await sleep(200)
+    await sleep(100)
   }
   return novas
 }
 
 async function jobEspelhar() {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    log('[espelhar] BLOB_READ_WRITE_TOKEN ausente — pulando')
+  try {
+    fs.mkdirSync(IMG_DIR, { recursive: true })
+  } catch (e) {
+    log('[espelhar] diretório de imagens indisponível — pulando:', e.message)
     return { espelhados: 0 }
   }
   const candidatos = await prisma.product.findMany({
@@ -412,7 +415,7 @@ async function jobEspelhar() {
   for (const p of candidatos) {
     const urls = Array.isArray(p.imagens) ? p.imagens : []
     if (urls.length === 0) continue
-    if (urls.every((u) => typeof u === 'string' && u.includes(BLOB_HOST))) { jaOk++; continue }
+    if (urls.every(urlLocal)) { jaOk++; continue }
 
     let novas = await subirParaBlob(p.sku, urls)
 
@@ -438,7 +441,7 @@ async function jobEspelhar() {
     if ((espelhados + semDownload) % 100 === 0 && espelhados + semDownload > 0)
       log(`[espelhar] progresso: ${espelhados + semDownload}/${candidatos.length - jaOk}`)
   }
-  log(`[espelhar] passada completa: ${espelhados} espelhados no Blob, ${jaOk} já estavam, ${semDownload} sem download (mantidos)`)
+  log(`[espelhar] passada completa: ${espelhados} espelhados no disco, ${jaOk} já estavam, ${semDownload} sem download (mantidos)`)
   return { espelhados, jaOk, semDownload }
 }
 

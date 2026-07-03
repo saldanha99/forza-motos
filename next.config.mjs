@@ -4,6 +4,9 @@ const nextConfig = {
   output: 'standalone',
   images: {
     remotePatterns: [
+      // Imagens de produto servidas pela própria VPS (nginx em /imagens)
+      { protocol: 'https', hostname: 'www.forzamotos.com.br' },
+      { protocol: 'https', hostname: 'forzamotos.com.br' },
       { protocol: 'https', hostname: '**.vercel-storage.com' },
       { protocol: 'https', hostname: '**.blob.vercel-storage.com' },
       { protocol: 'https', hostname: 'olist.com' },
