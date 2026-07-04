@@ -561,6 +561,15 @@ model Setting {
   updatedAt DateTime @updatedAt
 }
 
+/// Cache de consultas de placa (API Placas/wdapi2 cobra por consulta —
+/// mesma placa consultada de novo sai do cache, não da API)
+model PlacaConsulta {
+  placa     String   @id
+  /// Resposta normalizada: { marca, modelo, ano, cor }
+  resposta  Json
+  createdAt DateTime @default(now())
+}
+
 // ============================================================
 // MÓDULO CALENDÁRIO DE EVENTOS
 // ============================================================

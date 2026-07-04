@@ -6,7 +6,8 @@ import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/store/ProductCard'
 import { Breadcrumb } from '@/components/store/Breadcrumb'
 import { FAQSection } from '@/components/store/FAQSection'
-import { MODELOS_MOTOS, getModelosPorMarca } from '@/lib/motos-modelos'
+import { MODELOS_MOTOS, ESTILOS, getModelosPorMarca, type EstiloMoto } from '@/lib/motos-modelos'
+import { BuscaPorPlaca } from '@/components/store/BuscaPorPlaca'
 import { CheckCircle2, Wrench, Clock, Shield, Award, Zap } from 'lucide-react'
 import { SITE_URL } from '@/lib/schema'
 import { LogoPirelli, LogoMichelin, LogoMetzeler, LogoBridgestone } from '@/components/store/BrandLogo'
@@ -137,9 +138,19 @@ async function getDadosPneus() {
   }
 }
 
-export default async function PneusPage() {
+export default async function PneusPage({
+  searchParams,
+}: {
+  searchParams: { estilo?: string }
+}) {
   const { pneusDestaque, marcas, medidasPorAro } = await getDadosPneus()
-  const modelosPorMarca = getModelosPorMarca()
+
+  // Filtro por estilo de moto (?estilo=trail etc.)
+  const estiloAtivo = ESTILOS.find((e) => e.id === searchParams.estilo)?.id as EstiloMoto | undefined
+  const modelosFiltrados = estiloAtivo
+    ? MODELOS_MOTOS.filter((m) => m.estilo === estiloAtivo)
+    : MODELOS_MOTOS
+  const modelosPorMarca = getModelosPorMarca(modelosFiltrados)
 
   return (
     <>
@@ -253,6 +264,24 @@ export default async function PneusPage() {
         </div>
       </section>
 
+      {/* Busca pela PLACA da moto */}
+      <section className="py-12 bg-white border-b border-[#f0f0f0]">
+        <div className="max-w-[1280px] mx-auto px-6 md:px-12 flex flex-col lg:flex-row items-center gap-8">
+          <div className="flex-1">
+            <p className="text-[11px] font-semibold tracking-[2.5px] text-[#d42b2b] uppercase mb-2">
+              Novidade
+            </p>
+            <h2 className="font-barlow font-bold text-3xl md:text-4xl text-[#111] mb-2" style={{ letterSpacing: '-0.5px' }}>
+              Busque pela placa da sua moto
+            </h2>
+            <p className="text-[#666] font-inter">
+              Digite a placa e a gente identifica sua moto e mostra os produtos compatíveis — sem precisar saber medida nem modelo.
+            </p>
+          </div>
+          <BuscaPorPlaca />
+        </div>
+      </section>
+
       {/* Busca pela MEDIDA do pneu */}
       {medidasPorAro.size > 0 && (
         <section className="py-14" style={{ background: '#f7f7f8' }}>
@@ -295,9 +324,37 @@ export default async function PneusPage() {
           <h2 className="font-barlow font-bold text-3xl md:text-4xl text-[#111] text-center mb-2" style={{ letterSpacing: '-0.5px' }}>
             Encontre o pneu certo para sua moto
           </h2>
-          <p className="text-center text-[#666] font-inter mb-10">
+          <p className="text-center text-[#666] font-inter mb-6">
             Selecione o modelo da sua moto para ver os pneus compatíveis
           </p>
+
+          {/* Filtro por estilo de moto */}
+          <div className="flex flex-wrap justify-center gap-2 mb-10">
+            <Link
+              href="/pneus"
+              className={`rounded-full px-4 py-2 text-sm font-semibold font-inter border transition-colors ${
+                !estiloAtivo
+                  ? 'bg-[#d42b2b] border-[#d42b2b] text-white'
+                  : 'bg-white border-[#e2e2e6] text-[#333] hover:border-[#d42b2b] hover:text-[#d42b2b]'
+              }`}
+            >
+              Todos os estilos
+            </Link>
+            {ESTILOS.map((e) => (
+              <Link
+                key={e.id}
+                href={`/pneus?estilo=${e.id}`}
+                title={e.desc}
+                className={`rounded-full px-4 py-2 text-sm font-semibold font-inter border transition-colors ${
+                  estiloAtivo === e.id
+                    ? 'bg-[#d42b2b] border-[#d42b2b] text-white'
+                    : 'bg-white border-[#e2e2e6] text-[#333] hover:border-[#d42b2b] hover:text-[#d42b2b]'
+                }`}
+              >
+                {e.label}
+              </Link>
+            ))}
+          </div>
 
           <div className="space-y-8">
             {Array.from(modelosPorMarca.entries()).map(([marca, modelos]) => (
