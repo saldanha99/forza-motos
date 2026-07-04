@@ -10,7 +10,7 @@
  *   4. jobEspelhar   — re-hospeda as imagens no Vercel Blob (fim das imagens
  *                      quebradas por dependência do CDN do Olist)
  *
- * Ciclo: fantasmas 1x/24h; estoque + imagens em loop contínuo com pausa.
+ * Ciclo: catálogo (importação+fantasmas) a cada ciclo; estoque + imagens em loop contínuo.
  * Rate limit do Tiny respeitado com delay fixo + retry com backoff em bloqueio.
  */
 
@@ -20,7 +20,7 @@ const prisma = new PrismaClient()
 const BASE_URL = 'https://api.tiny.com.br/api2'
 const DELAY_MS = 1300            // delay entre chamadas produto.obter*
 const PAUSA_ENTRE_CICLOS_MIN = 30
-const FANTASMAS_INTERVALO_H = 24
+const CATALOGO_INTERVALO_H = 1 // catálogo (importação+fantasmas) roda a cada ciclo
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const log = (...a) => console.log(new Date().toISOString(), ...a)
@@ -559,7 +559,7 @@ async function main() {
   let ultimoCatalogo = 0
   for (;;) {
     try {
-      if (Date.now() - ultimoCatalogo > FANTASMAS_INTERVALO_H * 3600_000) {
+      if (Date.now() - ultimoCatalogo > CATALOGO_INTERVALO_H * 3600_000) {
         await rodarJob('catalogo', jobCatalogo) // importa faltantes + desativa fantasmas
         ultimoCatalogo = Date.now()
       }
