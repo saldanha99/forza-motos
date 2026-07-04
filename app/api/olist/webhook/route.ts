@@ -73,8 +73,20 @@ export async function POST(req: Request) {
     ) {
       const id = body.dados?.id || body.data?.id || body.id
       if (id) {
-        const novoEstoque = await syncEstoqueProduto(id)
-        console.log(`[webhook] Estoque produto ${id} → ${novoEstoque}`)
+        // Se o produto ainda não existe no site, cria na hora (traz imagem,
+        // preço e dados completos) — o Tiny não tem webhook de "produto criado",
+        // então o 1º lançamento de estoque é o gatilho de importação em tempo real.
+        const jaExiste = await prisma.product.findFirst({
+          where: { tinyId: String(id) },
+          select: { id: true },
+        })
+        if (!jaExiste) {
+          const r = await syncProdutoUnico(id)
+          console.log(`[webhook] Produto ${id} NOVO importado via estoque (${r})`)
+        } else {
+          const novoEstoque = await syncEstoqueProduto(id)
+          console.log(`[webhook] Estoque produto ${id} → ${novoEstoque}`)
+        }
       }
       return NextResponse.json({ ok: true })
     }

@@ -29,6 +29,12 @@ async function vigiarWorker(): Promise<{ workerOk: boolean; avisado?: boolean }>
     const idadeMin = (Date.now() - new Date(status.heartbeat).getTime()) / 60000
     if (idadeMin <= 120) return { workerOk: true }
 
+    // Cooldown de 3h: como este cron roda a cada 15 min, sem trava ele mandaria
+    // o mesmo alerta 12x/hora enquanto o worker estivesse parado.
+    const ultimo = await prisma.setting.findUnique({ where: { key: 'sync_worker_alerta' } })
+    const ultimoMs = ultimo ? Number(ultimo.value) : 0
+    if (Date.now() - ultimoMs < 3 * 60 * 60 * 1000) return { workerOk: false, avisado: false }
+
     const horas = Math.round(idadeMin / 60)
     await enviarMensagem({
       whatsapp: process.env.ADMIN_WHATSAPP ?? '5519974049445',
@@ -38,6 +44,11 @@ async function vigiarWorker(): Promise<{ workerOk: boolean; avisado?: boolean }>
         `Reiniciar: entrar na VPS e rodar\n` +
         '`docker restart forza-worker`\n\n' +
         `Status: https://www.forzamotos.com.br/admin/sincronizacao`,
+    })
+    await prisma.setting.upsert({
+      where: { key: 'sync_worker_alerta' },
+      update: { value: String(Date.now()) },
+      create: { key: 'sync_worker_alerta', value: String(Date.now()) },
     })
     return { workerOk: false, avisado: true }
   } catch (e: any) {
