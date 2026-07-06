@@ -6,7 +6,6 @@ import { useState } from 'react'
 import { ShoppingCart } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { useCartStore } from '@/store/cart'
-import toast from 'react-hot-toast'
 
 interface Produto {
   id: string
@@ -36,7 +35,6 @@ export function ProductCard({ produto }: { produto: Produto }) {
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault()
     adicionarItem({ id: produto.id, nome: produto.nome, slug: produto.slug, preco: precoFinal, imagem })
-    toast.success('Adicionado ao carrinho!')
   }
 
   const esgotado = produto.estoque === 0

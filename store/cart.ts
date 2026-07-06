@@ -12,6 +12,10 @@ export interface CartItem {
 
 interface CartStore {
   items: CartItem[]
+  /** Drawer lateral do carrinho (abre ao adicionar item) */
+  drawerAberto: boolean
+  abrirDrawer: () => void
+  fecharDrawer: () => void
   _hasHydrated: boolean
   setHasHydrated: (v: boolean) => void
   adicionarItem: (item: Omit<CartItem, 'quantidade'>) => void
@@ -25,6 +29,9 @@ export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
+      drawerAberto: false,
+      abrirDrawer: () => set({ drawerAberto: true }),
+      fecharDrawer: () => set({ drawerAberto: false }),
       _hasHydrated: false,
       setHasHydrated: (v) => set({ _hasHydrated: v }),
 
@@ -33,12 +40,13 @@ export const useCartStore = create<CartStore>()(
           const existe = state.items.find((i) => i.id === item.id)
           if (existe) {
             return {
+              drawerAberto: true,
               items: state.items.map((i) =>
                 i.id === item.id ? { ...i, quantidade: i.quantidade + 1 } : i
               ),
             }
           }
-          return { items: [...state.items, { ...item, quantidade: 1 }] }
+          return { drawerAberto: true, items: [...state.items, { ...item, quantidade: 1 }] }
         }),
 
       removerItem: (id) =>
@@ -59,6 +67,7 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: 'forza-cart',
+      partialize: (state) => ({ items: state.items }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true)
       },

@@ -5,7 +5,6 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { ShoppingCart, MessageCircle, ChevronLeft, ChevronRight, ZoomIn, X } from 'lucide-react'
 import { formatPrice, whatsappLink } from '@/lib/utils'
 import { useCartStore } from '@/store/cart'
-import toast from 'react-hot-toast'
 import { ProductReviews } from './ProductReviews'
 import { CalculadorFrete } from './CalculadorFrete'
 
@@ -319,7 +318,6 @@ export function ProductDetail({
       preco: precoPromo ?? preco,
       imagem: imagens[0],
     })
-    toast.success('Adicionado ao carrinho!')
   }
 
   const whatsLink = whatsappLink(

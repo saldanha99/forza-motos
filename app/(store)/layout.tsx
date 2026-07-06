@@ -4,6 +4,7 @@ import { WhatsappButton } from '@/components/store/WhatsappButton'
 import { AnnouncementBar } from '@/components/store/AnnouncementBar'
 import { SmoothScroll } from '@/components/SmoothScroll'
 import { LeadCaptureModal } from '@/components/store/LeadCaptureModal'
+import { CartDrawer } from '@/components/store/CartDrawer'
 
 export default function StoreLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -15,6 +16,7 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
         <Footer />
         <WhatsappButton />
         <LeadCaptureModal />
+        <CartDrawer />
       </div>
     </SmoothScroll>
   )

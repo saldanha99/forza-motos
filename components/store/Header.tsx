@@ -114,6 +114,7 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [activeCat, setActiveCat] = useState<string | null>(null)
   const itemCount = useCartStore((s) => s.items.reduce((acc, i) => acc + i.quantidade, 0))
+  const abrirDrawer = useCartStore((s) => s.abrirDrawer)
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -178,7 +179,18 @@ export function Header() {
 
           <ThemeToggle />
 
-          <Link href="/carrinho" className="text-white flex flex-col items-center gap-0.5">
+          <Link
+            href="/carrinho"
+            onClick={(e) => {
+              // Abre o drawer em vez de navegar (o drawer não existe em /carrinho e /checkout)
+              const path = window.location.pathname
+              if (!path.startsWith('/carrinho') && !path.startsWith('/checkout')) {
+                e.preventDefault()
+                abrirDrawer()
+              }
+            }}
+            className="text-white flex flex-col items-center gap-0.5"
+          >
             <div className="relative">
               <ShoppingCart size={22} />
               {itemCount > 0 && (
