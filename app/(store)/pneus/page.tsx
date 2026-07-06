@@ -108,6 +108,7 @@ async function getDadosPneus() {
     ativo: true,
     estoque: { gt: 0 },
     preco: { gt: 0, not: 999 },
+    variacaoDe: null,
     OR: [
       { categoria: { contains: 'pneu', mode: 'insensitive' as const } },
       { nome: { contains: 'pneu', mode: 'insensitive' as const } },

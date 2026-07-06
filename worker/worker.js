@@ -134,7 +134,8 @@ const parseNum = (v) => {
 // ─── JOB 1: estoque real de todos os produtos ───────────────────────────────
 async function jobEstoque() {
   const produtos = await prisma.product.findMany({
-    where: { tinyId: { not: null } },
+    // ehPai=false: estoque do pai é derivado dos filhos (jobVariacoes)
+    where: { tinyId: { not: null }, ehPai: false },
     select: { id: true, tinyId: true, sku: true, temImagem: true, estoque: true },
     // 999 primeiro (nunca verificados), depois os mais desatualizados
     orderBy: [{ updatedAt: 'asc' }],
@@ -483,6 +484,75 @@ async function alertarAdmin(chave, mensagem) {
   }
 }
 
+
+// ─── JOB 5: variações de tamanho — liga filhos ao pai (_PAI do Tiny) ─────────
+// Padrão do catálogo: pai "Luva Texx Nomade Preta" (sku 1447XX_PAI) e filhos
+// "Luva Texx Nomade Preta - M" etc. O pai vira o card único da família:
+// herda menor preço efetivo, soma de estoque e foto do 1º filho.
+async function jobVariacoes() {
+  const pais = await prisma.product.findMany({
+    where: { sku: { endsWith: '_PAI' } },
+    select: { id: true, sku: true, nome: true, temImagem: true, imagens: true, preco: true },
+  })
+  if (pais.length === 0) return { familias: 0 }
+
+  // Candidatos ainda não linkados (nome com sufixo " - ...")
+  const soltos = await prisma.product.findMany({
+    where: { variacaoDe: null, NOT: { sku: { endsWith: '_PAI' } }, nome: { contains: ' - ' } },
+    select: { id: true, nome: true },
+  })
+
+  let linkados = 0
+  let familias = 0
+  for (const pai of pais) {
+    const prefixo = `${pai.nome} - `
+    const filhosNovos = soltos.filter((c) => c.nome.startsWith(prefixo))
+    if (filhosNovos.length > 0) {
+      await prisma.product.updateMany({
+        where: { id: { in: filhosNovos.map((f) => f.id) } },
+        data: { variacaoDe: pai.sku },
+      })
+      linkados += filhosNovos.length
+    }
+
+    // Agrega dados dos filhos no pai
+    const filhos = await prisma.product.findMany({
+      where: { variacaoDe: pai.sku },
+      select: { preco: true, precoPromocional: true, estoque: true, ativo: true, imagens: true, temImagem: true },
+    })
+    if (filhos.length === 0) continue
+    familias++
+
+    const ativos = filhos.filter((f) => f.ativo && f.estoque > 0)
+    const base = ativos.length > 0 ? ativos : filhos
+    const precoMin = Math.min(
+      ...base.map((f) => Number(f.precoPromocional ?? f.preco)).filter((v) => v > 0),
+    )
+    const estoqueTotal = Math.min(999, ativos.reduce((acc, f) => acc + f.estoque, 0))
+
+    // Pai sem foto herda as fotos do 1º filho que tem
+    let imagens = undefined
+    let temImagem = pai.temImagem
+    if (!pai.temImagem) {
+      const comFoto = filhos.find((f) => f.temImagem && Array.isArray(f.imagens) && f.imagens.length > 0)
+      if (comFoto) { imagens = comFoto.imagens; temImagem = true }
+    }
+
+    await prisma.product.update({
+      where: { id: pai.id },
+      data: {
+        ehPai: true,
+        ...(Number.isFinite(precoMin) && { preco: precoMin, precoPromocional: null }),
+        estoque: estoqueTotal,
+        ativo: temImagem && ativos.length > 0,
+        ...(imagens !== undefined && { imagens, temImagem }),
+      },
+    })
+  }
+  log(`[variacoes] ${familias} famílias agregadas, ${linkados} filhos linkados`)
+  return { familias, linkados }
+}
+
 // ─── Status: persistido em Setting (lido pelo admin) + HTTP :3000 ───────────
 const http = require('http')
 
@@ -566,6 +636,7 @@ async function main() {
       await rodarJob('imagens', jobImagens)     // destrava pendentes (já espelha no Blob)
       await rodarJob('espelhar', jobEspelhar)   // migra imagens hot-linkadas pro Blob
       await rodarJob('estoque', jobEstoque)     // converge estoque do catálogo inteiro
+      await rodarJob('variacoes', jobVariacoes) // agrega famílias de tamanho no pai
       STATUS.ciclos++
     } catch (e) {
       log('[main] erro no ciclo:', e.message, '— aguardando 10min')

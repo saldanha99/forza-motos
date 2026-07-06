@@ -18,6 +18,8 @@ interface Produto {
   estoque: number
   marca: string
   categoria: string
+  /** Produto-pai de variações de tamanho: card mostra "a partir de" + escolher tamanho */
+  ehPai?: boolean
 }
 
 export function ProductCard({ produto }: { produto: Produto }) {
@@ -151,6 +153,11 @@ export function ProductCard({ produto }: { produto: Produto }) {
               className="block font-black text-[15px] sm:text-[20px] leading-none tracking-tight"
               style={{ color: 'var(--vermelho)' }}
             >
+              {produto.ehPai && (
+                <span className="block text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--card-installment)' }}>
+                  a partir de
+                </span>
+              )}
               {formatPrice(precoFinal)}
             </span>
             <span
@@ -161,10 +168,10 @@ export function ProductCard({ produto }: { produto: Produto }) {
             </span>
           </div>
 
-          {/* CTA */}
+          {/* CTA — pai de variações não tem compra rápida: precisa escolher tamanho */}
           {!esgotado && (
             <button
-              onClick={handleAddToCart}
+              onClick={produto.ehPai ? undefined : handleAddToCart}
               className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-[12px] font-bold uppercase tracking-[0.4px] transition-all duration-300"
               style={{
                 background: hov ? 'var(--vermelho)' : 'rgba(212,43,43,0.08)',
@@ -174,8 +181,14 @@ export function ProductCard({ produto }: { produto: Produto }) {
                 opacity: hov ? 1 : 0.85,
               }}
             >
-              <ShoppingCart size={12} strokeWidth={2.5} />
-              Carrinho
+              {produto.ehPai ? (
+                <>Escolher tamanho</>
+              ) : (
+                <>
+                  <ShoppingCart size={12} strokeWidth={2.5} />
+                  Carrinho
+                </>
+              )}
             </button>
           )}
         </div>

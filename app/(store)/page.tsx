@@ -54,9 +54,9 @@ async function getHomeData() {
     } else {
       // Sem vendas ainda — usa produtos com imagem real e estoque, melhor preço
       maisVendidos = await prisma.$queryRaw`
-        SELECT id, nome, slug, preco, "precoPromocional", imagens, estoque, marca, categoria, ativo
+        SELECT id, nome, slug, preco, "precoPromocional", imagens, estoque, marca, categoria, ativo, "ehPai"
         FROM "Product"
-        WHERE ativo = true AND estoque > 0 AND preco != 999
+        WHERE ativo = true AND estoque > 0 AND preco != 999 AND "variacaoDe" IS NULL
         ORDER BY
           CASE WHEN "precoPromocional" IS NOT NULL THEN 0 ELSE 1 END,
           estoque DESC,

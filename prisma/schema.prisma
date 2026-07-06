@@ -102,6 +102,10 @@ model Product {
   imagensVerificadas   Boolean     @default(false)
   /// True quando o produto tem pelo menos 1 imagem — usado para filtrar exibição
   temImagem            Boolean     @default(false)
+  /// SKU do produto-pai quando este é uma variação de tamanho (filho some das listagens)
+  variacaoDe           String?
+  /// True para produto-pai de variações (_PAI do Tiny) — card vira "escolher tamanho"
+  ehPai                Boolean     @default(false)
   /// Peso em kg (para cotação de frete)
   peso                 Decimal?    @db.Decimal(8, 3)
   /// Altura em cm
@@ -115,6 +119,8 @@ model Product {
 
   orderItems OrderItem[]
   reviews    Review[]
+
+  @@index([variacaoDe])
 }
 
 model Review {

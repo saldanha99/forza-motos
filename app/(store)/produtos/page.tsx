@@ -16,7 +16,8 @@ interface SearchParams {
 }
 
 async function getProdutos(params: SearchParams) {
-  const where: any = { ativo: true, estoque: { gt: 0 }, preco: { gt: 0, not: 999 } }
+  // variacaoDe: null → esconde variações de tamanho (a família aparece 1x, pelo pai)
+  const where: any = { ativo: true, estoque: { gt: 0 }, preco: { gt: 0, not: 999 }, variacaoDe: null }
 
   if (params.busca) {
     where.OR = [

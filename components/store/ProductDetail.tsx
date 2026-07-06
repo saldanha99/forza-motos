@@ -292,7 +292,14 @@ function Galeria({ imagens, disc }: { imagens: string[]; disc: number | null }) 
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
-export function ProductDetail({ produto }: { produto: Produto }) {
+export function ProductDetail({
+  produto,
+  seletorTamanho,
+}: {
+  produto: Produto
+  /** Seletor de tamanho renderizado pelo server (variações da mesma família) */
+  seletorTamanho?: React.ReactNode
+}) {
   const imagens = Array.isArray(produto.imagens) ? produto.imagens : []
   const adicionarItem = useCartStore((s) => s.adicionarItem)
 
@@ -340,6 +347,9 @@ export function ProductDetail({ produto }: { produto: Produto }) {
           <h1 className="font-barlow font-black text-[28px] md:text-[38px] text-[#111] leading-[1.05] mb-5 tracking-[-0.5px]">
             {produto.nome}
           </h1>
+
+          {/* Seletor de tamanho (variações da família) */}
+          {seletorTamanho}
 
           {/* Preço */}
           <div className="mb-6">
