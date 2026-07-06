@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cotarMelhorEnvio } from '@/lib/frete/melhor-envio'
 import { dimensoesPorCategoria } from '@/lib/frete/dimensoes'
+import { opcaoRetirada } from '@/lib/frete/cotar'
 
 // Dimensões médias de um pedido de pneu/peça
 const DIMENSOES_PADRAO = dimensoesPorCategoria('pneus')
@@ -28,25 +29,27 @@ export async function GET(req: NextRequest) {
       valorTotal: subtotal,
     })
 
-    const opcoes = resultados
+    const transportadoras = resultados
       .filter((r) => r.available && r.price > 0)
       .map((r) => ({
         id:             String(r.id),
         nome:           r.name,
         transportadora: r.company,
-        logo:           r.picture,
+        logo:           r.picture as string | undefined,
         preco:          r.price,
         prazo:          r.deliveryTime,
       }))
       .sort((a, b) => a.preco - b.preco)
-      .slice(0, 4) // máximo 4 opções
+      .slice(0, 4) // máximo 4 opções de transportadora
+
+    // retirada na loja sempre disponível, além do limite das 4
+    const opcoes = [...transportadoras, opcaoRetirada()]
 
     return NextResponse.json({ opcoes })
   } catch (err: any) {
     console.error('[frete/calcular]', err?.message)
-    return NextResponse.json(
-      { error: 'Não foi possível calcular o frete. Tente novamente.' },
-      { status: 502 },
-    )
+    // Melhor Envio fora do ar: ainda oferece retirada na loja, não deixa o
+    // cliente sem NENHUMA opção de entrega
+    return NextResponse.json({ opcoes: [opcaoRetirada()] })
   }
 }

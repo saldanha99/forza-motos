@@ -37,7 +37,7 @@ export interface FreteOpcao {
 }
 
 /** Retirada na loja física — sempre disponível, sem custo */
-function opcaoRetirada(): FreteOpcao {
+export function opcaoRetirada(): FreteOpcao {
   return {
     id: 'retirada',
     nome: 'Retirar na loja',
