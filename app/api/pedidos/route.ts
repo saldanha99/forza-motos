@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { gerarOrderNumber } from '@/lib/utils'
-import { criarPreferencia } from '@/lib/mercadopago'
+import { criarPreferencia, montarPayer } from '@/lib/mercadopago'
 import { verificarEstoqueTiny } from '@/lib/tiny/verificar-estoque'
 // NOTE: a replicação do pedido para o Olist agora acontece APENAS
 // dentro do webhook do Mercado Pago, quando o pagamento é aprovado.
@@ -141,7 +141,17 @@ export async function POST(req: Request) {
           quantity: i.quantidade,
           unit_price: Number(i.precoUnitario),
         })),
-        payer: session?.user ? { email: session.user.email!, name: session.user.name ?? undefined } : undefined,
+        // Payer completo (CPF, telefone, endereço): alimenta o antifraude do MP
+        // e habilita o Programa de Proteção ao Vendedor contra chargeback
+        payer: montarPayer({
+          email: session?.user?.email ?? enderecoComCpf?.email ?? null,
+          nome: enderecoComCpf?.nome ?? session?.user?.name ?? null,
+          telefone: enderecoComCpf?.telefone ?? null,
+          cpf: cpfLimpo,
+          cep: enderecoComCpf?.cep ?? null,
+          rua: enderecoComCpf?.rua ?? null,
+          numero: enderecoComCpf?.numero ?? null,
+        }),
         external_reference: pedido.id,
         back_urls: { success: '', failure: '', pending: '' },
       })

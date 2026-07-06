@@ -64,13 +64,63 @@ export interface ItemPagamento {
 
 export interface PreferenciaPagamento {
   items: ItemPagamento[]
-  payer?: { email: string; name?: string }
+  /**
+   * Quanto mais dados do comprador, melhor o score antifraude do MP e a
+   * elegibilidade do Programa de Proteção ao Vendedor (chargeback de fraude).
+   */
+  payer?: {
+    email: string
+    name?: string
+    surname?: string
+    phone?: { area_code: string; number: string }
+    identification?: { type: 'CPF' | 'CNPJ'; number: string }
+    address?: { zip_code?: string; street_name?: string; street_number?: string }
+  }
   external_reference: string
   back_urls: {
     success: string
     failure: string
     pending: string
   }
+}
+
+/** Monta o payer completo a partir dos dados do checkout (todos opcionais, defensivo) */
+export function montarPayer(dados: {
+  email?: string | null
+  nome?: string | null
+  telefone?: string | null
+  cpf?: string | null
+  cep?: string | null
+  rua?: string | null
+  numero?: string | null
+}): PreferenciaPagamento['payer'] | undefined {
+  if (!dados.email) return undefined
+
+  const partesNome = (dados.nome ?? '').trim().split(/\s+/)
+  const name = partesNome[0] || undefined
+  const surname = partesNome.length > 1 ? partesNome.slice(1).join(' ') : undefined
+
+  const fone = (dados.telefone ?? '').replace(/\D/g, '')
+  const phone =
+    fone.length >= 10
+      ? { area_code: fone.slice(0, 2), number: fone.slice(2) }
+      : undefined
+
+  const doc = (dados.cpf ?? '').replace(/\D/g, '')
+  const identification =
+    doc.length === 11
+      ? ({ type: 'CPF', number: doc } as const)
+      : doc.length === 14
+        ? ({ type: 'CNPJ', number: doc } as const)
+        : undefined
+
+  const cep = (dados.cep ?? '').replace(/\D/g, '')
+  const address =
+    cep.length === 8
+      ? { zip_code: cep, street_name: dados.rua ?? undefined, street_number: dados.numero ?? undefined }
+      : undefined
+
+  return { email: dados.email, name, surname, phone, identification, address }
 }
 
 export async function criarPreferencia(dados: PreferenciaPagamento) {
