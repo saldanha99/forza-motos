@@ -273,7 +273,11 @@ export default function CheckoutPage() {
                           <span className="text-faint font-normal text-[11px]">· {op.transportadora}</span>
                         )}
                       </p>
-                      <p className="text-xs text-faint">Prazo: até {op.prazo} dias úteis</p>
+                      <p className="text-xs text-faint">
+                        {op.id === 'retirada'
+                          ? 'Retire hoje mesmo — horário comercial'
+                          : `Prazo: até ${op.prazo} dias úteis`}
+                      </p>
                     </div>
                   </div>
                   <span className={`font-bold text-base ${op.gratis ? 'text-green-600' : 'text-ink'}`}>

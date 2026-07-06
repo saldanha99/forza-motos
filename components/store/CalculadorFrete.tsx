@@ -175,7 +175,9 @@ export function CalculadorFrete({ subtotal, compact = false }: Props) {
                           )}
                         </p>
                         <p className="text-[10px] text-faint mt-0.5">
-                          Prazo: até {op.prazo} {op.prazo === 1 ? 'dia útil' : 'dias úteis'}
+                          {op.id === 'retirada'
+                            ? 'Retire hoje mesmo — horário comercial'
+                            : `Prazo: até ${op.prazo} ${op.prazo === 1 ? 'dia útil' : 'dias úteis'}`}
                         </p>
                       </div>
                     </div>

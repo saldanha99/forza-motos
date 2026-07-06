@@ -33,7 +33,19 @@ export interface FreteOpcao {
   /** Prazo em dias úteis */
   prazo: number
   /** Origem da cotação — útil pra debug */
-  fonte: 'melhor-envio' | 'fallback'
+  fonte: 'melhor-envio' | 'fallback' | 'loja'
+}
+
+/** Retirada na loja física — sempre disponível, sem custo */
+function opcaoRetirada(): FreteOpcao {
+  return {
+    id: 'retirada',
+    nome: 'Retirar na loja',
+    transportadora: 'R. Funilense, 110 — Campinas/SP',
+    preco: 0,
+    prazo: 0,
+    fonte: 'loja',
+  }
 }
 
 /**
@@ -99,7 +111,7 @@ export async function cotarFrete(input: {
       }))
       .sort((a, b) => a.preco - b.preco)
 
-    if (opcoes.length > 0) return opcoes
+    if (opcoes.length > 0) return [...opcoes, opcaoRetirada()]
     // Se vazio, cai pro fallback
   } catch (e) {
     console.warn('[frete] Melhor Envio falhou, usando fallback:', e)
@@ -107,12 +119,15 @@ export async function cotarFrete(input: {
 
   // 3) Fallback — tabela hardcoded por região
   const fallback = await fallbackFrete(input.cepDestino, dimensoes.peso, input.valorTotal)
-  return fallback.map((f) => ({
-    id: f.codigo,
-    nome: f.servico,
-    transportadora: 'Correios',
-    preco: f.valor,
-    prazo: f.prazo,
-    fonte: 'fallback' as const,
-  }))
+  return [
+    ...fallback.map((f) => ({
+      id: f.codigo,
+      nome: f.servico,
+      transportadora: 'Correios',
+      preco: f.valor,
+      prazo: f.prazo,
+      fonte: 'fallback' as const,
+    })),
+    opcaoRetirada(),
+  ]
 }
