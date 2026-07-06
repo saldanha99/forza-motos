@@ -6,7 +6,7 @@ import { SEO_CONFIG } from '@/lib/seo/config'
 import { verificarEstoqueTiny, restaurarEstoquePedido } from '@/lib/tiny/verificar-estoque'
 import { validarAssinaturaMP } from '@/lib/mercadopago'
 import { enfileirarMensagem } from '@/lib/evolution/queue'
-import { normalizarWhatsApp } from '@/lib/evolution/client'
+import { normalizarWhatsApp, enviarMensagem } from '@/lib/evolution/client'
 import { enviarEmailConfirmacao, enviarEmailIngresso } from '@/lib/email/send'
 
 /**
@@ -315,6 +315,73 @@ export async function POST(req: Request) {
       }).catch((e) => console.error('[mp-webhook] Falha ao notificar admin:', e))
 
       return NextResponse.json({ ok: true, status: 'approved' })
+    }
+
+    // ── CHARGEBACK / DISPUTA / ESTORNO ─────────────────────────────────────
+    // charged_back = dono do cartão contestou (golpe do cartão clonado);
+    // in_mediation = comprador abriu reclamação; refunded = estorno efetivado.
+    // O dinheiro é tratado pelo MP — aqui a missão é AVISAR o admin na hora
+    // (responder a disputa no prazo com NF + rastreio é o que garante a
+    // cobertura do Programa de Proteção ao Vendedor) e registrar no pedido.
+    if (
+      payment.status === 'charged_back' ||
+      payment.status === 'in_mediation' ||
+      payment.status === 'refunded'
+    ) {
+      const marcador = `DISPUTA:${payment.status}`
+      // Idempotência: MP reenvia webhooks — só alerta 1x por tipo de evento
+      const jaRegistrado = await prisma.orderTracking.findFirst({
+        where: { orderId, status: marcador },
+        select: { id: true },
+      })
+      if (!jaRegistrado) {
+        const pedido = await prisma.order.findUnique({
+          where: { id: orderId },
+          select: { orderNumber: true, status: true, total: true, trackingCode: true },
+        })
+        if (pedido) {
+          const rotulo =
+            payment.status === 'charged_back'
+              ? '🚨 CHARGEBACK (possível cartão clonado)'
+              : payment.status === 'in_mediation'
+                ? '⚠️ DISPUTA aberta pelo comprador'
+                : '↩️ ESTORNO efetivado'
+
+          await prisma.orderTracking.create({
+            data: {
+              orderId,
+              status: marcador,
+              descricao: `${rotulo} — pagamento ${paymentId}. Responder no painel MP com NF + rastreio.`,
+            },
+          })
+
+          const aindaNaoDespachado = ['AGUARDANDO_PAGAMENTO', 'CONFIRMADO', 'SEPARANDO'].includes(pedido.status)
+          const totalFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
+            .format(Number(pedido.total ?? 0))
+          const msg =
+            `${rotulo} — *Forza Motos*\n\n` +
+            `📦 Pedido: ${pedido.orderNumber}\n` +
+            `💰 Valor: ${totalFmt}\n` +
+            (aindaNaoDespachado ? `\n⛔ *NÃO DESPACHAR este pedido!*\n` : `\n📦 Pedido já despachado${pedido.trackingCode ? ` (rastreio ${pedido.trackingCode})` : ''}.\n`) +
+            `\n👉 Responder a disputa no painel do Mercado Pago DENTRO DO PRAZO, ` +
+            `anexando NF e código de rastreio — é isso que garante a cobertura ` +
+            `do Programa de Proteção ao Vendedor.\n` +
+            `https://www.mercadopago.com.br/reclamos-ventas`
+
+          const adminPhone = process.env.ADMIN_WHATSAPP ?? '5519974049445'
+          // Envio direto (urgente); se falhar, cai na fila (processada a cada 5min)
+          const direto = await enviarMensagem({ whatsapp: adminPhone, mensagem: msg }).catch(() => ({ ok: false }))
+          if (!direto.ok) {
+            await enfileirarMensagem({
+              whatsapp: adminPhone,
+              nome: 'Admin',
+              tipo: 'MANUAL',
+              payload: { conteudo: msg },
+            }).catch((e) => console.error('[mp-webhook] Falha ao enfileirar alerta de disputa:', e))
+          }
+        }
+      }
+      return NextResponse.json({ ok: true, status: payment.status })
     }
 
     // ── PAGAMENTO REJEITADO / CANCELADO ────────────────────────────────────
