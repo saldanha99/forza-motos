@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/store/ProductCard'
 import { Breadcrumb } from '@/components/store/Breadcrumb'
-import { MODELOS_MOTOS, getModelo } from '@/lib/motos-modelos'
+import { MODELOS_MOTOS, getModelo, variantesMedida } from '@/lib/motos-modelos'
 import { SITE_URL } from '@/lib/schema'
 import { ArrowLeft, CheckCircle2, Phone } from 'lucide-react'
 
@@ -50,11 +50,21 @@ export default async function PneusModeloPage({
   const modelo = getModelo(params.modelo)
   if (!modelo) notFound()
 
-  // Busca produtos compatíveis: nome ou descrição contendo termos do modelo
-  const orConditions = modelo.termosCompativeis.flatMap((termo) => [
-    { nome: { contains: termo, mode: 'insensitive' as const } },
-    { descricao: { contains: termo, mode: 'insensitive' as const } },
-  ])
+  // Busca produtos compatíveis:
+  // 1. MEDIDAS de fábrica da moto no nome do pneu (ex: "90/90-18") — o caminho
+  //    que realmente acha pneus, já que pneu não tem nome de moto no título
+  // 2. Termos do modelo no nome/descrição (pega peças/acessórios compatíveis)
+  const orConditions = [
+    ...(modelo.medidas ?? []).flatMap((medida) =>
+      variantesMedida(medida).map((v) => ({
+        nome: { contains: v, mode: 'insensitive' as const },
+      })),
+    ),
+    ...modelo.termosCompativeis.flatMap((termo) => [
+      { nome: { contains: termo, mode: 'insensitive' as const } },
+      { descricao: { contains: termo, mode: 'insensitive' as const } },
+    ]),
+  ]
 
   const produtos = await prisma.product.findMany({
     where: {
@@ -107,6 +117,16 @@ export default async function PneusModeloPage({
           <p className="text-[#cbd] text-base md:text-lg font-inter">
             Encontre o pneu compatível com sua {modelo.nome} de {modelo.cilindradas}cc na Forza Motos em Campinas
           </p>
+          {modelo.medidas && modelo.medidas.length >= 2 && (
+            <p className="inline-flex flex-wrap items-center gap-2 mt-3 text-sm font-inter bg-white/10 border border-white/15 rounded-lg px-3 py-2">
+              <span className="text-[#cbd]">Medidas de fábrica:</span>
+              <strong className="text-white">{modelo.medidas[0]}</strong>
+              <span className="text-[#cbd] text-xs">dianteiro</span>
+              <span className="text-white/30">·</span>
+              <strong className="text-white">{modelo.medidas[1]}</strong>
+              <span className="text-[#cbd] text-xs">traseiro</span>
+            </p>
+          )}
           <div className="flex flex-wrap gap-4 mt-5 text-sm">
             <span className="flex items-center gap-1.5 text-[#cbd]">
               <CheckCircle2 size={14} className="text-green-400" /> Instalação inclusa
@@ -144,11 +164,17 @@ export default async function PneusModeloPage({
                 Não encontramos pneus específicos para a {modelo.nome} no momento.
               </p>
               <p className="text-[#666] font-inter text-sm mb-5">
-                Mas temos centenas de modelos disponíveis. Fale conosco que ajudamos a encontrar o pneu certo.
+                {modelo.medidas
+                  ? `Temos na loja física — as medidas da sua ${modelo.nome} são ${modelo.medidas[0]} (diant.) e ${modelo.medidas[1]} (tras.). Chama no WhatsApp que verificamos na hora.`
+                  : 'Mas temos centenas de modelos disponíveis. Fale conosco que ajudamos a encontrar o pneu certo.'}
               </p>
               <div className="flex flex-wrap gap-3 justify-center">
                 <a
-                  href="https://wa.me/5519974049445?text=Ol%C3%A1!%20Preciso%20de%20pneu%20para%20minha%20moto."
+                  href={`https://wa.me/5519974049445?text=${encodeURIComponent(
+                    `Olá! Preciso de pneu para minha ${modelo.marca} ${modelo.nome}` +
+                      (modelo.medidas ? ` (medidas ${modelo.medidas.join(' / ')})` : '') +
+                      '. Tem disponível?',
+                  )}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bg-green-500 hover:bg-green-600 text-white font-medium px-5 py-2 rounded text-sm"

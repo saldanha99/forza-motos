@@ -265,8 +265,36 @@ export default async function PneusPage({
         </div>
       </section>
 
+
+      {/* 4 formas de encontrar o pneu certo */}
+      <section className="py-8 bg-[#111]">
+        <div className="max-w-[1280px] mx-auto px-6 md:px-12">
+          <p className="text-center text-[11px] font-semibold tracking-[2.5px] text-white/40 uppercase mb-4">
+            4 formas de encontrar o pneu certo
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { href: '#placa', num: '1', titulo: 'Pela placa', desc: 'Digite a placa e a gente identifica a moto' },
+              { href: '#medida', num: '2', titulo: 'Pela medida', desc: 'Está gravada na lateral do pneu' },
+              { href: '#modelo', num: '3', titulo: 'Pelo modelo', desc: 'CG, Biz, Fazer, XRE, PCX…' },
+              { href: '#modelo', num: '4', titulo: 'Pelo estilo', desc: 'Urbana, scooter, trail, esportiva' },
+            ].map((c) => (
+              <a
+                key={c.num + c.titulo}
+                href={c.href}
+                className="group rounded-xl border border-white/10 hover:border-[#d42b2b] bg-white/[0.04] px-4 py-3.5 transition-colors"
+              >
+                <p className="font-barlow font-black text-lg text-[#d42b2b] leading-none mb-1">{c.num}.</p>
+                <p className="font-barlow font-bold text-white text-sm group-hover:text-[#d42b2b] transition-colors">{c.titulo}</p>
+                <p className="text-[11px] text-white/50 font-inter leading-snug mt-0.5">{c.desc}</p>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Busca pela PLACA da moto */}
-      <section className="py-12 bg-white border-b border-[#f0f0f0]">
+      <section id="placa" className="py-12 bg-white border-b border-[#f0f0f0] scroll-mt-24">
         <div className="max-w-[1280px] mx-auto px-6 md:px-12 flex flex-col lg:flex-row items-center gap-8">
           <div className="flex-1">
             <p className="text-[11px] font-semibold tracking-[2.5px] text-[#d42b2b] uppercase mb-2">
@@ -285,7 +313,7 @@ export default async function PneusPage({
 
       {/* Busca pela MEDIDA do pneu */}
       {medidasPorAro.size > 0 && (
-        <section className="py-14" style={{ background: '#f7f7f8' }}>
+        <section id="medida" className="py-14 scroll-mt-24" style={{ background: '#f7f7f8' }}>
           <div className="max-w-[1280px] mx-auto px-6 md:px-12">
             <h2 className="font-barlow font-bold text-3xl md:text-4xl text-[#111] text-center mb-2" style={{ letterSpacing: '-0.5px' }}>
               Busque pela medida do pneu
@@ -320,7 +348,7 @@ export default async function PneusPage({
       )}
 
       {/* Filtro por modelo de moto */}
-      <section className="py-14 bg-white">
+      <section id="modelo" className="py-14 bg-white scroll-mt-24">
         <div className="max-w-[1280px] mx-auto px-6 md:px-12">
           <h2 className="font-barlow font-bold text-3xl md:text-4xl text-[#111] text-center mb-2" style={{ letterSpacing: '-0.5px' }}>
             Encontre o pneu certo para sua moto
