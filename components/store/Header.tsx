@@ -15,8 +15,7 @@ const CATS = [
   { id: 'freios',      label: 'Pastilhas',   href: '/pastilhas' },
   { id: 'suspensao',   label: 'Serviços',    href: '/servicos' },
   { id: 'filtros',     label: 'Filtros',     href: '/produtos?categoria=Filtros' },
-  { id: 'correntes',   label: 'Correntes',   href: '/produtos?categoria=Transmissão' },
-  { id: 'capacetes',   label: 'Capacetes',   href: '/produtos?categoria=Capacetes' },
+  { id: 'correntes',   label: 'Kit Transmissão', href: '/produtos?categoria=Transmissão' },
   { id: 'acessorios',  label: 'Acessórios',  href: '/produtos?categoria=Acessórios' },
   { id: 'eventos',     label: 'Eventos',     href: '/calendario' },
 ]
@@ -156,7 +155,7 @@ export function Header() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar peças, pneus, óleos, capacetes..."
+            placeholder="Buscar peças, pneus, óleos, acessórios..."
             className="flex-1 border-none outline-none px-4 py-[11px] text-[13.5px] font-inter text-[#333] bg-white"
           />
           <button

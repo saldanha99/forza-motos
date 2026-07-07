@@ -119,11 +119,11 @@ export function LeadCaptureModal() {
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest opacity-80">Forza Motos</p>
-              <p className="font-bold text-lg leading-tight">Frete grátis na 1ª compra!</p>
+              <p className="font-bold text-lg leading-tight">Frete grátis acima de R$499!</p>
             </div>
           </div>
           <p className="text-sm opacity-90">
-            Deixe seu WhatsApp e receba ofertas exclusivas, dicas de manutenção e muito mais. 🏍️
+            Frete grátis para SP em compras acima de R$499. Deixe seu WhatsApp e receba ofertas exclusivas e dicas de manutenção. 🏍️
           </p>
         </div>
 

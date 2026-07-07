@@ -76,8 +76,12 @@ async function tinyFetch(endpoint, params = {}, delayMs = DELAY_MS) {
 const naoExisteNoTiny = (e) =>
   /não localizado|nao localizado|não encontrado|nao encontrado|inválido|invalido/i.test(e?.tinyMsg ?? '')
 
-// ─── Estoque real (mesma semântica do app: Loja / dropship=999) ─────────────
-const DEPOSITOS_DROPSHIP = ['drop_eurolaqu', 'f_drop', 'eurolaqui', 'drop']
+// ─── Estoque real (Loja = físico; dropship permitido = 999) ─────────────────
+// Fornecedores dropship que a loja MANTÉM vendendo → produto disponível (999).
+const DROPSHIP_OK = ['f_drop', 'fdrop']
+// Fornecedores BLOQUEADOS (não vendemos mais) → depósito ignorado; produto que
+// só existe aqui vira indisponível (estoque 0 → desativado). Eurolaqui (05/07).
+const DROPSHIP_BLOQUEADO = ['eurolaqui']
 
 async function buscarEstoqueReal(tinyId) {
   const data = await tinyFetch('produto.obter.estoque.php', { id: String(tinyId) })
@@ -85,21 +89,20 @@ async function buscarEstoqueReal(tinyId) {
   const lista = Array.isArray(raw) ? raw : raw.deposito ? [raw.deposito].flat() : []
 
   let saldoLoja = 0
-  let temDropship = false
+  let saldoOutros = 0
+  let temDropshipOk = false
   for (const item of lista) {
     const dep = item.deposito ?? item
     const nome = (dep.nome ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
     const saldo = Number(dep.saldo ?? dep.quantidade ?? 0)
-    if (nome === 'loja') saldoLoja += saldo
-    else if (DEPOSITOS_DROPSHIP.some((d) => nome.includes(d))) temDropship = true
+    if (DROPSHIP_BLOQUEADO.some((d) => nome.includes(d))) continue // fornecedor bloqueado — ignora saldo
+    if (nome === 'loja') { saldoLoja += saldo; continue }
+    if (DROPSHIP_OK.some((d) => nome.includes(d))) { temDropshipOk = true; continue }
+    saldoOutros += saldo
   }
-  if (saldoLoja > 0) return saldoLoja
-  if (temDropship) return 999
-  const total = lista.reduce((acc, item) => {
-    const dep = item.deposito ?? item
-    return acc + Number(dep.saldo ?? dep.quantidade ?? 0)
-  }, 0)
-  return Math.max(0, total)
+  if (saldoLoja > 0) return saldoLoja        // estoque físico real
+  if (temDropshipOk) return 999              // dropship permitido → disponível
+  return Math.max(0, saldoOutros)            // 0 se só havia Eurolaqui → desativado
 }
 
 // ─── Extração de imagens (mesma lógica do app) ──────────────────────────────

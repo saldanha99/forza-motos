@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { prisma } from '@/lib/prisma'
+import { filtroCategoriasOcultas, categoriaOculta } from '@/lib/categorias-ocultas'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ProductDetail } from '@/components/store/ProductDetail'
@@ -124,6 +125,9 @@ export default async function ProdutoPage({ params }: Props) {
 
   if (!produto) notFound()
 
+  // Categoria oculta (ex: capacetes — não vendemos por enquanto): página fora do ar
+  if (categoriaOculta(produto.categoria)) notFound()
+
   // Produto-pai não é comprável (estoque agregado): manda pro 1º tamanho disponível
   if (produto.ehPai) {
     const filho = await prisma.product.findFirst({
@@ -145,6 +149,7 @@ export default async function ProdutoPage({ params }: Props) {
         preco: { gt: 0, not: 999 },
         variacaoDe: null,
         id: { not: produto.id },
+        ...filtroCategoriasOcultas(),
         // não sugerir o próprio pai da família como "relacionado"
         ...(produto.variacaoDe && { sku: { not: produto.variacaoDe } }),
       },

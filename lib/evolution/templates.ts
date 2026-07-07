@@ -8,7 +8,7 @@ export function msgBoasVindas(nome: string): string {
 
 Vi que você se interessou pela nossa loja! Pode contar com a gente para qualquer dúvida sobre pneus, peças ou serviços. 🏍️
 
-Temos mais de *2.800 produtos* em estoque e *box rápido sem agendamento* — troca de pneu em 30 minutos!
+Temos mais de *2.800 produtos* em estoque e *box rápido com agendamento* — troca de pneu em 30 minutos!
 
 É só chamar aqui. 😊`
 }

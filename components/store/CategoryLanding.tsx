@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
+import { filtroCategoriasOcultas } from '@/lib/categorias-ocultas'
 import { ProductCard } from '@/components/store/ProductCard'
 import { Breadcrumb } from '@/components/store/Breadcrumb'
 import { FAQSection, FAQItem } from '@/components/store/FAQSection'
@@ -46,6 +47,7 @@ export async function CategoryLanding({
       estoque: { gt: 0 },
       temImagem: true,
       OR: orConditions,
+      ...filtroCategoriasOcultas(),
     },
     take: 12,
     orderBy: { updatedAt: 'desc' },

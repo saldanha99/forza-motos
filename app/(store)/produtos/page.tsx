@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/store/ProductCard'
 import { FiltrosProdutos, FiltrosMobile } from '@/components/store/FiltrosProdutos'
 import { Package } from 'lucide-react'
+import { filtroCategoriasOcultas } from '@/lib/categorias-ocultas'
 
 interface SearchParams {
   [key: string]: string | undefined
@@ -17,7 +18,8 @@ interface SearchParams {
 
 async function getProdutos(params: SearchParams) {
   // variacaoDe: null → esconde variações de tamanho (a família aparece 1x, pelo pai)
-  const where: any = { ativo: true, estoque: { gt: 0 }, preco: { gt: 0, not: 999 }, variacaoDe: null }
+  // filtroCategoriasOcultas → esconde categorias que a loja não vende agora (capacetes)
+  const where: any = { ativo: true, estoque: { gt: 0 }, preco: { gt: 0, not: 999 }, variacaoDe: null, ...filtroCategoriasOcultas() }
 
   if (params.busca) {
     where.OR = [
@@ -46,7 +48,7 @@ async function getProdutos(params: SearchParams) {
 }
 
 async function getFiltrosDisponiveis() {
-  const filtroBase = { ativo: true, estoque: { gt: 0 }, preco: { gt: 0, not: 999 } }
+  const filtroBase = { ativo: true, estoque: { gt: 0 }, preco: { gt: 0, not: 999 }, ...filtroCategoriasOcultas() }
   const [categorias, marcas] = await Promise.all([
     prisma.product.findMany({ where: filtroBase, select: { categoria: true }, distinct: ['categoria'] }),
     prisma.product.findMany({ where: filtroBase, select: { marca: true }, distinct: ['marca'] }),

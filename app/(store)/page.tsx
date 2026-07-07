@@ -2,6 +2,8 @@ export const dynamic = 'force-dynamic'
 import Link from 'next/link'
 import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
+import { filtroCategoriasOcultas, sqlCategoriasOcultas } from '@/lib/categorias-ocultas'
 import { ProductCard } from '@/components/store/ProductCard'
 import { FeaturedCarousel } from '@/components/store/FeaturedCarousel'
 import { HeroCarousel } from '@/components/store/HeroCarousel'
@@ -46,7 +48,7 @@ async function getHomeData() {
       temVendasReais = true
       const ids = topSold.map(t => t.productId)
       const prods = await prisma.product.findMany({
-        where: { id: { in: ids }, ativo: true, estoque: { gt: 0 }, preco: { gt: 0, not: 999 } },
+        where: { id: { in: ids }, ativo: true, estoque: { gt: 0 }, preco: { gt: 0, not: 999 }, ...filtroCategoriasOcultas() },
       })
       // Preserva ordem do ranking de vendas
       const map = new Map(prods.map(p => [p.id, p]))
@@ -56,7 +58,7 @@ async function getHomeData() {
       maisVendidos = await prisma.$queryRaw`
         SELECT id, nome, slug, preco, "precoPromocional", imagens, estoque, marca, categoria, ativo, "ehPai"
         FROM "Product"
-        WHERE ativo = true AND estoque > 0 AND preco != 999 AND "variacaoDe" IS NULL
+        WHERE ativo = true AND estoque > 0 AND preco != 999 AND "variacaoDe" IS NULL${Prisma.raw(sqlCategoriasOcultas())}
         ORDER BY
           CASE WHEN "precoPromocional" IS NOT NULL THEN 0 ELSE 1 END,
           estoque DESC,
@@ -69,7 +71,7 @@ async function getHomeData() {
     const promos = await prisma.$queryRaw`
       SELECT id, nome, slug, preco, "precoPromocional", imagens, estoque, marca, categoria, ativo
       FROM "Product"
-      WHERE ativo = true AND estoque > 0 AND preco != 999 AND "precoPromocional" IS NOT NULL
+      WHERE ativo = true AND estoque > 0 AND preco != 999 AND "precoPromocional" IS NOT NULL${Prisma.raw(sqlCategoriasOcultas())}
       ORDER BY (1 - "precoPromocional"::float / preco::float) DESC
       LIMIT 4
     ` as any[]
@@ -78,7 +80,7 @@ async function getHomeData() {
     const destaque = await prisma.$queryRaw`
       SELECT id, nome, slug, preco, "precoPromocional", imagens, estoque, marca, categoria, ativo
       FROM "Product"
-      WHERE ativo = true AND estoque > 0 AND preco != 999
+      WHERE ativo = true AND estoque > 0 AND preco != 999${Prisma.raw(sqlCategoriasOcultas())}
       ORDER BY "updatedAt" DESC
       LIMIT 12
     ` as any[]
@@ -141,8 +143,7 @@ const POP_CATS = [
   { id: 'Pneus',         label: 'Pneus Premium',          sub: 'Pirelli · Michelin · Bridgestone', img: '/images/categories/pneus.jpg',       href: '/produtos?categoria=Pneus' },
   { id: 'Lubrificantes', label: 'Óleos e Lubrificantes',  sub: 'Motul · Castrol · Shell',          img: '/images/categories/oleos.jpg',       href: '/produtos?categoria=Lubrificantes' },
   { id: 'Freios',        label: 'Freios e Segurança',     sub: 'EBC · Brembo · ATE',              img: '/images/categories/freios.jpg',      href: '/produtos?categoria=Freios' },
-  { id: 'Transmissão',   label: 'Transmissão',            sub: 'DID · RK · Regina',               img: '/images/categories/transmissao.jpg', href: '/produtos?categoria=Transmissão' },
-  { id: 'Capacetes',     label: 'Capacetes e EPI',        sub: 'AGV · HJC · Shoei',               img: '/images/categories/capacetes.jpg',   href: '/produtos?categoria=Capacetes' },
+  { id: 'Transmissão',   label: 'Kit Transmissão',        sub: 'DID · RK · Regina',               img: '/images/categories/transmissao.jpg', href: '/produtos?categoria=Transmissão' },
 ]
 
 // Serviços do box rápido (extraído do áudio do Vinícius)
@@ -279,7 +280,7 @@ export default async function HomePage() {
             <div>
               <span className="text-[#d42b2b] font-barlow font-bold text-[13px] uppercase tracking-[1.5px]">Box Rápido · Campinas/SP</span>
               <h2 className="font-barlow font-black text-[32px] md:text-[40px] text-[#111] tracking-[-0.5px] leading-[1.1] mt-1">
-                SERVIÇOS SEM<br />AGENDAMENTO
+                SERVIÇOS COM<br />AGENDAMENTO
               </h2>
             </div>
             <div className="text-right">

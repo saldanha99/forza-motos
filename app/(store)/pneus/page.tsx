@@ -57,7 +57,7 @@ const FAQS = [
   {
     question: 'Vocês instalam o pneu no mesmo dia da compra?',
     answer:
-      'Sim. Nosso box rápido faz a troca em até 30 minutos, sem necessidade de agendamento prévio. Basta vir até nossa loja na R. Funilense, 110 — Campinas/SP, em horário comercial.',
+      'Sim. Nosso box rápido faz a troca em até 30 minutos. Agende pelo WhatsApp (19) 97404-9445 para garantir seu horário e vá até a loja na R. Funilense, 110 — Campinas/SP.',
   },
   {
     question: 'Qual a garantia dos pneus vendidos?',

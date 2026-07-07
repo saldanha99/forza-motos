@@ -42,7 +42,7 @@ export async function generateMetadata(): Promise<Metadata> {
     template: '%s | Forza Motos',
   },
   description:
-    'Credenciada Pirelli, Metzeler e Michelin em Campinas/SP. Troca de pneu em 30 min sem agendamento. Box rápido: pneu, freio, óleo e transmissão. Loja online com entrega em todo Brasil.',
+    'Credenciada Pirelli, Metzeler e Michelin em Campinas/SP. Troca de pneu em 30 min com agendamento online. Box rápido: pneu, freio, óleo e transmissão. Loja online com entrega em todo Brasil.',
   keywords: [
     'pneus moto Campinas', 'Pirelli moto', 'Metzeler moto', 'Michelin moto',
     'troca pneu moto Campinas', 'peças moto', 'oficina moto Campinas',
@@ -63,7 +63,7 @@ export async function generateMetadata(): Promise<Metadata> {
     url: BASE_URL,
     title: 'Forza Motos — Pneus e Peças para Moto em Campinas/SP',
     description:
-      'Credenciada Pirelli, Metzeler e Michelin. Troca de pneu em 30 min sem agendamento. Entrega em todo Brasil.',
+      'Credenciada Pirelli, Metzeler e Michelin. Troca de pneu em 30 min com agendamento online. Entrega em todo Brasil.',
     images: [{ url: '/og-image.jpg', width: 1200, height: 630, alt: 'Forza Motos' }],
   },
   twitter: {

@@ -96,7 +96,7 @@ const FAQS = [
   {
     question: 'Precisa marcar horário para troca de pneu ou óleo?',
     answer:
-      'Não. Nosso box rápido atende por ordem de chegada em horário comercial. Para serviços maiores (revisão completa, manutenção preventiva) recomendamos agendar pelo WhatsApp para garantir disponibilidade.',
+      'Sim. Trabalhamos com agendamento para garantir seu atendimento sem espera. Agende pelo WhatsApp (19) 97404-9445 e escolha o melhor horário — assim seu serviço já sai na hora marcada.',
   },
   {
     question: 'Quanto tempo leva uma troca de pneu?',
