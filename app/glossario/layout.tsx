@@ -3,11 +3,12 @@ import { Footer } from '@/components/store/Footer'
 import { WhatsappButton } from '@/components/store/WhatsappButton'
 import { AnnouncementBar } from '@/components/store/AnnouncementBar'
 import { LeadCaptureModal } from '@/components/store/LeadCaptureModal'
+import { CartDrawer } from '@/components/store/CartDrawer'
 
 /**
  * Layout do Glossário — herda toda a identidade do e-commerce:
- * announcement bar, header, footer, botão WhatsApp e popup de captura
- * (primeiro frete grátis cadastrando nome + WhatsApp).
+ * announcement bar, header, footer, botão WhatsApp, popup de captura
+ * e o drawer lateral do carrinho.
  */
 export default function GlossarioLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -18,6 +19,7 @@ export default function GlossarioLayout({ children }: { children: React.ReactNod
       <Footer />
       <WhatsappButton />
       <LeadCaptureModal />
+      <CartDrawer />
     </div>
   )
 }
