@@ -14,7 +14,15 @@ const STATUS_TRANSICOES: Record<string, string[]> = {
   CANCELADO: [],
 }
 
-export function AlterarStatusPedido({ pedidoId, statusAtual }: { pedidoId: string; statusAtual: string }) {
+export function AlterarStatusPedido({
+  pedidoId,
+  statusAtual,
+  freteServico,
+}: {
+  pedidoId: string
+  statusAtual: string
+  freteServico: string | null
+}) {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const proximos = STATUS_TRANSICOES[statusAtual] ?? []
@@ -28,7 +36,14 @@ export function AlterarStatusPedido({ pedidoId, statusAtual }: { pedidoId: strin
         body: JSON.stringify({ status: novoStatus }),
       })
       if (!res.ok) throw new Error()
-      toast.success(`Status atualizado para: ${novoStatus.replace(/_/g, ' ')}`)
+      
+      const textoStatus = novoStatus === 'ENVIADO' && freteServico === 'retirada'
+        ? 'PRONTO PARA RETIRADA'
+        : novoStatus === 'ENTREGUE' && freteServico === 'retirada'
+        ? 'RETIRADO'
+        : novoStatus.replace(/_/g, ' ')
+
+      toast.success(`Status atualizado para: ${textoStatus}`)
       router.refresh()
     } catch {
       toast.error('Erro ao atualizar status')
@@ -50,9 +65,13 @@ export function AlterarStatusPedido({ pedidoId, statusAtual }: { pedidoId: strin
             size="sm"
             loading={loading}
             onClick={() => alterarStatus(s)}
-            className="w-full font-bold uppercase tracking-wider text-xs rounded-xl py-3"
+            className="w-full font-bold uppercase tracking-wider text-xs rounded-xl py-3 font-sans"
           >
-            {s.replace(/_/g, ' ')}
+            {s === 'ENVIADO' && freteServico === 'retirada'
+              ? 'Pronto para retirada'
+              : s === 'ENTREGUE' && freteServico === 'retirada'
+              ? 'Retirado (Entregue)'
+              : s.replace(/_/g, ' ')}
           </Button>
         ))}
       </div>

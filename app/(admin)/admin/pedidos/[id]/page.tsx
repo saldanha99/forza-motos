@@ -33,6 +33,7 @@ export default async function PedidoDetalhePage({ params }: { params: { id: stri
         status={pedido.status}
         olistOrderId={pedido.olistOrderId}
         trackingCode={pedido.trackingCode}
+        freteServico={pedido.freteServico}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -86,7 +87,7 @@ export default async function PedidoDetalhePage({ params }: { params: { id: stri
 
         <div className="space-y-6">
           {/* Ações de status */}
-          <AlterarStatusPedido pedidoId={pedido.id} statusAtual={pedido.status} />
+          <AlterarStatusPedido pedidoId={pedido.id} statusAtual={pedido.status} freteServico={pedido.freteServico} />
 
           {/* Cliente */}
           {pedido.user && (
@@ -109,15 +110,24 @@ export default async function PedidoDetalhePage({ params }: { params: { id: stri
             </div>
           )}
 
-          {/* Endereço */}
+          {/* Entrega ou Retirada */}
           <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
-            <h2 className="font-barlow font-bold text-xl text-brand-text mb-4">Entrega</h2>
-            <address className="text-sm text-brand-muted/90 not-italic space-y-1">
-              <p className="text-brand-text font-medium">{endereco?.rua}, {endereco?.numero} {endereco?.complemento}</p>
-              <p>{endereco?.bairro}</p>
-              <p>{endereco?.cidade}/{endereco?.estado}</p>
-              <p className="pt-1 font-mono text-xs text-brand-muted/60">CEP: {endereco?.cep}</p>
-            </address>
+            <h2 className="font-barlow font-bold text-xl text-brand-text mb-4">
+              {pedido.freteServico === 'retirada' ? 'Retirada na Loja' : 'Entrega'}
+            </h2>
+            {pedido.freteServico === 'retirada' ? (
+              <div className="text-sm text-brand-muted/95 space-y-1">
+                <p className="text-brand-text font-semibold text-emerald-400">Cliente optou por retirar no balcão</p>
+                <p className="text-xs text-brand-muted/80">Não gerar etiqueta de envio ou despacho via transportadora.</p>
+              </div>
+            ) : (
+              <address className="text-sm text-brand-muted/90 not-italic space-y-1">
+                <p className="text-brand-text font-medium">{endereco?.rua}, {endereco?.numero} {endereco?.complemento}</p>
+                <p>{endereco?.bairro}</p>
+                <p>{endereco?.cidade}/{endereco?.estado}</p>
+                <p className="pt-1 font-mono text-xs text-brand-muted/60">CEP: {endereco?.cep}</p>
+              </address>
+            )}
           </div>
 
           {/* Pagamento */}

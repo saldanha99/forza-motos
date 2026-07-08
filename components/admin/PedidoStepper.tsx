@@ -1,4 +1,4 @@
-import { CheckCircle2, CircleDollarSign, Cloud, PackageOpen, Truck, Home, XCircle } from 'lucide-react'
+import { CheckCircle2, CircleDollarSign, Cloud, PackageOpen, Truck, Home, XCircle, ShoppingBag } from 'lucide-react'
 import { ReplicarOlistButton } from './ReplicarOlistButton'
 
 /**
@@ -10,11 +10,13 @@ export function PedidoStepper({
   status,
   olistOrderId,
   trackingCode,
+  freteServico,
 }: {
   pedidoId: string
   status: string
   olistOrderId: string | null
   trackingCode: string | null
+  freteServico: string | null
 }) {
   if (status === 'CANCELADO') {
     return (
@@ -30,13 +32,28 @@ export function PedidoStepper({
   const separando = ['SEPARANDO', 'ENVIADO', 'ENTREGUE'].includes(status)
   const enviado = ['ENVIADO', 'ENTREGUE'].includes(status)
   const entregue = status === 'ENTREGUE'
+  const isRetirada = freteServico === 'retirada'
 
   const steps = [
     { done: pago, icon: CircleDollarSign, titulo: 'Pagamento', detalhe: pago ? 'Aprovado' : 'Aguardando cliente pagar' },
     { done: noOlist, icon: Cloud, titulo: 'Olist / NF', detalhe: noOlist ? `Pedido no ERP` : pago ? 'NÃO replicado — agir!' : 'Replica após pagamento' },
     { done: separando, icon: PackageOpen, titulo: 'Separação', detalhe: separando ? 'Em separação/embalado' : 'Separar no painel Olist' },
-    { done: enviado, icon: Truck, titulo: 'Despacho', detalhe: enviado ? (trackingCode ? `Rastreio ${trackingCode}` : 'Enviado') : 'Etiqueta + coleta' },
-    { done: entregue, icon: Home, titulo: 'Entrega', detalhe: entregue ? 'Entregue ao cliente' : 'Aguardando transporte' },
+    {
+      done: enviado,
+      icon: isRetirada ? ShoppingBag : Truck,
+      titulo: isRetirada ? 'Retirada' : 'Despacho',
+      detalhe: enviado
+        ? (isRetirada ? 'Pronto para retirada' : (trackingCode ? `Rastreio ${trackingCode}` : 'Enviado'))
+        : (isRetirada ? 'Aguardando separação' : 'Etiqueta + coleta')
+    },
+    {
+      done: entregue,
+      icon: isRetirada ? CheckCircle2 : Home,
+      titulo: isRetirada ? 'Retirado' : 'Entrega',
+      detalhe: entregue
+        ? (isRetirada ? 'Retirado no balcão' : 'Entregue ao cliente')
+        : (isRetirada ? 'Aguardando cliente retirar' : 'Aguardando transporte')
+    },
   ]
   const atual = steps.findIndex((s) => !s.done)
 

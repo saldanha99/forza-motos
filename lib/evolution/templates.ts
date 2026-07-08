@@ -30,11 +30,13 @@ Qualquer dúvida é só responder aqui. Te esperamos! 🏁`
 }
 
 export function msgPedidoConfirmado(nome: string, numeroPedido: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://forzamotos.com.br'
   return `Oi *${nome}*! ✅ Seu pedido *#${numeroPedido}* foi confirmado!
 
 Estamos separando seus produtos com cuidado. 📦
 
-Você receberá o código de rastreio assim que o pedido for enviado.
+Você pode acompanhar o status do seu pedido em tempo real pelo link:
+👉 ${baseUrl}/rastrear?pedido=${numeroPedido}
 
 Obrigado por escolher a *Forza Motos*! 🏍️`
 }

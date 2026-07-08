@@ -19,6 +19,8 @@ export function htmlPedidoConfirmado(opts: {
   fretePrazo?: number | null
 }) {
   const { nomeCliente, numeroPedido, itens, subtotal, frete, total, freteTransportadora, fretePrazo } = opts
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://forzamotos.com.br'
+  const trackingUrl = `${baseUrl}/rastrear?pedido=${numeroPedido}`
 
   const itensHtml = itens
     .map(
@@ -65,6 +67,9 @@ export function htmlPedidoConfirmado(opts: {
             <div style="background:#fff8f0;border:1px solid #ffe0b2;border-radius:6px;padding:16px;text-align:center;">
               <p style="margin:0;color:#777;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Número do Pedido</p>
               <p style="margin:4px 0 0;color:#e63946;font-size:22px;font-weight:700;font-family:monospace;">${numeroPedido}</p>
+              <div style="margin-top: 12px;">
+                <a href="${trackingUrl}" style="display:inline-block;background:#e63946;color:#fff;text-decoration:none;padding:10px 24px;border-radius:20px;font-size:13px;font-weight:600;">🔍 Acompanhar em Tempo Real</a>
+              </div>
             </div>
           </td>
         </tr>

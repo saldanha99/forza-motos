@@ -18,19 +18,13 @@ interface TrackingData {
   subtotal: number
   frete: number
   total: number
+  freteServico: string | null
+  freteTransportadora: string | null
   trackingCode: string | null
   enderecoEntrega: any
   items: { nome: string; quantidade: number; precoUnitario: number }[]
   tracking: { status: string; descricao: string; createdAt: string }[]
 }
-
-const STATUS_STEPS = [
-  { key: 'AGUARDANDO_PAGAMENTO', label: 'Aguardando pagamento', Icon: Clock },
-  { key: 'CONFIRMADO',           label: 'Pedido confirmado',    Icon: CheckCircle },
-  { key: 'SEPARANDO',            label: 'Separando',            Icon: Package },
-  { key: 'ENVIADO',              label: 'Enviado',              Icon: Truck },
-  { key: 'ENTREGUE',             label: 'Entregue',             Icon: CheckCircle },
-]
 
 const STATUS_ORDER: Record<string, number> = {
   AGUARDANDO_PAGAMENTO: 0,
@@ -41,20 +35,32 @@ const STATUS_ORDER: Record<string, number> = {
   CANCELADO: -1,
 }
 
+export function getStatusSteps(freteServico: string | null) {
+  const isRetirada = freteServico === 'retirada'
+  return [
+    { key: 'AGUARDANDO_PAGAMENTO', label: 'Aguardando pagamento', Icon: Clock },
+    { key: 'CONFIRMADO',           label: 'Pedido confirmado',    Icon: CheckCircle },
+    { key: 'SEPARANDO',            label: 'Separando',            Icon: Package },
+    { key: 'ENVIADO',              label: isRetirada ? 'Pronto para retirada' : 'Enviado',              Icon: isRetirada ? ShoppingBag : Truck },
+    { key: 'ENTREGUE',             label: isRetirada ? 'Retirado' : 'Entregue',             Icon: CheckCircle },
+  ]
+}
+
 // ── Barra de progresso visual ──────────────────────────────────────────────────
-function BarraProgresso({ status }: { status: string }) {
+function BarraProgresso({ status, freteServico }: { status: string; freteServico: string | null }) {
   const idx = STATUS_ORDER[status] ?? 0
   const cancelado = status === 'CANCELADO'
+  const steps = getStatusSteps(freteServico)
 
   return (
     <div className="flex items-center gap-0 py-2">
-      {STATUS_STEPS.map(({ key, label, Icon }, i) => {
+      {steps.map(({ key, label, Icon }, i) => {
         const done    = !cancelado && i < idx
         const current = !cancelado && i === idx
         const future  = cancelado || i > idx
 
         return (
-          <div key={key} className="flex items-center" style={{ flex: i < STATUS_STEPS.length - 1 ? '1' : 'none' }}>
+          <div key={key} className="flex items-center" style={{ flex: i < steps.length - 1 ? '1' : 'none' }}>
             {/* Círculo */}
             <div className="flex flex-col items-center gap-1.5 shrink-0">
               <div
@@ -87,7 +93,7 @@ function BarraProgresso({ status }: { status: string }) {
             </div>
 
             {/* Linha conectora */}
-            {i < STATUS_STEPS.length - 1 && (
+            {i < steps.length - 1 && (
               <div
                 className="flex-1 h-0.5 mx-1 rounded-full transition-all"
                 style={{
@@ -248,12 +254,12 @@ export default function RastrearPage({ searchParams }: { searchParams: { pedido?
 
             {/* Barra de progresso */}
             {pedido.status !== 'CANCELADO' && (
-              <BarraProgresso status={pedido.status} />
+              <BarraProgresso status={pedido.status} freteServico={pedido.freteServico} />
             )}
 
             {/* Label mobile atual */}
             <p className="text-xs text-center text-vermelho font-medium mt-2 sm:hidden">
-              {STATUS_STEPS.find((s) => s.key === pedido.status)?.label ?? pedido.status}
+              {getStatusSteps(pedido.freteServico).find((s) => s.key === pedido.status)?.label ?? pedido.status}
             </p>
 
             {/* Código de rastreio */}
@@ -273,7 +279,7 @@ export default function RastrearPage({ searchParams }: { searchParams: { pedido?
             ) : (
               <div className="space-y-0">
                 {[...pedido.tracking].reverse().map((t, i) => {
-                  const StepIcon = STATUS_STEPS.find((s) => s.key === t.status)?.Icon ?? Package
+                  const StepIcon = getStatusSteps(pedido.freteServico).find((s) => s.key === t.status)?.Icon ?? Package
                   const isFirst = i === 0
                   const isLast  = i === pedido.tracking.length - 1
                   return (
@@ -332,18 +338,38 @@ export default function RastrearPage({ searchParams }: { searchParams: { pedido?
             </div>
           </div>
 
-          {/* Endereço mascarado */}
-          <div className="bg-card border border-line rounded-2xl p-5">
-            <h2 className="font-grotesk font-semibold text-base text-ink mb-2 flex items-center gap-2">
-              <MapPin size={15} className="text-vermelho" />
-              Endereço de entrega
-            </h2>
-            <p className="text-sm text-dim">
-              {mascaraEndereco(
-                `${pedido.enderecoEntrega?.rua ?? ''}, ${pedido.enderecoEntrega?.numero ?? ''} – ${pedido.enderecoEntrega?.cidade ?? ''}/${pedido.enderecoEntrega?.estado ?? ''}`
-              )}
-            </p>
-          </div>
+          {/* Endereço ou Local de Retirada */}
+          {pedido.freteServico === 'retirada' ? (
+            <div className="bg-card border border-line rounded-2xl p-5">
+              <h2 className="font-grotesk font-semibold text-base text-ink mb-2 flex items-center gap-2">
+                <MapPin size={15} className="text-vermelho" />
+                Local de Retirada
+              </h2>
+              <p className="text-sm text-dim leading-relaxed">
+                <strong className="text-ink">Forza Motos</strong>
+                <br />
+                Rua Funilense, 110 — Guanabara
+                <br />
+                Campinas/SP — CEP: 13073-041
+                <br />
+                <span className="text-xs text-faint mt-1.5 block font-semibold text-emerald-600 dark:text-emerald-400">
+                  🏁 Disponível para retirada de Segunda a Sexta das 8h às 18h e Sábado das 8h às 13h.
+                </span>
+              </p>
+            </div>
+          ) : (
+            <div className="bg-card border border-line rounded-2xl p-5">
+              <h2 className="font-grotesk font-semibold text-base text-ink mb-2 flex items-center gap-2">
+                <MapPin size={15} className="text-vermelho" />
+                Endereço de entrega
+              </h2>
+              <p className="text-sm text-dim">
+                {mascaraEndereco(
+                  `${pedido.enderecoEntrega?.rua ?? ''}, ${pedido.enderecoEntrega?.numero ?? ''} – ${pedido.enderecoEntrega?.cidade ?? ''}/${pedido.enderecoEntrega?.estado ?? ''}`
+                )}
+              </p>
+            </div>
+          )}
 
           {/* WhatsApp CTA */}
           <a

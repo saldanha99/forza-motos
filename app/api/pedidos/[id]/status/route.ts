@@ -19,6 +19,25 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
   const { status } = await req.json()
 
+  const currentOrder = await prisma.order.findUnique({
+    where: { id: params.id },
+    select: { freteServico: true }
+  })
+  if (!currentOrder) {
+    return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 })
+  }
+
+  const isRetirada = currentOrder.freteServico === 'retirada'
+  let descricao = DESCRICOES[status] ?? `Status atualizado para ${status}`
+
+  if (isRetirada) {
+    if (status === 'ENVIADO') {
+      descricao = 'Pedido disponível para retirada no balcão.'
+    } else if (status === 'ENTREGUE') {
+      descricao = 'Pedido retirado no balcão.'
+    }
+  }
+
   const pedido = await prisma.order.update({
     where: { id: params.id },
     data: {
@@ -26,7 +45,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       tracking: {
         create: {
           status,
-          descricao: DESCRICOES[status] ?? `Status atualizado para ${status}`,
+          descricao,
         },
       },
     },
