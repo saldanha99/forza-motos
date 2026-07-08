@@ -88,7 +88,12 @@ async function getAccessToken(): Promise<string> {
 export async function notifyGoogleIndexing(
   url: string,
   action: IndexingAction = 'URL_UPDATED'
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; skipped?: boolean }> {
+  // Sem credencial → pula silenciosamente (Google indexa via sitemap/Search
+  // Console; a Indexing API oficial cobre só JobPosting/BroadcastEvent).
+  if (!process.env.GOOGLE_INDEXING_CREDENTIALS) {
+    return { ok: false, skipped: true, error: 'Google via sitemap (sem Indexing API)' }
+  }
   try {
     const token = await getAccessToken()
     const res = await fetch(

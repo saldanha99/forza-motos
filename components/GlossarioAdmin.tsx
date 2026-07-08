@@ -506,7 +506,7 @@ export function GlossarioAdmin({ initialTermos, defaultNicho = '', siteUrl = '' 
 
             {geradorAberto && (
               <div className="px-5 pb-5 space-y-3 border-t border-brand-border/20">
-                <p className="text-xs text-brand-muted pt-3">Sugere até 30 novos verbetes por letra baseados no nicho.</p>
+                <p className="text-xs text-brand-muted pt-3">Sugere até 100 novos verbetes por letra baseados no nicho.</p>
 
                 {/* Nicho */}
                 <div className="space-y-1">

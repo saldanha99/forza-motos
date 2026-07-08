@@ -37,9 +37,14 @@ export async function POST(req: Request) {
     promptExtra = '',
     provider,
     modelo,
-    maxTokens   = 1024,
+    quantidade  = 100,
+    maxTokens,
     apiKey,
   } = body
+
+  // 100 termos não cabem em 1024 tokens — escala o teto pela quantidade pedida
+  const qtd = Math.max(10, Math.min(200, Number(quantidade) || 100))
+  const tokens = maxTokens ?? Math.min(8000, 1200 + qtd * 40)
 
   if (!nicho?.trim() || !letra?.trim()) {
     return NextResponse.json({ error: '"nicho" e "letra" são obrigatórios' }, { status: 400 })
@@ -61,11 +66,11 @@ ${formatacaoPrefixo}
 Retorne APENAS um objeto JSON válido (sem formatação markdown, sem comentários):
 {"termos": ["Termo 1", "Termo 2", ...]}
 
-Gere entre 15 e 30 termos altamente relevantes para ranqueamento no Google.
+Gere exatamente ${qtd} termos altamente relevantes para ranqueamento no Google, sem repetir.
 ${promptExtra ? `Instruções adicionais: ${promptExtra}` : ''}`
 
   try {
-    const raw     = await callAI({ prompt, maxTokens, provider, modelo, apiKey: apiKey || undefined })
+    const raw     = await callAI({ prompt, maxTokens: tokens, provider, modelo, apiKey: apiKey || undefined })
     const cleaned = cleanJsonResponse(raw)
     const parsed  = JSON.parse(cleaned)
     const sugeridos: string[] = parsed.termos ?? []

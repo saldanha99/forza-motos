@@ -180,13 +180,13 @@ async function criarLogs(
 
 async function atualizarLog(
   id: string,
-  resp: { ok: boolean; error?: string }
+  resp: { ok: boolean; error?: string; skipped?: boolean }
 ) {
   return prisma.seoIndexingLog
     .update({
       where: { id },
       data: {
-        status: resp.ok ? 'SUCESSO' : 'FALHA',
+        status: resp.ok ? 'SUCESSO' : resp.skipped ? 'IGNORADO' : 'FALHA',
         erro: resp.error || null,
         enviadoEm: new Date(),
         tentativas: { increment: 1 },
@@ -197,13 +197,13 @@ async function atualizarLog(
 
 async function atualizarLogsLote(
   logs: Array<{ id: string }>,
-  resp: { ok: boolean; error?: string }
+  resp: { ok: boolean; error?: string; skipped?: boolean }
 ) {
   return prisma.seoIndexingLog
     .updateMany({
       where: { id: { in: logs.map((l) => l.id) } },
       data: {
-        status: resp.ok ? 'SUCESSO' : 'FALHA',
+        status: resp.ok ? 'SUCESSO' : resp.skipped ? 'IGNORADO' : 'FALHA',
         erro: resp.error || null,
         enviadoEm: new Date(),
         tentativas: { increment: 1 },
