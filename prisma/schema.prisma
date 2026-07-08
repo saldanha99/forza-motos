@@ -106,6 +106,10 @@ model Product {
   variacaoDe           String?
   /// True para produto-pai de variações (_PAI do Tiny) — card vira "escolher tamanho"
   ehPai                Boolean     @default(false)
+  /// Depósito de origem no Olist: loja | f_drop | eurolaqui | outro (populado pelo worker)
+  fornecedor           String?
+  /// Admin marcou p/ MANTER na loja mesmo sendo de fornecedor bloqueado (Eurolaqui)
+  mantidoManual        Boolean     @default(false)
   /// Peso em kg (para cotação de frete)
   peso                 Decimal?    @db.Decimal(8, 3)
   /// Altura em cm

@@ -83,6 +83,8 @@ const DROPSHIP_OK = ['f_drop', 'fdrop']
 // só existe aqui vira indisponível (estoque 0 → desativado). Eurolaqui (05/07).
 const DROPSHIP_BLOQUEADO = ['eurolaqui']
 
+// Retorna { estoque, fornecedor }. `fornecedor` = origem principal do saldo:
+//   loja (físico) | f_drop (dropship permitido) | eurolaqui (bloqueado) | outro
 async function buscarEstoqueReal(tinyId) {
   const data = await tinyFetch('produto.obter.estoque.php', { id: String(tinyId) })
   const raw = data.retorno?.produto?.depositos ?? []
@@ -91,18 +93,27 @@ async function buscarEstoqueReal(tinyId) {
   let saldoLoja = 0
   let saldoOutros = 0
   let temDropshipOk = false
+  let temEurolaqui = false
   for (const item of lista) {
     const dep = item.deposito ?? item
     const nome = (dep.nome ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
     const saldo = Number(dep.saldo ?? dep.quantidade ?? 0)
-    if (DROPSHIP_BLOQUEADO.some((d) => nome.includes(d))) continue // fornecedor bloqueado — ignora saldo
+    if (DROPSHIP_BLOQUEADO.some((d) => nome.includes(d))) { if (saldo > 0) temEurolaqui = true; continue }
     if (nome === 'loja') { saldoLoja += saldo; continue }
-    if (DROPSHIP_OK.some((d) => nome.includes(d))) { temDropshipOk = true; continue }
+    if (DROPSHIP_OK.some((d) => nome.includes(d))) { if (saldo > 0 || lista.length) temDropshipOk = temDropshipOk || nome.length > 0; continue }
     saldoOutros += saldo
   }
-  if (saldoLoja > 0) return saldoLoja        // estoque físico real
-  if (temDropshipOk) return 999              // dropship permitido → disponível
-  return Math.max(0, saldoOutros)            // 0 se só havia Eurolaqui → desativado
+  // F_drop conta como disponível mesmo com saldo 0 (fornecedor garante) — mantém regra antiga
+  temDropshipOk = lista.some((item) => {
+    const nome = ((item.deposito ?? item).nome ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
+    return DROPSHIP_OK.some((d) => nome.includes(d))
+  })
+
+  if (saldoLoja > 0) return { estoque: saldoLoja, fornecedor: 'loja' }
+  if (temDropshipOk) return { estoque: 999, fornecedor: 'f_drop' }
+  if (saldoOutros > 0) return { estoque: saldoOutros, fornecedor: 'outro' }
+  if (temEurolaqui) return { estoque: 0, fornecedor: 'eurolaqui' } // bloqueado → indisponível
+  return { estoque: 0, fornecedor: 'outro' }
 }
 
 // ─── Extração de imagens (mesma lógica do app) ──────────────────────────────
@@ -139,7 +150,7 @@ async function jobEstoque() {
   const produtos = await prisma.product.findMany({
     // ehPai=false: estoque do pai é derivado dos filhos (jobVariacoes)
     where: { tinyId: { not: null }, ehPai: false },
-    select: { id: true, tinyId: true, sku: true, temImagem: true, estoque: true },
+    select: { id: true, tinyId: true, sku: true, temImagem: true, estoque: true, mantidoManual: true },
     // 999 primeiro (nunca verificados), depois os mais desatualizados
     orderBy: [{ updatedAt: 'asc' }],
   })
@@ -149,11 +160,13 @@ async function jobEstoque() {
   let ok = 0, mudaram = 0, fantasmas = 0, erros = 0
   for (const p of produtos) {
     try {
-      const novo = await buscarEstoqueReal(p.tinyId)
+      const { estoque: base, fornecedor } = await buscarEstoqueReal(p.tinyId)
+      // Eurolaqui é bloqueado — MAS se o admin marcou p/ manter, fica disponível (999)
+      const novo = fornecedor === 'eurolaqui' && p.mantidoManual ? 999 : base
       if (novo !== p.estoque) mudaram++
       await prisma.product.update({
         where: { id: p.id },
-        data: { estoque: novo, ativo: p.temImagem && novo > 0 },
+        data: { estoque: novo, fornecedor, ativo: p.temImagem && novo > 0 },
       })
       ok++
     } catch (e) {
