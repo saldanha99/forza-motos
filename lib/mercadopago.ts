@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto'
+import { getSettings } from '@/lib/settings'
 
 /**
  * Valida a assinatura HMAC do webhook do Mercado Pago.
@@ -129,18 +130,91 @@ export async function criarPreferencia(dados: PreferenciaPagamento) {
 
   const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
 
-  const body = {
+  // Carrega configurações do painel admin
+  const keys = [
+    'mp_checkout_pro_enabled',
+    'mp_accept_cards',
+    'mp_accept_ticket',
+    'mp_accept_pix',
+    'mp_max_installments',
+    'mp_auto_return',
+    'mp_binary_mode',
+    'mp_preference_expiration_minutes'
+  ]
+  const settings = await getSettings(keys)
+
+  // 1. Verifica se o Checkout do Mercado Pago está ativado
+  if (settings['mp_checkout_pro_enabled'] === 'false') {
+    throw new Error('O checkout via Mercado Pago está temporariamente desativado.')
+  }
+
+  // 2. Monta meios de pagamento
+  const acceptCards = settings['mp_accept_cards'] !== 'false' // default true
+  const acceptTicket = settings['mp_accept_ticket'] !== 'false' // default true
+  const acceptPix = settings['mp_accept_pix'] !== 'false' // default true
+  
+  const excluded_payment_types: { id: string }[] = []
+  if (!acceptCards) {
+    excluded_payment_types.push({ id: 'credit_card' })
+    excluded_payment_types.push({ id: 'debit_card' })
+  }
+  if (!acceptTicket) {
+    excluded_payment_types.push({ id: 'ticket' })
+    excluded_payment_types.push({ id: 'account_money' })
+  }
+  if (!acceptPix) {
+    excluded_payment_types.push({ id: 'bank_transfer' })
+  }
+
+  const payment_methods: any = {}
+  if (excluded_payment_types.length > 0) {
+    payment_methods.excluded_payment_types = excluded_payment_types
+  }
+
+  // 3. Máximo de parcelas
+  const maxInstallments = settings['mp_max_installments']
+    ? parseInt(settings['mp_max_installments'], 10)
+    : undefined
+  if (maxInstallments) {
+    payment_methods.installments = maxInstallments
+  }
+
+  // 5. Retorno automático
+  const autoReturn = settings['mp_auto_return'] || 'approved'
+
+  // 6. Modo binário
+  const binaryMode = settings['mp_binary_mode'] === 'true'
+
+  // 7. Expiração da preferência
+  const expirationMinutes = settings['mp_preference_expiration_minutes']
+    ? parseInt(settings['mp_preference_expiration_minutes'], 10)
+    : undefined
+
+  const body: any = {
     items: dados.items,
     payer: dados.payer,
     external_reference: dados.external_reference,
     back_urls: {
-      success: `${baseUrl}/checkout/sucesso`,
-      failure: `${baseUrl}/checkout/erro`,
-      pending: `${baseUrl}/checkout/pendente`,
+      success: dados.back_urls.success || `${baseUrl}/checkout/sucesso`,
+      failure: dados.back_urls.failure || `${baseUrl}/checkout/erro`,
+      pending: dados.back_urls.pending || `${baseUrl}/checkout/pendente`,
     },
-    auto_return: 'approved',
+    auto_return: autoReturn === 'off' ? undefined : autoReturn,
+    binary_mode: binaryMode,
     notification_url: `${baseUrl}/api/mercadopago/webhook`,
     statement_descriptor: 'FORZA MOTOS',
+  }
+
+  if (Object.keys(payment_methods).length > 0) {
+    body.payment_methods = payment_methods
+  }
+
+  if (expirationMinutes && expirationMinutes > 0) {
+    const dateFrom = new Date()
+    const dateTo = new Date(dateFrom.getTime() + expirationMinutes * 60 * 1000)
+    body.expires = true
+    body.expiration_date_from = dateFrom.toISOString()
+    body.expiration_date_to = dateTo.toISOString()
   }
 
   const res = await fetch('https://api.mercadopago.com/checkout/preferences', {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Settings, Save, RefreshCw, CheckCircle2, Key, Globe, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -43,6 +43,23 @@ export function SeoConfigSection() {
   const [valores, setValores] = useState<Record<string, string>>({})
   const [salvando, setSalvando] = useState<string | null>(null)
   const [salvos, setSalvos] = useState<Set<string>>(new Set())
+
+  // Carrega configurações quando o painel for aberto
+  useEffect(() => {
+    if (!aberto) return
+    async function carregar() {
+      try {
+        const res = await fetch('/api/admin/settings')
+        if (res.ok) {
+          const data = await res.json()
+          setValores(data)
+        }
+      } catch (e) {
+        console.error(e)
+      }
+    }
+    carregar()
+  }, [aberto])
 
   async function salvar(key: string) {
     const valor = valores[key]
