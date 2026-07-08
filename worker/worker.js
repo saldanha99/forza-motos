@@ -90,29 +90,22 @@ async function buscarEstoqueReal(tinyId) {
   const raw = data.retorno?.produto?.depositos ?? []
   const lista = Array.isArray(raw) ? raw : raw.deposito ? [raw.deposito].flat() : []
 
-  let saldoLoja = 0
-  let saldoOutros = 0
-  let temDropshipOk = false
-  let temEurolaqui = false
+  let saldoLoja = 0, saldoFdrop = 0, saldoEuro = 0, saldoOutros = 0
+  let temFdropDep = false
   for (const item of lista) {
     const dep = item.deposito ?? item
     const nome = (dep.nome ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
     const saldo = Number(dep.saldo ?? dep.quantidade ?? 0)
-    if (DROPSHIP_BLOQUEADO.some((d) => nome.includes(d))) { if (saldo > 0) temEurolaqui = true; continue }
+    if (DROPSHIP_BLOQUEADO.some((d) => nome.includes(d))) { saldoEuro += saldo; continue }
     if (nome === 'loja') { saldoLoja += saldo; continue }
-    if (DROPSHIP_OK.some((d) => nome.includes(d))) { if (saldo > 0 || lista.length) temDropshipOk = temDropshipOk || nome.length > 0; continue }
+    if (DROPSHIP_OK.some((d) => nome.includes(d))) { saldoFdrop += saldo; temFdropDep = true; continue }
     saldoOutros += saldo
   }
-  // F_drop conta como disponível mesmo com saldo 0 (fornecedor garante) — mantém regra antiga
-  temDropshipOk = lista.some((item) => {
-    const nome = ((item.deposito ?? item).nome ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
-    return DROPSHIP_OK.some((d) => nome.includes(d))
-  })
-
-  if (saldoLoja > 0) return { estoque: saldoLoja, fornecedor: 'loja' }
-  if (temDropshipOk) return { estoque: 999, fornecedor: 'f_drop' }
+  if (saldoLoja > 0) return { estoque: saldoLoja, fornecedor: 'loja' }   // físico real
+  if (saldoFdrop > 0) return { estoque: 999, fornecedor: 'f_drop' }      // F_drop com saldo → disponível
+  if (saldoEuro > 0) return { estoque: 0, fornecedor: 'eurolaqui' }      // fonte é Eurolaqui → remove
+  if (temFdropDep) return { estoque: 999, fornecedor: 'f_drop' }         // F_drop vazio, sem Eurolaqui → dropship
   if (saldoOutros > 0) return { estoque: saldoOutros, fornecedor: 'outro' }
-  if (temEurolaqui) return { estoque: 0, fornecedor: 'eurolaqui' } // bloqueado → indisponível
   return { estoque: 0, fornecedor: 'outro' }
 }
 

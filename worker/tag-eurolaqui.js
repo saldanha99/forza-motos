@@ -37,31 +37,29 @@ async function tinyFetch(endpoint, params) {
 }
 
 function classificar(lista) {
-  let saldoLoja = 0, saldoOutros = 0, temEurolaqui = false
-  const temDropshipOk = lista.some((item) => {
-    const nome = ((item.deposito ?? item).nome ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
-    return DROPSHIP_OK.some((d) => nome.includes(d))
-  })
+  let saldoLoja = 0, saldoFdrop = 0, saldoEuro = 0, saldoOutros = 0
+  let temFdropDep = false
   for (const item of lista) {
     const dep = item.deposito ?? item
     const nome = (dep.nome ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
     const saldo = Number(dep.saldo ?? dep.quantidade ?? 0)
-    if (DROPSHIP_BLOQUEADO.some((d) => nome.includes(d))) { if (saldo > 0) temEurolaqui = true; continue }
+    if (DROPSHIP_BLOQUEADO.some((d) => nome.includes(d))) { saldoEuro += saldo; continue }
     if (nome === 'loja') { saldoLoja += saldo; continue }
-    if (DROPSHIP_OK.some((d) => nome.includes(d))) continue
+    if (DROPSHIP_OK.some((d) => nome.includes(d))) { saldoFdrop += saldo; temFdropDep = true; continue }
     saldoOutros += saldo
   }
   if (saldoLoja > 0) return { estoque: saldoLoja, fornecedor: 'loja' }
-  if (temDropshipOk) return { estoque: 999, fornecedor: 'f_drop' }
+  if (saldoFdrop > 0) return { estoque: 999, fornecedor: 'f_drop' }
+  if (saldoEuro > 0) return { estoque: 0, fornecedor: 'eurolaqui' }
+  if (temFdropDep) return { estoque: 999, fornecedor: 'f_drop' }
   if (saldoOutros > 0) return { estoque: saldoOutros, fornecedor: 'outro' }
-  if (temEurolaqui) return { estoque: 0, fornecedor: 'eurolaqui' }
   return { estoque: 0, fornecedor: 'outro' }
 }
 
 async function main() {
   // Vestuário (Eurolaqui confirmado) primeiro; depois o resto do catálogo
   const produtos = await prisma.product.findMany({
-    where: { tinyId: { not: null }, ehPai: false, fornecedor: null },
+    where: { tinyId: { not: null }, ehPai: false },
     select: { id: true, tinyId: true, sku: true, categoria: true, temImagem: true, mantidoManual: true },
   })
   const peso = (c) => (/jaqueta|luva|calc|macac|capacete/i.test(c ?? '') ? 0 : 1)
