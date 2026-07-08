@@ -35,7 +35,7 @@ const STATUS_ORDER: Record<string, number> = {
   CANCELADO: -1,
 }
 
-export function getStatusSteps(freteServico: string | null) {
+function getStatusSteps(freteServico: string | null) {
   const isRetirada = freteServico === 'retirada'
   return [
     { key: 'AGUARDANDO_PAGAMENTO', label: 'Aguardando pagamento', Icon: Clock },
