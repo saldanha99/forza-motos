@@ -1,0 +1,1 @@
+ALTER TABLE "Product" ADD COLUMN "ocultoManual" BOOLEAN NOT NULL DEFAULT false;

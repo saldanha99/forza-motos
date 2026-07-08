@@ -143,7 +143,7 @@ async function jobEstoque() {
   const produtos = await prisma.product.findMany({
     // ehPai=false: estoque do pai é derivado dos filhos (jobVariacoes)
     where: { tinyId: { not: null }, ehPai: false },
-    select: { id: true, tinyId: true, sku: true, temImagem: true, estoque: true, mantidoManual: true },
+    select: { id: true, tinyId: true, sku: true, temImagem: true, estoque: true, mantidoManual: true, ocultoManual: true },
     // 999 primeiro (nunca verificados), depois os mais desatualizados
     orderBy: [{ updatedAt: 'asc' }],
   })
@@ -157,9 +157,11 @@ async function jobEstoque() {
       // Eurolaqui é bloqueado — MAS se o admin marcou p/ manter, fica disponível (999)
       const novo = fornecedor === 'eurolaqui' && p.mantidoManual ? 999 : base
       if (novo !== p.estoque) mudaram++
+      // Admin ocultou manualmente → nunca reativa
+      const ativo = !p.ocultoManual && p.temImagem && novo > 0
       await prisma.product.update({
         where: { id: p.id },
-        data: { estoque: novo, fornecedor, ativo: p.temImagem && novo > 0 },
+        data: { estoque: novo, fornecedor, ativo },
       })
       ok++
     } catch (e) {
@@ -193,7 +195,7 @@ async function jobImagens() {
         { temImagem: false, imagensVerificadas: true, updatedAt: { lt: seteAtras } },
       ],
     },
-    select: { id: true, tinyId: true, sku: true, estoque: true },
+    select: { id: true, tinyId: true, sku: true, estoque: true, ocultoManual: true, fornecedor: true },
     orderBy: { updatedAt: 'asc' },
   })
   if (pendentes.length === 0) { log('[imagens] nada pendente'); return { ok: 0 } }
@@ -230,7 +232,8 @@ async function jobImagens() {
           imagens,
           imagensVerificadas: true,
           temImagem,
-          ativo: tinyAtivo && temImagem && p.estoque > 0,
+          // respeita ocultação manual e Eurolaqui bloqueado
+          ativo: !p.ocultoManual && p.fornecedor !== 'eurolaqui' && tinyAtivo && temImagem && p.estoque > 0,
           descricao: descricao || undefined,
           ...(categoria && { categoria }),
           ...(detalhe.marca && { marca: detalhe.marca }),

@@ -110,6 +110,8 @@ model Product {
   fornecedor           String?
   /// Admin marcou p/ MANTER na loja mesmo sendo de fornecedor bloqueado (Eurolaqui)
   mantidoManual        Boolean     @default(false)
+  /// Admin OCULTOU manualmente da loja (mesmo ativo no Olist) — sync respeita
+  ocultoManual         Boolean     @default(false)
   /// Peso em kg (para cotação de frete)
   peso                 Decimal?    @db.Decimal(8, 3)
   /// Altura em cm

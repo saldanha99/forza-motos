@@ -4,7 +4,7 @@ import { formatPrice } from '@/lib/utils'
 import Link from 'next/link'
 import { KpiCard } from '@/components/admin/KpiCard'
 import { FadeIn } from '@/components/admin/FadeIn'
-import { ShoppingBag, Wrench, Users, TrendingUp, Store } from 'lucide-react'
+import { ShoppingBag, Wrench, Users, TrendingUp } from 'lucide-react'
 
 export const metadata = { title: 'CRM — Forza Admin' }
 
@@ -39,8 +39,9 @@ export default async function ClientesAdminPage({
   const clientes = await prisma.user.findMany({
     where: {
       role: 'CUSTOMER',
+      // CRM foca no e-commerce próprio — clientes do Mercado Livre ficam fora
+      origem: { not: 'MERCADOLIVRE' },
       ...(categoria === 'ecommerce'    && { origem: 'ECOMMERCE' }),
-      ...(categoria === 'ml'           && { origem: 'MERCADOLIVRE' }),
       ...(categoria === 'servico'      && { origem: 'AGENDAMENTO' }),
     },
     include: {
@@ -53,14 +54,12 @@ export default async function ClientesAdminPage({
   })
 
   const totalEcommerce    = clientes.filter(c => c.origem === 'ECOMMERCE').length
-  const totalML           = clientes.filter(c => c.origem === 'MERCADOLIVRE').length
   const totalServico      = clientes.filter(c => c.origem === 'AGENDAMENTO').length
   const recorrentes       = clientes.filter(c => (c.crm?.etapaFunil ?? '') === 'RECORRENTE').length
 
   const abas = [
     { key: 'todos',     label: 'Todos',          icon: Users,       count: clientes.length },
     { key: 'ecommerce', label: 'E-commerce',      icon: ShoppingBag, count: totalEcommerce },
-    { key: 'ml',        label: 'Mercado Livre',   icon: Store,       count: totalML },
     { key: 'servico',   label: 'Serviço / Box',   icon: Wrench,      count: totalServico },
   ]
 
@@ -69,17 +68,17 @@ export default async function ClientesAdminPage({
       <div className="mb-8">
         <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">CRM Inteligente</h1>
         <p className="text-brand-muted text-sm mt-1">
-          Clientes do e-commerce, Mercado Livre e agendamentos de serviço
+          Clientes do e-commerce e agendamentos de serviço
         </p>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <FadeIn delay={0}>
-          <KpiCard label="E-commerce"    value={totalEcommerce} icon={ShoppingBag} />
+          <KpiCard label="Total"         value={clientes.length} icon={Users} />
         </FadeIn>
         <FadeIn delay={80}>
-          <KpiCard label="Mercado Livre" value={totalML}        icon={Store} />
+          <KpiCard label="E-commerce"    value={totalEcommerce} icon={ShoppingBag} />
         </FadeIn>
         <FadeIn delay={160}>
           <KpiCard label="Box / Serviço" value={totalServico}   icon={Wrench} />

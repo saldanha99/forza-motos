@@ -13,12 +13,13 @@ export const CATEGORIAS_OCULTAS = ['capacete']
  * Espalhe dentro do `where`:  where: { ativo: true, ...filtroCategoriasOcultas() }
  */
 export function filtroCategoriasOcultas() {
-  if (CATEGORIAS_OCULTAS.length === 0) return {}
-  return {
-    AND: CATEGORIAS_OCULTAS.map((termo) => ({
-      NOT: { categoria: { contains: termo, mode: 'insensitive' as const } },
-    })),
+  // Sempre esconde produtos ocultados manualmente pelo admin (curadoria),
+  // além das categorias globalmente ocultas.
+  const and: any[] = [{ ocultoManual: false }]
+  for (const termo of CATEGORIAS_OCULTAS) {
+    and.push({ NOT: { categoria: { contains: termo, mode: 'insensitive' as const } } })
   }
+  return { AND: and }
 }
 
 /** True se a categoria informada está oculta (ex: bloquear página do produto) */
@@ -28,8 +29,9 @@ export function categoriaOculta(categoria: string | null | undefined): boolean {
   return CATEGORIAS_OCULTAS.some((t) => c.includes(t.toLowerCase()))
 }
 
-/** Versão SQL (para $queryRaw): "AND categoria NOT ILIKE '%capacete%' AND ..." */
+/** Versão SQL (para $queryRaw): esconde ocultos manuais + categorias ocultas. */
 export function sqlCategoriasOcultas(): string {
-  if (CATEGORIAS_OCULTAS.length === 0) return ''
-  return CATEGORIAS_OCULTAS.map((t) => ` AND categoria NOT ILIKE '%${t}%'`).join('')
+  let sql = ` AND "ocultoManual" = false`
+  for (const t of CATEGORIAS_OCULTAS) sql += ` AND categoria NOT ILIKE '%${t}%'`
+  return sql
 }
