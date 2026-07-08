@@ -99,3 +99,18 @@ Em breve enviaremos mais detalhes sobre o evento por aqui.
 
 Qualquer dúvida é só chamar — *Forza Motos* 🏍️`
 }
+
+export function msgPedidoProntoRetirada(nome: string, numeroPedido: string): string {
+  return `Olá *${nome}*! 🏁 Seu pedido *#${numeroPedido}* já está separado e *pronto para retirada* na nossa loja!
+
+📍 Endereço de Retirada:
+Forza Motos
+Rua Funilense, 110 — Guanabara
+Campinas/SP
+
+⏰ Horário de funcionamento:
+Segunda a Sexta: 8h às 18h
+Sábado: 8h às 13h
+
+Venha nos visitar! Te esperamos. 🏍️`
+}

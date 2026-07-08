@@ -144,7 +144,17 @@ export async function POST(req: Request) {
             status: true,
             trackingCode: true,
             freteTransportadora: true,
+            freteServico: true,
             orderNumber: true,
+            userId: true,
+            enderecoEntrega: true,
+            user: {
+              select: {
+                nome: true,
+                telefone: true,
+                email: true,
+              }
+            }
           },
         })
 
@@ -176,44 +186,76 @@ export async function POST(req: Request) {
               (trackingCode ? ` (rastreio: ${trackingCode})` : '')
           )
 
-          // Dispara WhatsApp + e-mail com rastreio quando pedido é enviado
-          if (novoStatus === 'ENVIADO' && trackingCode && pedido) {
-            const orderFull = await prisma.order.findUnique({
-              where: { id: pedido.id },
-              include: { user: { select: { nome: true, telefone: true, email: true } } },
-            })
+          // Dispara WhatsApp + e-mail com rastreio quando pedido é enviado ou está pronto para retirada
+          if (novoStatus === 'ENVIADO' && pedido) {
+            const isRetirada = pedido.freteServico === 'retirada'
 
-            // WhatsApp
-            if (orderFull?.user?.telefone) {
-              const wa = normalizarWhatsApp(orderFull.user.telefone)
-              const lead = await prisma.crmLead.findFirst({ where: { whatsapp: wa } })
-              await enfileirarMensagem({
-                whatsapp: wa,
-                nome: orderFull.user.nome ?? 'Cliente',
-                tipo: 'PEDIDO_ENVIADO',
-                leadId: lead?.id,
-                userId: orderFull.userId ?? undefined,
-                payload: {
+            if (isRetirada) {
+              const nome = pedido.user?.nome ?? 'Cliente'
+              const numeroPedido = pedido.orderNumber
+
+              // WhatsApp de retirada
+              if (pedido.user?.telefone) {
+                const { msgPedidoProntoRetirada } = await import('@/lib/evolution/templates')
+                const wa = normalizarWhatsApp(pedido.user.telefone)
+                const lead = await prisma.crmLead.findFirst({ where: { whatsapp: wa } })
+                const msgText = msgPedidoProntoRetirada(nome, numeroPedido)
+
+                await enfileirarMensagem({
+                  whatsapp: wa,
+                  nome,
+                  tipo: 'MANUAL',
+                  leadId: lead?.id,
+                  userId: pedido.userId ?? undefined,
+                  payload: { conteudo: msgText },
+                }).catch(() => {})
+              }
+
+              // E-mail de retirada
+              const emailDestinatario = pedido.user?.email ?? (pedido.enderecoEntrega as any)?.email
+              if (emailDestinatario) {
+                const { enviarEmailProntoRetirada } = await import('@/lib/email/send')
+                await enviarEmailProntoRetirada({
+                  para: emailDestinatario,
+                  nomeCliente: nome,
+                  numeroPedido,
+                }).catch((e) => console.error('[olist-webhook] Falha ao enviar e-mail de retirada:', e))
+              }
+            } else if (trackingCode) {
+              // Fluxo padrão de envio (correios/transportadora)
+              const nome = pedido.user?.nome ?? 'Cliente'
+
+              // WhatsApp
+              if (pedido.user?.telefone) {
+                const wa = normalizarWhatsApp(pedido.user.telefone)
+                const lead = await prisma.crmLead.findFirst({ where: { whatsapp: wa } })
+                await enfileirarMensagem({
+                  whatsapp: wa,
+                  nome,
+                  tipo: 'PEDIDO_ENVIADO',
+                  leadId: lead?.id,
+                  userId: pedido.userId ?? undefined,
+                  payload: {
+                    numeroPedido: pedido.orderNumber,
+                    rastreio: trackingCode,
+                    transportadora: transportadora ?? 'Transportadora',
+                  },
+                }).catch(() => {})
+              }
+
+              // E-mail de rastreio
+              const emailDestinatario = pedido.user?.email ?? (pedido.enderecoEntrega as any)?.email
+              if (emailDestinatario) {
+                await enviarEmailRastreio({
+                  para: emailDestinatario,
+                  nomeCliente: nome,
                   numeroPedido: pedido.orderNumber,
-                  rastreio: trackingCode,
-                  transportadora: transportadora ?? 'Transportadora',
-                },
-              }).catch(() => {})
+                  rastreio: String(trackingCode),
+                  transportadora: String(transportadora ?? 'Transportadora'),
+                  prazo: (pedido as any).fretePrazo ?? null,
+                }).catch((e) => console.error('[olist-webhook] Falha ao enviar e-mail rastreio:', e))
+              }
             }
-
-            // E-mail de rastreio
-            const emailDestinatario = orderFull?.user?.email ?? (orderFull?.enderecoEntrega as any)?.email
-            if (emailDestinatario) {
-              await enviarEmailRastreio({
-                para: emailDestinatario,
-                nomeCliente: orderFull?.user?.nome ?? 'Cliente',
-                numeroPedido: pedido.orderNumber,
-                rastreio: String(trackingCode),
-                transportadora: String(transportadora ?? 'Transportadora'),
-                prazo: orderFull?.fretePrazo ?? null,
-              }).catch((e) => console.error('[olist-webhook] Falha ao enviar e-mail rastreio:', e))
-            }
-
           }
         }
       }

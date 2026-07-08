@@ -1,5 +1,5 @@
 import { getResend, EMAIL_FROM } from './client'
-import { htmlPedidoConfirmado, htmlPedidoEnviado, htmlIngressoConfirmado } from './templates'
+import { htmlPedidoConfirmado, htmlPedidoEnviado, htmlIngressoConfirmado, htmlPedidoProntoRetirada } from './templates'
 
 export async function enviarEmailConfirmacao(opts: {
   para: string
@@ -83,5 +83,29 @@ export async function enviarEmailIngresso(opts: {
     console.error('[email] Falha ao enviar ingresso:', error)
   } else {
     console.log(`[email] Ingresso enviado para ${opts.para} (${opts.tituloEvento})`)
+  }
+}
+
+export async function enviarEmailProntoRetirada(opts: {
+  para: string
+  nomeCliente: string
+  numeroPedido: string
+}) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('[email] RESEND_API_KEY não configurada — e-mail não enviado')
+    return
+  }
+
+  const { error } = await getResend().emails.send({
+    from: EMAIL_FROM(),
+    to: opts.para,
+    subject: `🏁 Seu pedido ${opts.numeroPedido} está pronto para retirada! — Forza Motos`,
+    html: htmlPedidoProntoRetirada(opts),
+  })
+
+  if (error) {
+    console.error('[email] Falha ao enviar pronto para retirada:', error)
+  } else {
+    console.log(`[email] E-mail de retirada pronto enviado para ${opts.para} (pedido ${opts.numeroPedido})`)
   }
 }
