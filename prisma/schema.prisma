@@ -597,6 +597,10 @@ model Evento {
   local       String
   endereco    String?
   imagemUrl   String?
+  /// Galeria de fotos do evento — carrossel (roteiro, passeios anteriores, pontos visitados)
+  galeria     Json     @default("[]")
+  /// Opções de vaga p/ evento pago: [{label, preco}] — ex: Sozinho, Com garupa, Quarto p/ 4
+  opcoesVaga  Json     @default("[]")
   /// 0 = gratuito
   preco       Decimal  @default(0) @db.Decimal(10, 2)
   categoria   String   @default("Evento")
@@ -622,6 +626,10 @@ model EventoInscricao {
   email           String
   telefone        String
   quantidade      Int                   @default(1)
+  /// Rótulo da opção de vaga escolhida (ex: "Com garupa") — snapshot no momento da compra
+  opcaoVagaLabel  String?
+  /// Preço unitário da opção escolhida — snapshot (preço do evento pode mudar depois)
+  opcaoVagaPreco  Decimal?              @db.Decimal(10, 2)
   total           Decimal               @db.Decimal(10, 2)
   status          EventoInscricaoStatus @default(PENDENTE)
   /// ID da preferência no Mercado Pago

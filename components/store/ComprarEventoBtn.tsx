@@ -3,18 +3,28 @@
 import { useState } from 'react'
 import { X, ShoppingBag, Loader2 } from 'lucide-react'
 
+interface OpcaoVaga {
+  label: string
+  preco: number
+}
+
 interface Props {
   slug: string
   preco: number
   titulo: string
   gratuito: boolean
+  opcoesVaga?: OpcaoVaga[]
 }
 
-export function ComprarEventoBtn({ slug, preco, titulo, gratuito }: Props) {
+export function ComprarEventoBtn({ slug, preco, titulo, gratuito, opcoesVaga = [] }: Props) {
   const [aberto, setAberto] = useState(false)
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState('')
+  const temOpcoes = opcoesVaga.length > 0
+  const [vagaIdx, setVagaIdx] = useState(0)
   const [form, setForm] = useState({ nome: '', email: '', telefone: '', quantidade: '1' })
+
+  const precoUnitario = temOpcoes ? opcoesVaga[vagaIdx].preco : preco
 
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }))
@@ -31,6 +41,7 @@ export function ComprarEventoBtn({ slug, preco, titulo, gratuito }: Props) {
         body: JSON.stringify({
           ...form,
           quantidade: parseInt(form.quantidade) || 1,
+          ...(temOpcoes && { opcaoVagaLabel: opcoesVaga[vagaIdx].label }),
         }),
       })
       const data = await res.json()
@@ -59,7 +70,7 @@ export function ComprarEventoBtn({ slug, preco, titulo, gratuito }: Props) {
   }
 
   const qty = parseInt(form.quantidade) || 1
-  const total = preco * qty
+  const total = precoUnitario * qty
 
   return (
     <>
@@ -136,6 +147,34 @@ export function ComprarEventoBtn({ slug, preco, titulo, gratuito }: Props) {
                   className="w-full border border-[#ddd] focus:border-[#d42b2b] rounded-xl px-4 py-3 text-sm text-[#333] outline-none transition-colors"
                 />
               </div>
+
+              {!gratuito && temOpcoes && (
+                <div>
+                  <label className="block text-xs font-semibold text-[#555] uppercase tracking-wider mb-1.5">Como você vai?</label>
+                  <div className="space-y-2">
+                    {opcoesVaga.map((op, idx) => (
+                      <label
+                        key={idx}
+                        className={`flex items-center justify-between gap-3 border rounded-xl px-4 py-3 cursor-pointer transition-colors ${
+                          vagaIdx === idx ? 'border-[#d42b2b] bg-red-50' : 'border-[#ddd] hover:border-[#ccc]'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2.5 text-sm text-[#333]">
+                          <input
+                            type="radio"
+                            name="vaga"
+                            checked={vagaIdx === idx}
+                            onChange={() => setVagaIdx(idx)}
+                            className="accent-[#d42b2b]"
+                          />
+                          {op.label}
+                        </span>
+                        <span className="font-barlow font-bold text-[#d42b2b]">R$ {op.preco.toFixed(2)}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {!gratuito && (
                 <div>

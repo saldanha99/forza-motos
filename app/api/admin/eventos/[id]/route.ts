@@ -26,6 +26,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       local: body.local,
       endereco: body.endereco ?? null,
       imagemUrl: body.imagemUrl ?? null,
+      galeria: body.galeria ?? [],
+      opcoesVaga: body.opcoesVaga ?? [],
       preco: body.preco ?? 0,
       categoria: body.categoria ?? 'Evento',
       vagas: body.vagas ? Number(body.vagas) : null,

@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { Breadcrumb } from '@/components/store/Breadcrumb'
 import { SITE_URL } from '@/lib/schema'
 import { ComprarEventoBtn } from '@/components/store/ComprarEventoBtn'
+import { EventoGaleria } from '@/components/store/EventoGaleria'
 import { Calendar, MapPin, Tag, Users, ArrowLeft, ExternalLink } from 'lucide-react'
 
 interface Props {
@@ -104,6 +105,8 @@ export default async function EventoDetailPage({ params }: Props) {
         <div className="max-w-[1280px] mx-auto px-6 md:px-12 grid lg:grid-cols-[1fr_360px] gap-10">
           {/* Coluna principal */}
           <div>
+            <EventoGaleria fotos={Array.isArray(evento.galeria) ? (evento.galeria as string[]) : []} titulo={evento.titulo} />
+
             {evento.conteudo ? (
               <div
                 className="prose prose-gray max-w-none text-[#333] font-inter"
@@ -178,6 +181,7 @@ export default async function EventoDetailPage({ params }: Props) {
                     preco={preco}
                     titulo={evento.titulo}
                     gratuito={preco === 0}
+                    opcoesVaga={Array.isArray(evento.opcoesVaga) ? (evento.opcoesVaga as { label: string; preco: number }[]) : []}
                   />
                 )}
                 <a

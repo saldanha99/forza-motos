@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/Input'
 import { gerarSlug } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
-import { Upload, X } from 'lucide-react'
+import { Upload, X, Plus, ImagePlus } from 'lucide-react'
 
 const CATEGORIAS = ['Curso', 'Passeio', 'Viagem', 'Evento', 'Corrida', 'Encontro', 'Workshop']
 
@@ -21,6 +21,8 @@ interface Evento {
   local?: string
   endereco?: string | null
   imagemUrl?: string | null
+  galeria?: string[] | null
+  opcoesVaga?: { label: string; preco: number }[] | null
   preco?: number | string
   categoria?: string
   vagas?: number | null
@@ -48,6 +50,8 @@ export function EventoForm({ evento }: { evento?: Evento }) {
     local: evento?.local ?? '',
     endereco: evento?.endereco ?? '',
     imagemUrl: evento?.imagemUrl ?? '',
+    galeria: (evento?.galeria ?? []) as string[],
+    opcoesVaga: (evento?.opcoesVaga ?? []) as { label: string; preco: number }[],
     preco: String(evento?.preco ?? '0'),
     categoria: evento?.categoria ?? 'Evento',
     vagas: String(evento?.vagas ?? ''),
@@ -67,6 +71,7 @@ export function EventoForm({ evento }: { evento?: Evento }) {
   async function uploadImagem(file: File) {
     const formData = new FormData()
     formData.append('file', file)
+    formData.append('pasta', 'eventos')
     try {
       const res = await fetch('/api/upload', { method: 'POST', body: formData })
       if (!res.ok) throw new Error()
@@ -76,6 +81,40 @@ export function EventoForm({ evento }: { evento?: Evento }) {
     } catch {
       toast.error('Erro ao enviar imagem')
     }
+  }
+
+  async function uploadGaleria(files: FileList) {
+    for (const file of Array.from(files)) {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('pasta', 'eventos')
+      try {
+        const res = await fetch('/api/upload', { method: 'POST', body: formData })
+        if (!res.ok) throw new Error()
+        const data = await res.json()
+        setForm((f) => ({ ...f, galeria: [...f.galeria, data.url] }))
+      } catch {
+        toast.error(`Erro ao enviar ${file.name}`)
+      }
+    }
+    toast.success('Fotos adicionadas à galeria!')
+  }
+
+  function removerDaGaleria(idx: number) {
+    setForm((f) => ({ ...f, galeria: f.galeria.filter((_, i) => i !== idx) }))
+  }
+
+  function addOpcaoVaga() {
+    setForm((f) => ({ ...f, opcoesVaga: [...f.opcoesVaga, { label: '', preco: Number(f.preco) || 0 }] }))
+  }
+  function updateOpcaoVaga(idx: number, campo: 'label' | 'preco', valor: string) {
+    setForm((f) => ({
+      ...f,
+      opcoesVaga: f.opcoesVaga.map((o, i) => (i === idx ? { ...o, [campo]: campo === 'preco' ? Number(valor) || 0 : valor } : o)),
+    }))
+  }
+  function removerOpcaoVaga(idx: number) {
+    setForm((f) => ({ ...f, opcoesVaga: f.opcoesVaga.filter((_, i) => i !== idx) }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -94,6 +133,8 @@ export function EventoForm({ evento }: { evento?: Evento }) {
           dataFim: form.dataFim || null,
           endereco: form.endereco || null,
           imagemUrl: form.imagemUrl || null,
+          galeria: form.galeria,
+          opcoesVaga: form.opcoesVaga.filter((o) => o.label.trim()),
           linkExterno: form.linkExterno || null,
         }),
       })
@@ -245,6 +286,93 @@ export function EventoForm({ evento }: { evento?: Evento }) {
           Enviar imagem
           <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadImagem(e.target.files[0])} />
         </label>
+      </div>
+
+      {/* Galeria / carrossel */}
+      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-5 shadow-xl">
+        <div>
+          <h2 className="text-sm font-semibold text-brand-muted uppercase tracking-widest">Galeria (carrossel)</h2>
+          <p className="text-xs text-brand-muted/70 mt-1">
+            Fotos de passeios anteriores, roteiro e pontos que serão visitados — aparecem em carrossel na página do evento.
+          </p>
+        </div>
+
+        {form.galeria.length > 0 && (
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+            {form.galeria.map((url, idx) => (
+              <div key={url + idx} className="relative rounded-xl overflow-hidden border border-brand-border/30 aspect-square group/img">
+                <img src={url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removerDaGaleria(idx)}
+                  className="absolute top-1.5 right-1.5 bg-black/80 hover:bg-brand-accent p-1 rounded-lg text-white transition-colors opacity-0 group-hover/img:opacity-100"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <label className="inline-flex items-center gap-2.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-brand-text text-sm px-4 py-2.5 rounded-xl cursor-pointer transition-all font-semibold select-none">
+          <ImagePlus size={16} />
+          Adicionar fotos
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => e.target.files && e.target.files.length > 0 && uploadGaleria(e.target.files)}
+          />
+        </label>
+      </div>
+
+      {/* Opções de vaga */}
+      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-5 shadow-xl">
+        <div>
+          <h2 className="text-sm font-semibold text-brand-muted uppercase tracking-widest">Opções de vaga (evento pago)</h2>
+          <p className="text-xs text-brand-muted/70 mt-1">
+            Ex: "Sozinho" (piloto só), "Com garupa" (+1 pessoa), "Quarto dividido em 4" (preço por pessoa).
+            Se deixar vazio, o cliente só escolhe a quantidade pelo preço base.
+          </p>
+        </div>
+
+        {form.opcoesVaga.map((op, idx) => (
+          <div key={idx} className="flex gap-3 items-center">
+            <input
+              value={op.label}
+              onChange={(e) => updateOpcaoVaga(idx, 'label', e.target.value)}
+              placeholder="Ex: Com garupa"
+              className="flex-1 bg-white/5 border border-white/10 hover:border-white/20 rounded-xl px-4 py-2.5 text-brand-text text-sm focus:outline-none focus:border-brand-accent transition-all duration-200"
+            />
+            <div className="relative w-40">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted text-sm">R$</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={op.preco}
+                onChange={(e) => updateOpcaoVaga(idx, 'preco', e.target.value)}
+                className="w-full bg-white/5 border border-white/10 hover:border-white/20 rounded-xl pl-9 pr-3 py-2.5 text-brand-text text-sm focus:outline-none focus:border-brand-accent transition-all duration-200"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => removerOpcaoVaga(idx)}
+              className="p-2.5 rounded-xl text-brand-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={addOpcaoVaga}
+          className="inline-flex items-center gap-2 text-sm font-semibold text-brand-accent hover:text-brand-accent-hover transition-colors"
+        >
+          <Plus size={15} /> Adicionar opção de vaga
+        </button>
       </div>
 
       {/* Conteúdo */}

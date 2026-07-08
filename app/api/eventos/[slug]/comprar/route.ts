@@ -13,14 +13,22 @@ export async function POST(request: Request, { params }: { params: { slug: strin
     }
 
     const body = await request.json()
-    const { nome, email, telefone, quantidade } = body
+    const { nome, email, telefone, quantidade, opcaoVagaLabel } = body
 
     if (!nome || !email || !telefone) {
       return NextResponse.json({ error: 'Nome, e-mail e telefone são obrigatórios' }, { status: 400 })
     }
 
     const qty = Math.max(1, Number(quantidade) || 1)
-    const preco = Number(evento.preco)
+
+    // Preço SEMPRE recalculado no servidor a partir do evento — nunca confia
+    // no valor enviado pelo cliente (evita manipulação de preço).
+    const opcoesVaga = Array.isArray(evento.opcoesVaga) ? (evento.opcoesVaga as { label: string; preco: number }[]) : []
+    const opcaoEscolhida = opcaoVagaLabel ? opcoesVaga.find((o) => o.label === opcaoVagaLabel) : undefined
+    if (opcaoVagaLabel && !opcaoEscolhida) {
+      return NextResponse.json({ error: 'Opção de vaga inválida' }, { status: 400 })
+    }
+    const preco = opcaoEscolhida ? opcaoEscolhida.preco : Number(evento.preco)
     const total = preco * qty
 
     // Cria inscrição pendente
@@ -32,6 +40,8 @@ export async function POST(request: Request, { params }: { params: { slug: strin
         telefone: telefone.trim(),
         quantidade: qty,
         total,
+        opcaoVagaLabel: opcaoEscolhida?.label,
+        opcaoVagaPreco: opcaoEscolhida ? preco : undefined,
         status: 'PENDENTE',
       },
     })
@@ -57,7 +67,7 @@ export async function POST(request: Request, { params }: { params: { slug: strin
       items: [
         {
           id: evento.id,
-          title: `Ingresso — ${evento.titulo}`,
+          title: `Ingresso — ${evento.titulo}${opcaoEscolhida ? ` (${opcaoEscolhida.label})` : ''}`,
           quantity: qty,
           unit_price: preco,
           picture_url: evento.imagemUrl ?? undefined,

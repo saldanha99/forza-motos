@@ -73,6 +73,8 @@ export default async function EditarEventoPage({ params }: { params: { id: strin
         preco: Number(evento.preco),
         dataInicio: evento.dataInicio.toISOString(),
         dataFim: evento.dataFim?.toISOString() ?? null,
+        galeria: Array.isArray(evento.galeria) ? (evento.galeria as string[]) : [],
+        opcoesVaga: Array.isArray(evento.opcoesVaga) ? (evento.opcoesVaga as { label: string; preco: number }[]) : [],
       }} />
     </div>
   )
