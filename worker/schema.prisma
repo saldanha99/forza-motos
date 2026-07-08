@@ -102,6 +102,14 @@ model Product {
   imagensVerificadas   Boolean     @default(false)
   /// True quando o produto tem pelo menos 1 imagem — usado para filtrar exibição
   temImagem            Boolean     @default(false)
+  /// SKU do produto-pai quando este é uma variação de tamanho (filho some das listagens)
+  variacaoDe           String?
+  /// True para produto-pai de variações (_PAI do Tiny) — card vira "escolher tamanho"
+  ehPai                Boolean     @default(false)
+  /// Depósito de origem no Olist: loja | f_drop | eurolaqui | outro (populado pelo worker)
+  fornecedor           String?
+  /// Admin marcou p/ MANTER na loja mesmo sendo de fornecedor bloqueado (Eurolaqui)
+  mantidoManual        Boolean     @default(false)
   /// Peso em kg (para cotação de frete)
   peso                 Decimal?    @db.Decimal(8, 3)
   /// Altura em cm
@@ -115,6 +123,8 @@ model Product {
 
   orderItems OrderItem[]
   reviews    Review[]
+
+  @@index([variacaoDe])
 }
 
 model Review {
@@ -559,6 +569,15 @@ model Setting {
   key       String   @id
   value     String   @db.Text
   updatedAt DateTime @updatedAt
+}
+
+/// Cache de consultas de placa (API Placas/wdapi2 cobra por consulta —
+/// mesma placa consultada de novo sai do cache, não da API)
+model PlacaConsulta {
+  placa     String   @id
+  /// Resposta normalizada: { marca, modelo, ano, cor }
+  resposta  Json
+  createdAt DateTime @default(now())
 }
 
 // ============================================================
