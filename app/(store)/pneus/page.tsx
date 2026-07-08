@@ -361,6 +361,7 @@ export default async function PneusPage({
           <div className="flex flex-wrap justify-center gap-2 mb-10">
             <Link
               href="/pneus"
+              scroll={false}
               className={`rounded-full px-4 py-2 text-sm font-semibold font-inter border transition-colors ${
                 !estiloAtivo
                   ? 'bg-[#d42b2b] border-[#d42b2b] text-white'
@@ -373,6 +374,7 @@ export default async function PneusPage({
               <Link
                 key={e.id}
                 href={`/pneus?estilo=${e.id}`}
+                scroll={false}
                 title={e.desc}
                 className={`rounded-full px-4 py-2 text-sm font-semibold font-inter border transition-colors ${
                   estiloAtivo === e.id
