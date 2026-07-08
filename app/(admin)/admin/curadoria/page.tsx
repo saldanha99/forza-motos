@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { prisma } from '@/lib/prisma'
 import { FadeIn } from '@/components/admin/FadeIn'
 import { CuradoriaToggle } from '@/components/admin/CuradoriaToggle'
+import { CuradoriaBulkActions } from '@/components/admin/CuradoriaBulkActions'
 import { formatPrice } from '@/lib/utils'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -138,7 +139,10 @@ export default async function CuradoriaPage({
         </div>
       ) : (
         <FadeIn delay={160}>
-          <p className="text-xs text-brand-muted mb-3">{total} produto{total !== 1 ? 's' : ''}</p>
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <p className="text-xs text-brand-muted">{total} produto{total !== 1 ? 's' : ''}</p>
+            <CuradoriaBulkActions cat={cat} q={q} estado={estado} total={total} />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {produtos.map((p) => {
               const img = Array.isArray(p.imagens) ? (p.imagens[0] as string) : null
