@@ -68,8 +68,9 @@ Instruções:
 ${SITE_CIDADE ? `6. Inclua referências geográficas naturais a ${SITE_CIDADE}.` : ''}
 7. Tom profissional, técnico e acessível.
 8. NÃO adicione introduções formais nem conclusões genéricas.
+9. IMPORTANTE: Como o retorno deve ser um JSON válido, certifique-se de escapar corretamente quaisquer aspas duplas internas do HTML (como em atributos de tags) utilizando barra invertida (ex: \\"). Em vez de aspas duplas em atributos, dê preferência ao uso de aspas simples se possível (ex: <h2 id='titulo'> em vez de <h2 id=\"titulo\">) para evitar erros de sintaxe JSON.
 
-Retorne APENAS um objeto JSON válido:
+Retorne estritamente um objeto JSON no formato:
 {
   "conteudo": "HTML completo com <h2> e <p>",
   "seoTitle": "título SEO até 60 chars com o termo",

@@ -63,7 +63,8 @@ Gere uma lista de termos, palavras-chave e expressões de mercado relacionadas a
 
 ${formatacaoPrefixo}
 
-Retorne APENAS um objeto JSON válido (sem formatação markdown, sem comentários):
+IMPORTANTE: Não use aspas duplas de forma alguma dentro do texto de cada termo sugerido. Use apenas aspas simples caso precise destacar algum nome. Isso é necessário para evitar corromper a estrutura JSON.
+Retorne estritamente um objeto JSON no formato:
 {"termos": ["Termo 1", "Termo 2", ...]}
 
 Gere exatamente ${qtd} termos altamente relevantes para ranqueamento no Google, sem repetir.

@@ -49,6 +49,7 @@ async function callOpenAICompat(
   prompt:    string,
   maxTokens: number,
 ): Promise<string> {
+  const isJson = prompt.toLowerCase().includes('json')
   const res = await fetch(`${baseUrl}/chat/completions`, {
     method:  'POST',
     headers: {
@@ -61,6 +62,7 @@ async function callOpenAICompat(
       model,
       max_tokens: maxTokens,
       messages:   [{ role: 'user', content: prompt }],
+      ...(isJson && { response_format: { type: 'json_object' } }),
     }),
   })
   if (!res.ok) throw new Error(`${baseUrl} erro ${res.status}: ${await res.text().then(t => t.slice(0, 200))}`)
@@ -71,12 +73,16 @@ async function callOpenAICompat(
 // ── Gemini call ───────────────────────────────────────────────────────────────
 async function callGemini(model: string, apiKey: string, prompt: string, maxTokens: number): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+  const isJson = prompt.toLowerCase().includes('json')
   const res = await fetch(url, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { maxOutputTokens: maxTokens },
+      generationConfig: { 
+        maxOutputTokens: maxTokens,
+        ...(isJson && { responseMimeType: 'application/json' }),
+      },
     }),
   })
   if (!res.ok) throw new Error(`Gemini erro ${res.status}: ${await res.text().then(t => t.slice(0, 200))}`)
