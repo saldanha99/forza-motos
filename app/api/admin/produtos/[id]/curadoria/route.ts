@@ -36,8 +36,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     data: {
       mantidoManual: eurolaqui ? !!visivel : undefined,
       ocultoManual: eurolaqui ? undefined : !visivel,
-      // Eurolaqui mantido → estoque 999 (fornecedor garante); senão preserva
-      ...(eurolaqui && { estoque: visivel ? 999 : 0 }),
+      // Eurolaqui mantido → estoque nominal 10 (sob encomenda); senão zera
+      ...(eurolaqui && { estoque: visivel ? 10 : 0 }),
       ativo,
     },
   })

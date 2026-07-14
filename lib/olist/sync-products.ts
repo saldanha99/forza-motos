@@ -129,9 +129,8 @@ export async function syncPaginaListagem(pagina: number) {
           descricao:         '',
           preco:             d.preco ?? 0,
           precoPromocional:  d.precoPromocional ?? undefined,
-          // 999 = marcador "nunca verificado" (fila da FASE 4); produto nasce
-          // inativo, então não fica à venda com esse placeholder
-          estoque:           d.estoque ?? 999,
+          // Nasce com 0 e inativo — o robô da VPS verifica o estoque real
+          estoque:           d.estoque ?? 0,
           ativo:             false, // Novo produto não tem imagens ainda -> inativo por padrão
           tinyId:            d.tinyId,
           categoria:         d.categoria,
@@ -507,7 +506,7 @@ export async function syncProdutoUnico(tinyId: string | number): Promise<'criado
       ...resto,
       preco: preco ?? 0,
       precoPromocional: precoPromocional ?? undefined,
-      estoque: estoque ?? 999, // marcador "nunca verificado" p/ fila da FASE 4
+      estoque: estoque ?? 0, // robô da VPS verifica o estoque real
       slug,
       imagens,
       descricao,
@@ -548,7 +547,8 @@ function calcularEstoqueDepositos(depositos: any[]): number {
   }
 
   if (saldoLoja > 0) return saldoLoja
-  if (temDropship) return 999
+  // 09/07: sem 999 mágico — só saldo real conta (regra F_drop=disponível era falsa)
+  if (temDropship) return 0
   const total = lista.reduce((acc, item) => {
     const dep = item.deposito ?? item
     return acc + Number(dep.saldo ?? dep.quantidade ?? 0)
@@ -681,7 +681,7 @@ export async function syncDeltaProdutos(diasAtras = 2): Promise<{
               ...d,
               preco: preco ?? 0,
               precoPromocional: precoPromocional ?? undefined,
-              estoque: estoque ?? 999, // marcador "nunca verificado" p/ fila da FASE 4
+              estoque: estoque ?? 0, // robô da VPS verifica o estoque real
               slug,
               descricao: '',
               imagens: [],

@@ -89,8 +89,7 @@ export async function verificarEstoqueTiny(
         }).catch(() => {}) // não bloqueia o checkout se falhar
       }
 
-      // Dropshipping (999) = sempre disponível via fornecedor
-      if (estoqueReal === 999) return
+      // (999 extinto em 09/07 — estoque é sempre o saldo real)
 
       if (estoqueReal < item.quantidade) {
         esgotados.push({

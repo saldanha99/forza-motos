@@ -2,8 +2,8 @@
  * Forza Sync Worker — roda na VPS (Docker), sem limite de timeout.
  *
  * Converge o catálogo do site com o ERP Olist/Tiny (fonte da verdade):
- *   1. jobEstoque    — estoque real de TODOS os produtos (depósito "Loja";
- *                      depósitos dropship → 999 = disponível via fornecedor)
+ *   1. jobEstoque    — estoque real de TODOS os produtos (soma dos saldos
+ *                      reais; sem 999 mágico — Eurolaqui ignorado)
  *   2. jobImagens    — verifica imagens + peso/dimensões/descrição pendentes
  *   3. jobCatalogo   — importa produtos do Tiny que faltam no site e desativa
  *                      fantasmas que sumiram do ERP (não deleta — reversível)
@@ -76,37 +76,38 @@ async function tinyFetch(endpoint, params = {}, delayMs = DELAY_MS) {
 const naoExisteNoTiny = (e) =>
   /não localizado|nao localizado|não encontrado|nao encontrado|inválido|invalido/i.test(e?.tinyMsg ?? '')
 
-// ─── Estoque real (Loja = físico; dropship permitido = 999) ─────────────────
-// Fornecedores dropship que a loja MANTÉM vendendo → produto disponível (999).
-const DROPSHIP_OK = ['f_drop', 'fdrop']
-// Fornecedores BLOQUEADOS (não vendemos mais) → depósito ignorado; produto que
-// só existe aqui vira indisponível (estoque 0 → desativado). Eurolaqui (05/07).
+// ─── Estoque real — SÓ saldo físico conta, sem 999 mágico ───────────────────
+// 09/07 (Caio): "tudo que tiver 999 tá errado, não tem nenhum pneu com 1000".
+// A regra antiga "tem depósito F_drop → disponível via fornecedor (999)" era
+// FALSA: o depósito existe no cadastro com saldo zero. Agora: estoque = soma
+// dos saldos reais dos depósitos não-bloqueados. Eurolaqui segue ignorado.
 const DROPSHIP_BLOQUEADO = ['eurolaqui']
 
 // Retorna { estoque, fornecedor }. `fornecedor` = origem principal do saldo:
-//   loja (físico) | f_drop (dropship permitido) | eurolaqui (bloqueado) | outro
+//   loja (físico) | f_drop (saldo real no fornecedor) | eurolaqui (bloqueado) | outro
 async function buscarEstoqueReal(tinyId) {
   const data = await tinyFetch('produto.obter.estoque.php', { id: String(tinyId) })
   const raw = data.retorno?.produto?.depositos ?? []
   const lista = Array.isArray(raw) ? raw : raw.deposito ? [raw.deposito].flat() : []
 
   let saldoLoja = 0, saldoFdrop = 0, saldoEuro = 0, saldoOutros = 0
-  let temFdropDep = false
   for (const item of lista) {
     const dep = item.deposito ?? item
     const nome = (dep.nome ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
     const saldo = Number(dep.saldo ?? dep.quantidade ?? 0)
     if (DROPSHIP_BLOQUEADO.some((d) => nome.includes(d))) { saldoEuro += saldo; continue }
     if (nome === 'loja') { saldoLoja += saldo; continue }
-    if (DROPSHIP_OK.some((d) => nome.includes(d))) { saldoFdrop += saldo; temFdropDep = true; continue }
+    if (nome.includes('drop')) { saldoFdrop += saldo; continue }
     saldoOutros += saldo
   }
-  if (saldoLoja > 0) return { estoque: saldoLoja, fornecedor: 'loja' }   // físico real
-  if (saldoFdrop > 0) return { estoque: 999, fornecedor: 'f_drop' }      // F_drop com saldo → disponível
-  if (saldoEuro > 0) return { estoque: 0, fornecedor: 'eurolaqui' }      // fonte é Eurolaqui → remove
-  if (temFdropDep) return { estoque: 999, fornecedor: 'f_drop' }         // F_drop vazio, sem Eurolaqui → dropship
-  if (saldoOutros > 0) return { estoque: saldoOutros, fornecedor: 'outro' }
-  return { estoque: 0, fornecedor: 'outro' }
+  const total = Math.max(0, saldoLoja + saldoFdrop + saldoOutros)
+  const fornecedor =
+    saldoLoja > 0 ? 'loja'
+    : saldoFdrop > 0 ? 'f_drop'
+    : saldoEuro > 0 ? 'eurolaqui'
+    : 'outro'
+  // Fonte é só Eurolaqui (bloqueado) → indisponível
+  return { estoque: fornecedor === 'eurolaqui' ? 0 : total, fornecedor }
 }
 
 // ─── Extração de imagens (mesma lógica do app) ──────────────────────────────
@@ -155,7 +156,7 @@ async function jobEstoque() {
     try {
       const { estoque: base, fornecedor } = await buscarEstoqueReal(p.tinyId)
       // Eurolaqui é bloqueado — MAS se o admin marcou p/ manter, fica disponível (999)
-      const novo = fornecedor === 'eurolaqui' && p.mantidoManual ? 999 : base
+      const novo = fornecedor === 'eurolaqui' && p.mantidoManual ? 10 : base // 10 = nominal p/ item mantido sob encomenda
       if (novo !== p.estoque) mudaram++
       // Admin ocultou manualmente → nunca reativa
       const ativo = !p.ocultoManual && p.temImagem && novo > 0
@@ -314,7 +315,7 @@ async function jobCatalogo() {
           descricao: '',
           preco: parseNum(p.preco ?? p.preco_venda) ?? 0,
           precoPromocional: (() => { const v = parseNum(p.preco_promocional); return v && v > 0 ? v : null })(),
-          estoque: 999, // marcador "nunca verificado" — jobEstoque prioriza e corrige
+          estoque: 0, // jobEstoque verifica o saldo real no próximo ciclo
           ativo: false, // só ativa depois de imagem + estoque verificados
           tinyId: String(p.id),
           categoria: p.categoria?.descricao || (typeof p.categoria === 'string' ? p.categoria : '') || 'Geral',
@@ -540,7 +541,7 @@ async function jobVariacoes() {
     const precoMin = Math.min(
       ...base.map((f) => Number(f.precoPromocional ?? f.preco)).filter((v) => v > 0),
     )
-    const estoqueTotal = Math.min(999, ativos.reduce((acc, f) => acc + f.estoque, 0))
+    const estoqueTotal = ativos.reduce((acc, f) => acc + f.estoque, 0)
 
     // Pai sem foto herda as fotos do 1º filho que tem
     let imagens = undefined

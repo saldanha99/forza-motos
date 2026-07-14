@@ -132,14 +132,13 @@ export async function fetchTinyProduct(id: string | number): Promise<any> {
 }
 
 /**
- * Busca estoque real de 1 produto usando depósito "Loja" (estoque físico da Forza).
- * Depósitos Drop_EuroLaqui e F_drop são dropshipping — sempre 0 no Tiny,
- * mas o produto é disponível via fornecedor. Nesses casos retornamos 999 (disponível).
+ * Busca estoque real de 1 produto — SÓ saldo físico conta, sem 999 mágico.
+ * (09/07, Caio: "tudo que tiver 999 tá errado" — a regra antiga de tratar a
+ * mera existência do depósito F_drop como disponibilidade era falsa.)
+ * Estoque = soma dos saldos reais dos depósitos, ignorando Eurolaqui (bloqueado).
  *
  * Retorna:
- *   > 0  → estoque físico real da Loja
- *   999  → dropshipping (ativo, sem estoque próprio — disponível pelo fornecedor)
- *   0    → produto inativo/sem disponibilidade
+ *   >= 0 → estoque real somado
  *   -1   → erro de API (não alterar valor atual)
  */
 export async function fetchTinyProductEstoque(id: string | number): Promise<number> {
@@ -150,33 +149,16 @@ export async function fetchTinyProductEstoque(id: string | number): Promise<numb
       ? raw
       : (raw.deposito ? [raw.deposito].flat() : [])
 
-    const DEPOSITOS_DROPSHIP = ['drop_eurolaqu', 'f_drop', 'eurolaqui', 'drop']
-    let saldoLoja = 0
-    let temDropship = false
+    const DEPOSITOS_BLOQUEADOS = ['eurolaqui'] // fornecedor que não vendemos mais
+    let total = 0
 
     for (const item of lista) {
       const dep = item.deposito ?? item
       const nomeDeposito = (dep.nome ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
-      const saldo = Number(dep.saldo ?? dep.quantidade ?? 0)
-
-      if (nomeDeposito === 'loja') {
-        saldoLoja += saldo
-      } else if (DEPOSITOS_DROPSHIP.some(d => nomeDeposito.includes(d))) {
-        temDropship = true
-      }
+      if (DEPOSITOS_BLOQUEADOS.some(d => nomeDeposito.includes(d))) continue
+      total += Number(dep.saldo ?? dep.quantidade ?? 0)
     }
 
-    // Tem estoque físico real → retorna número exato
-    if (saldoLoja > 0) return saldoLoja
-
-    // Dropshipping: fornecedor garante disponibilidade, produto ativo → 999
-    if (temDropship) return 999
-
-    // Nenhum depósito conhecido com saldo → soma geral como fallback
-    const total = lista.reduce((acc: number, item: any) => {
-      const dep = item.deposito ?? item
-      return acc + Number(dep.saldo ?? dep.quantidade ?? 0)
-    }, 0)
     return Math.max(0, total)
   } catch {
     return -1
