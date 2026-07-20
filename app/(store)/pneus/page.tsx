@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/store/ProductCard'
 import { Breadcrumb } from '@/components/store/Breadcrumb'
 import { FAQSection } from '@/components/store/FAQSection'
-import { MODELOS_MOTOS, ESTILOS, getModelosPorMarca, type EstiloMoto } from '@/lib/motos-modelos'
+import { MARCAS_PNEUS } from '@/lib/menu-loja'
 import { BuscaPorPlaca } from '@/components/store/BuscaPorPlaca'
 import { CheckCircle2, Wrench, Clock, Shield, Award, Zap } from 'lucide-react'
 import { SITE_URL } from '@/lib/schema'
@@ -139,19 +139,8 @@ async function getDadosPneus() {
   }
 }
 
-export default async function PneusPage({
-  searchParams,
-}: {
-  searchParams: { estilo?: string }
-}) {
-  const { pneusDestaque, marcas, medidasPorAro } = await getDadosPneus()
-
-  // Filtro por estilo de moto (?estilo=trail etc.)
-  const estiloAtivo = ESTILOS.find((e) => e.id === searchParams.estilo)?.id as EstiloMoto | undefined
-  const modelosFiltrados = estiloAtivo
-    ? MODELOS_MOTOS.filter((m) => m.estilo === estiloAtivo)
-    : MODELOS_MOTOS
-  const modelosPorMarca = getModelosPorMarca(modelosFiltrados)
+export default async function PneusPage() {
+  const { pneusDestaque, medidasPorAro } = await getDadosPneus()
 
   return (
     <>
@@ -180,7 +169,7 @@ export default async function PneusPage({
               <span className="text-[#d42b2b]">em Campinas</span>
             </h1>
             <p className="text-white/75 text-lg md:text-xl font-inter leading-relaxed mb-6 max-w-[500px]">
-              A única loja em Campinas credenciada oficialmente por <strong className="text-white">Pirelli</strong>, <strong className="text-white">Metzeler</strong> e <strong className="text-white">Michelin</strong>. Troca em 30 minutos, instalação inclusa no preço.
+              A única loja em Campinas credenciada oficialmente por <strong className="text-white">Pirelli</strong>, <strong className="text-white">Metzeler</strong> e <strong className="text-white">Michelin</strong>. Troca em 30 minutos, instalação e balanceamento inclusos no preço.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link
@@ -190,17 +179,17 @@ export default async function PneusPage({
                 Ver todos os pneus
               </Link>
               <Link
-                href="/agendamentos"
+                href="/agendar"
                 className="border border-white/30 hover:border-white/70 hover:bg-white/5 text-white font-barlow font-bold uppercase px-8 py-3.5 rounded text-sm tracking-wider transition-colors"
               >
-                Agendar troca grátis
+                Compre o pneu e ganhe a troca
               </Link>
             </div>
             <div className="flex flex-wrap gap-5 mt-8 text-[13px] text-white/70 font-inter">
-              <span className="flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-400" /> Instalação inclusa</span>
+              <span className="flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-400" /> Instalação e balanceamento inclusos</span>
               <span className="flex items-center gap-1.5"><Zap size={14} className="text-emerald-400" /> Troca em 30 min</span>
               <span className="flex items-center gap-1.5"><Shield size={14} className="text-emerald-400" /> Garantia de fábrica</span>
-              <span className="flex items-center gap-1.5"><Clock size={14} className="text-emerald-400" /> Sem agendamento</span>
+              <span className="flex items-center gap-1.5"><Clock size={14} className="text-emerald-400" /> Box rápido com agendamento</span>
             </div>
           </div>
           <div className="hidden md:flex justify-center">
@@ -267,14 +256,13 @@ export default async function PneusPage({
       <section className="py-8 bg-[#111]">
         <div className="max-w-[1280px] mx-auto px-6 md:px-12">
           <p className="text-center text-[11px] font-semibold tracking-[2.5px] text-white/40 uppercase mb-4">
-            4 formas de encontrar o pneu certo
+            3 formas de encontrar o pneu certo
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
               { href: '#placa', num: '1', titulo: 'Pela placa', desc: 'Digite a placa e a gente identifica a moto' },
               { href: '#medida', num: '2', titulo: 'Pela medida', desc: 'Está gravada na lateral do pneu' },
-              { href: '#modelo', num: '3', titulo: 'Pelo modelo', desc: 'CG, Biz, Fazer, XRE, PCX…' },
-              { href: '#modelo', num: '4', titulo: 'Pelo estilo', desc: 'Urbana, scooter, trail, esportiva' },
+              { href: '#modelo', num: '3', titulo: 'Pela marca e modelo', desc: 'Pirelli Angel, Michelin Anakee, Metzeler Tourance…' },
             ].map((c) => (
               <a
                 key={c.num + c.titulo}
@@ -344,60 +332,35 @@ export default async function PneusPage({
         </section>
       )}
 
-      {/* Filtro por modelo de moto */}
+      {/* Busca por MARCA e MODELO de pneu */}
       <section id="modelo" className="py-14 bg-white scroll-mt-24">
         <div className="max-w-[1280px] mx-auto px-6 md:px-12">
           <h2 className="font-barlow font-bold text-3xl md:text-4xl text-[#111] text-center mb-2" style={{ letterSpacing: '-0.5px' }}>
-            Encontre o pneu certo para sua moto
+            Busque pela marca e modelo do pneu
           </h2>
-          <p className="text-center text-[#666] font-inter mb-6">
-            Selecione o modelo da sua moto para ver os pneus compatíveis
+          <p className="text-center text-[#666] font-inter mb-10">
+            Já sabe qual pneu quer? Vá direto ao modelo
           </p>
 
-          {/* Filtro por estilo de moto */}
-          <div className="flex flex-wrap justify-center gap-2 mb-10">
-            <Link
-              href="/pneus"
-              scroll={false}
-              className={`rounded-full px-4 py-2 text-sm font-semibold font-inter border transition-colors ${
-                !estiloAtivo
-                  ? 'bg-[#d42b2b] border-[#d42b2b] text-white'
-                  : 'bg-white border-[#e2e2e6] text-[#333] hover:border-[#d42b2b] hover:text-[#d42b2b]'
-              }`}
-            >
-              Todos os estilos
-            </Link>
-            {ESTILOS.map((e) => (
-              <Link
-                key={e.id}
-                href={`/pneus?estilo=${e.id}`}
-                scroll={false}
-                title={e.desc}
-                className={`rounded-full px-4 py-2 text-sm font-semibold font-inter border transition-colors ${
-                  estiloAtivo === e.id
-                    ? 'bg-[#d42b2b] border-[#d42b2b] text-white'
-                    : 'bg-white border-[#e2e2e6] text-[#333] hover:border-[#d42b2b] hover:text-[#d42b2b]'
-                }`}
-              >
-                {e.label}
-              </Link>
-            ))}
-          </div>
-
           <div className="space-y-8">
-            {Array.from(modelosPorMarca.entries()).map(([marca, modelos]) => (
-              <div key={marca}>
-                <h3 className="font-barlow font-bold text-lg text-[#333] mb-3 uppercase tracking-wider">
-                  {marca}
-                </h3>
+            {MARCAS_PNEUS.map((m) => (
+              <div key={m.marca}>
+                <div className="flex items-baseline gap-3 mb-3">
+                  <h3 className="font-barlow font-bold text-lg text-[#333] uppercase tracking-wider">
+                    {m.marca}
+                  </h3>
+                  <Link href={m.href} className="text-[13px] font-inter font-semibold text-[#d42b2b] hover:underline">
+                    Ver todos →
+                  </Link>
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {modelos.map((m) => (
+                  {m.modelos.map((mod) => (
                     <Link
-                      key={m.slug}
-                      href={`/pneus/${m.slug}`}
+                      key={mod.nome}
+                      href={`/produtos?busca=${encodeURIComponent(mod.busca)}`}
                       className="block px-4 py-3 bg-[#fafafa] hover:bg-[#d42b2b] border border-[#eee] hover:border-[#d42b2b] hover:text-white rounded-md text-sm font-inter text-[#333] transition-all duration-150"
                     >
-                      {m.nome}
+                      {mod.nome}
                     </Link>
                   ))}
                 </div>

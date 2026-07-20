@@ -8,6 +8,7 @@ import { useSession } from 'next-auth/react'
 import { useCartStore } from '@/store/cart'
 import { Search, User, ShoppingCart, Menu, X } from 'lucide-react'
 import { ThemeToggle } from '@/components/store/ThemeToggle'
+import { MARCAS_PNEUS, SUBMENUS } from '@/lib/menu-loja'
 
 const CATS = [
   { id: 'Pneus',       label: 'Pneus',       href: '/pneus' },
@@ -112,6 +113,8 @@ export function Header() {
   const [query, setQuery] = useState('')
   const [mobileOpen, setMobileOpen] = useState(false)
   const [activeCat, setActiveCat] = useState<string | null>(null)
+  const [hoverCat, setHoverCat] = useState<string | null>(null)
+  const temSubmenu = (id: string) => id === 'Pneus' || Boolean(SUBMENUS[id])
   const itemCount = useCartStore((s) => s.items.reduce((acc, i) => acc + i.quantidade, 0))
   const abrirDrawer = useCartStore((s) => s.abrirDrawer)
 
@@ -211,16 +214,20 @@ export function Header() {
         </div>
       </div>
 
-      {/* ── CategoryBar (desktop) ── */}
-      <div className="bg-white border-b border-[#eee] overflow-x-auto scrollbar-none hidden md:block">
-        <div className="flex justify-center px-10 min-w-max mx-auto">
+      {/* ── CategoryBar (desktop) + mega menu ── */}
+      <div
+        className="bg-white border-b border-[#eee] hidden md:block relative"
+        onMouseLeave={() => setHoverCat(null)}
+      >
+        <div className="flex justify-center px-10 min-w-max mx-auto overflow-x-auto scrollbar-none">
           {CATS.map((cat) => {
-            const isActive = activeCat === cat.id
+            const isActive = activeCat === cat.id || hoverCat === cat.id
             return (
               <Link
                 key={cat.id}
                 href={cat.href}
-                onClick={() => setActiveCat(isActive ? null : cat.id)}
+                onClick={() => { setActiveCat(cat.id); setHoverCat(null) }}
+                onMouseEnter={() => setHoverCat(temSubmenu(cat.id) ? cat.id : null)}
                 className="flex flex-col items-center gap-[5px] px-5 py-[10px] transition-colors"
                 style={{ borderBottom: `2.5px solid ${isActive ? '#d42b2b' : 'transparent'}` }}
               >
@@ -235,6 +242,113 @@ export function Header() {
             )
           })}
         </div>
+
+        {/* Painel do mega menu */}
+        {hoverCat && (
+          <div
+            className="absolute left-0 right-0 top-full bg-white border-b border-[#eee] z-50"
+            style={{ boxShadow: '0 14px 28px rgba(0,0,0,0.12)' }}
+          >
+            <div className="max-w-[1080px] mx-auto px-8 py-7">
+              {hoverCat === 'Pneus' ? (
+                <div className="grid grid-cols-4 gap-8">
+                  {MARCAS_PNEUS.map((m) => (
+                    <div key={m.marca}>
+                      <Link
+                        href={m.href}
+                        onClick={() => setHoverCat(null)}
+                        className="font-barlow font-bold text-[14px] uppercase tracking-wider text-[#111] hover:text-[#d42b2b] transition-colors"
+                      >
+                        {m.marca}
+                      </Link>
+                      <ul className="mt-3 space-y-2">
+                        {m.modelos.map((mod) => (
+                          <li key={mod.nome}>
+                            <Link
+                              href={`/produtos?busca=${encodeURIComponent(mod.busca)}`}
+                              onClick={() => setHoverCat(null)}
+                              className="text-[13px] font-inter text-[#666] hover:text-[#d42b2b] transition-colors"
+                            >
+                              {mod.nome}
+                            </Link>
+                          </li>
+                        ))}
+                        <li>
+                          <Link
+                            href={m.href}
+                            onClick={() => setHoverCat(null)}
+                            className="text-[12px] font-inter font-semibold text-[#d42b2b] hover:underline"
+                          >
+                            Ver todos →
+                          </Link>
+                        </li>
+                      </ul>
+                    </div>
+                  ))}
+                  {/* Buscas especiais */}
+                  <div>
+                    <p className="font-barlow font-bold text-[14px] uppercase tracking-wider text-[#111]">
+                      Encontre o pneu certo
+                    </p>
+                    <ul className="mt-3 space-y-2">
+                      <li>
+                        <Link href="/pneus#placa" onClick={() => setHoverCat(null)}
+                          className="text-[13px] font-inter font-semibold text-[#d42b2b] hover:underline">
+                          🔎 Pesquise pela sua placa
+                        </Link>
+                      </li>
+                      <li>
+                        <Link href="/pneus#medida" onClick={() => setHoverCat(null)}
+                          className="text-[13px] font-inter text-[#666] hover:text-[#d42b2b] transition-colors">
+                          Buscar pela medida
+                        </Link>
+                      </li>
+                      <li>
+                        <Link href="/produtos?categoria=Pneus" onClick={() => setHoverCat(null)}
+                          className="text-[13px] font-inter text-[#666] hover:text-[#d42b2b] transition-colors">
+                          Todos os pneus
+                        </Link>
+                      </li>
+                      <li>
+                        <Link href="/agendar" onClick={() => setHoverCat(null)}
+                          className="text-[13px] font-inter text-[#666] hover:text-[#d42b2b] transition-colors">
+                          Agendar troca — balanceamento incluso
+                        </Link>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-8" style={{ gridTemplateColumns: `repeat(${(SUBMENUS[hoverCat] ?? []).length}, minmax(0, 260px))`, justifyContent: 'center' }}>
+                  {(SUBMENUS[hoverCat] ?? []).map((col) => (
+                    <div key={col.titulo}>
+                      <p className="font-barlow font-bold text-[14px] uppercase tracking-wider text-[#111]">
+                        {col.titulo}
+                      </p>
+                      <ul className="mt-3 space-y-2">
+                        {col.itens.map((item) => (
+                          <li key={item.label}>
+                            <Link
+                              href={item.href}
+                              onClick={() => setHoverCat(null)}
+                              className={`text-[13px] font-inter transition-colors ${
+                                item.destaque
+                                  ? 'font-semibold text-[#d42b2b] hover:underline'
+                                  : 'text-[#666] hover:text-[#d42b2b]'
+                              }`}
+                            >
+                              {item.label}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Mobile search ── */}

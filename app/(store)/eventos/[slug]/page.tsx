@@ -96,7 +96,7 @@ export default async function EventoDetailPage({ params }: Props) {
             {evento.titulo}
           </h1>
 
-          <p className="text-white/70 text-lg font-inter max-w-2xl">{evento.descricao}</p>
+          <p className="text-white/70 text-lg font-inter max-w-2xl" style={{ whiteSpace: 'pre-line' }}>{evento.descricao}</p>
         </div>
       </section>
 
@@ -110,7 +110,15 @@ export default async function EventoDetailPage({ params }: Props) {
             {evento.conteudo ? (
               <div
                 className="prose prose-gray max-w-none text-[#333] font-inter"
-                dangerouslySetInnerHTML={{ __html: evento.conteudo }}
+                // Texto colado sem HTML no admin: preserva quebras de linha e parágrafos
+                dangerouslySetInnerHTML={{
+                  __html: /<[a-z][\s\S]*>/i.test(evento.conteudo)
+                    ? evento.conteudo
+                    : evento.conteudo
+                        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                        .replace(/\n/g, '<br />')
+                        .replace(/(<br\s*\/>){3,}/gi, '<br /><br />'),
+                }}
               />
             ) : (
               <p className="text-[#666] font-inter italic">Mais detalhes em breve.</p>
