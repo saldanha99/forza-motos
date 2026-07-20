@@ -17,21 +17,20 @@ const AGGREGATE_RATING = {
   },
 }
 
-const WIDGET_ID = 'a40011271054968da4061533db9'
+const WIDGET_ID = '73043017787d1877e976b42d67e'
 
 export function ReviewsSection() {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // Evita carregar duas vezes
+    if (!containerRef.current) return
     if (document.querySelector(`script[src*="${WIDGET_ID}"]`)) return
 
     const script = document.createElement('script')
     script.src = `https://cdn.trustindex.io/loader.js?${WIDGET_ID}`
     script.async = true
     script.defer = true
-    // Injeta o script logo após o container para o Trustindex encontrá-lo
-    containerRef.current?.parentElement?.appendChild(script)
+    containerRef.current.appendChild(script)
   }, [])
 
   return (
@@ -42,28 +41,37 @@ export function ReviewsSection() {
       />
 
       <section
-        className="bg-[#fafafa]"
+        className="bg-[#fafafa] dark:bg-[#121212]"
         style={{
-          borderTop: '1px solid #eee',
-          borderBottom: '1px solid #eee',
+          borderTop: '1px solid rgba(128,128,128,0.15)',
+          borderBottom: '1px solid rgba(128,128,128,0.15)',
           padding: '56px 0',
         }}
       >
         <div className="max-w-[1280px] mx-auto px-6 md:px-12">
           <div className="text-center mb-10">
             <h2
-              className="font-barlow font-bold text-3xl md:text-4xl text-[#111] mb-2"
+              className="font-barlow font-bold text-3xl md:text-4xl text-[#111] dark:text-white mb-2"
               style={{ letterSpacing: '-0.5px' }}
             >
               O que dizem nossos clientes
             </h2>
-            <p className="text-[#888] text-sm font-inter">
+            <p className="text-[#666] dark:text-[#aaa] text-sm font-inter">
               Avaliações reais do Google · Forza Motos Campinas
             </p>
           </div>
 
-          {/* Container onde o Trustindex vai injetar o widget */}
-          <div ref={containerRef} id={`trustindex-widget-${WIDGET_ID}`} />
+          {/* Container do Widget Trustindex */}
+          <div ref={containerRef} className="min-h-[350px] w-full flex justify-center items-center">
+            <iframe
+              src={`https://cdn.trustindex.io/amp-widget.html#${WIDGET_ID}`}
+              width="100%"
+              height="353"
+              style={{ border: 'none', overflow: 'hidden' }}
+              title="Avaliações do Google - Forza Motos"
+              sandbox="allow-scripts allow-same-origin allow-popups"
+            />
+          </div>
         </div>
       </section>
     </>

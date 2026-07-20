@@ -24,7 +24,7 @@ docker compose build app
 
 # Migrações Prisma rodam a partir do estágio builder (tem o CLI do prisma)
 BUILDER_IMG=$(docker build -q --target builder /opt/forza/app)
-docker run --rm --env-file /opt/forza/app.env "$BUILDER_IMG" npx prisma migrate deploy
+docker run --rm --network forza --env-file /opt/forza/app.env "$BUILDER_IMG" npx prisma db push
 
 docker compose up -d app
 docker compose ps app
