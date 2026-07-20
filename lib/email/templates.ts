@@ -365,8 +365,8 @@ export function htmlPedidoProntoRetirada(opts: {
               <p style="margin:0 0 8px;color:#333;font-size:13px;font-weight:600;">Forza Campinas</p>
               <p style="margin:0 0 12px;color:#555;font-size:13px;">Rua Funilense, 110 — Guanabara<br>Campinas/SP — CEP: 13073-041</p>
               <h3 style="margin:0 0 8px;color:#1a1a1a;font-size:14px;font-weight:700;">⏰ Horários:</h3>
-              <p style="margin:0 0 4px;color:#555;font-size:13px;">• Segunda a Sexta: 8h às 18h</p>
-              <p style="margin:0;color:#555;font-size:13px;">• Sábado: 8h às 13h</p>
+              <p style="margin:0 0 4px;color:#555;font-size:13px;">• Segunda a Sexta: 9h às 18h</p>
+              <p style="margin:0;color:#555;font-size:13px;">• Sábado: 8h às 12h</p>
             </div>
           </td>
         </tr>

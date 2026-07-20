@@ -74,6 +74,37 @@ export function calcularRegrasFrete(estado: string, subtotal: number): OpcaoFret
   ]
 }
 
+/** CEPs do estado de SP ocupam a faixa 01000-000 a 19999-999 */
+export function cepEhSP(cep: string): boolean {
+  const prefixo = Number(cep.replace(/\D/g, '').slice(0, 5))
+  return prefixo >= 1000 && prefixo <= 19999
+}
+
+/**
+ * Aplica a regra "frete grátis acima de R$499 para SP" sobre uma lista de
+ * opções cotadas: zera a opção paga mais barata, mantendo as demais como
+ * alternativas mais rápidas. Retorna a lista original se a regra não se aplica.
+ */
+export function aplicarFreteGratisSP<T extends { preco: number; nome: string }>(
+  opcoes: T[],
+  cepDestino: string,
+  subtotal: number
+): T[] {
+  if (!cepEhSP(cepDestino) || subtotal < FRETE_GRATIS_MIN) return opcoes
+
+  let idxMaisBarata = -1
+  for (let i = 0; i < opcoes.length; i++) {
+    if (opcoes[i].preco > 0 && (idxMaisBarata === -1 || opcoes[i].preco < opcoes[idxMaisBarata].preco)) {
+      idxMaisBarata = i
+    }
+  }
+  if (idxMaisBarata === -1) return opcoes
+
+  return opcoes.map((op, i) =>
+    i === idxMaisBarata ? { ...op, preco: 0, nome: `Frete Grátis — ${op.nome}` } : op
+  )
+}
+
 /** Quanto falta para ganhar frete grátis (só para SP) */
 export function faltaParaFreteGratis(estado: string, subtotal: number): number | null {
   const uf = estado.toUpperCase().trim()

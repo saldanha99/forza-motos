@@ -58,7 +58,9 @@ export default function CarrinhoPage() {
                     <span className="text-ink text-sm w-6 text-center font-medium">{item.quantidade}</span>
                     <button
                       onClick={() => atualizarQuantidade(item.id, item.quantidade + 1)}
-                      className="p-1.5 text-dim hover:text-ink transition-colors"
+                      disabled={item.estoque != null && item.quantidade >= item.estoque}
+                      className="p-1.5 text-dim hover:text-ink transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      title={item.estoque != null && item.quantidade >= item.estoque ? 'Máximo disponível em estoque' : undefined}
                     >
                       <Plus size={13} />
                     </button>

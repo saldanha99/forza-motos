@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import toast from 'react-hot-toast'
 import { whatsappLink } from '@/lib/utils'
+import { horariosParaData } from '@/lib/agendamento/horarios'
 import { Calendar, Clock, Wrench } from 'lucide-react'
 
 const SERVICOS = [
@@ -14,11 +15,10 @@ const SERVICOS = [
   'Troca de Pastilha de Freio',
   'Troca de Óleo',
   'Kit de Transmissão (corrente + coroa + pinhão)',
-  'Revisão Completa',
+  'Manutenção Preventiva',
   'Outro serviço',
 ]
 
-const HORARIOS = ['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00']
 
 export default function AgendarPage() {
   const [loading, setLoading] = useState(false)
@@ -32,14 +32,28 @@ export default function AgendarPage() {
     notas: '',
   })
 
+  const horariosDisponiveis = horariosParaData(form.dataPreferida)
+  const domingoSelecionado = Boolean(form.dataPreferida) && horariosDisponiveis.length === 0
+
   function update(field: string, value: string) {
-    setForm((f) => ({ ...f, [field]: value }))
+    setForm((f) => {
+      const next = { ...f, [field]: value }
+      // Ao trocar a data, descarta horário que não existe no novo dia (ex.: 15h num sábado)
+      if (field === 'dataPreferida' && next.horarioPreferido && !horariosParaData(value).includes(next.horarioPreferido)) {
+        next.horarioPreferido = ''
+      }
+      return next
+    })
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.nome || !form.telefone || !form.servico || !form.motoModelo || !form.dataPreferida || !form.horarioPreferido) {
       toast.error('Preencha todos os campos obrigatórios')
+      return
+    }
+    if (!horariosParaData(form.dataPreferida).includes(form.horarioPreferido)) {
+      toast.error('Escolha um horário dentro do funcionamento: seg–sex 9h às 18h, sábado 8h às 12h (domingo fechado)')
       return
     }
 
@@ -79,9 +93,9 @@ export default function AgendarPage() {
       {/* Cards de info */}
       <div className="grid grid-cols-3 gap-3 mb-8">
         {[
-          { icon: Clock, label: 'Seg–Sex', sub: '8h às 18h' },
-          { icon: Calendar, label: 'Sábado', sub: '8h às 13h' },
-          { icon: Wrench, label: 'Box rápido', sub: 'Sem fila' },
+          { icon: Clock, label: 'Seg–Sex', sub: '9h às 18h' },
+          { icon: Calendar, label: 'Sábado', sub: '8h às 12h' },
+          { icon: Wrench, label: 'Box rápido', sub: 'Com agendamento' },
         ].map((item) => (
           <div key={item.label} className="bg-card border border-line rounded-xl p-4 text-center">
             <item.icon size={20} className="text-vermelho mx-auto mb-2" />
@@ -124,11 +138,19 @@ export default function AgendarPage() {
             <select
               value={form.horarioPreferido}
               onChange={(e) => update('horarioPreferido', e.target.value)}
-              className="w-full bg-card border border-line rounded-md px-3 py-2.5 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-vermelho/30 focus:border-vermelho transition-colors"
+              disabled={!form.dataPreferida || domingoSelecionado}
+              className="w-full bg-card border border-line rounded-md px-3 py-2.5 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-vermelho/30 focus:border-vermelho transition-colors disabled:opacity-50"
             >
-              <option value="">Selecione...</option>
-              {HORARIOS.map((h) => <option key={h} value={h}>{h}</option>)}
+              <option value="">
+                {!form.dataPreferida ? 'Escolha a data primeiro...' : domingoSelecionado ? 'Fechado aos domingos' : 'Selecione...'}
+              </option>
+              {horariosDisponiveis.map((h) => <option key={h} value={h}>{h}</option>)}
             </select>
+            {domingoSelecionado && (
+              <p className="text-xs text-vermelho mt-1.5">
+                Não abrimos aos domingos. Escolha de segunda a sábado.
+              </p>
+            )}
           </div>
         </div>
 

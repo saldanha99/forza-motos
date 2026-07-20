@@ -39,7 +39,6 @@ const MARCAS_PARCEIRAS = [
   'Pirelli',
   'Metzeler',
   'Michelin',
-  'Bridgestone',
   'Rinaldi',
   'Mobil',
   'Motul',
@@ -115,7 +114,7 @@ export default function SobrePage() {
               A <strong>Forza Motos</strong> nasceu da paixão por motos. Começamos como uma pequena oficina em Campinas e, com o tempo, nos tornamos referência regional em pneus, óleos, peças e serviços para motociclistas.
             </p>
             <p>
-              Hoje somos credenciados pelas principais marcas do mercado — <strong>Pirelli, Metzeler, Michelin, Bridgestone</strong> — e oferecemos um catálogo com mais de 2.800 produtos, atendendo desde a moto do entregador até a esportiva de alta cilindrada.
+              Hoje somos credenciados pelas principais marcas do mercado — <strong>Pirelli, Metzeler e Michelin</strong> — e oferecemos um catálogo com mais de 2.800 produtos, atendendo desde a moto do entregador até a esportiva de alta cilindrada.
             </p>
             <p>
               Nosso diferencial: <strong>box rápido com agendamento online</strong>. Troca de pneu em 30 minutos, óleo em 20 minutos. Atendimento técnico de verdade, sem firula. Você chega, escolhe, instala e sai rodando.
@@ -246,8 +245,8 @@ export default function SobrePage() {
               <div className="flex items-start gap-3">
                 <Clock className="text-[#d42b2b] shrink-0 mt-0.5" size={18} />
                 <div className="text-sm">
-                  <p>Segunda a sexta: <strong>8h às 18h</strong></p>
-                  <p>Sábados: <strong>8h às 13h</strong></p>
+                  <p>Segunda a sexta: <strong>9h às 18h</strong></p>
+                  <p>Sábados: <strong>8h às 12h</strong></p>
                   <p className="text-[#888] mt-1">Domingos e feriados: fechado</p>
                 </div>
               </div>

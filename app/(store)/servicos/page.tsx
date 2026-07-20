@@ -23,30 +23,30 @@ import {
 } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Oficina de Motos em Campinas — Troca de Pneu, Óleo e Revisão',
+  title: 'Oficina de Motos em Campinas — Troca de Pneu, Óleo e Freios',
   description:
-    'Oficina especializada em motos em Campinas/SP. Troca de pneu (instalação inclusa), óleo, pastilhas, revisão e manutenção. Box rápido com agendamento online. (19) 97404-9445.',
+    'Oficina especializada em motos em Campinas/SP. Troca de pneu (instalação e balanceamento inclusos), óleo, pastilhas e kit de transmissão. Box rápido com agendamento online. (19) 97404-9445.',
   keywords: [
     'oficina motos Campinas',
     'mecânica de motos',
     'box rápido moto',
     'troca de óleo moto Campinas',
-    'revisão moto Campinas',
+    'troca de pneu moto Campinas',
   ],
   alternates: { canonical: `${SITE_URL}/servicos` },
   openGraph: {
     title: 'Oficina de Motos em Campinas — Forza Motos',
-    description: 'Box rápido para motos. Troca de pneu, óleo, freios e revisão completa.',
+    description: 'Box rápido para motos. Troca de pneu, óleo, freios e kit de transmissão.',
     url: `${SITE_URL}/servicos`,
   },
 }
 
+// Sem preços: o valor varia conforme o modelo da moto — cliente solicita orçamento
 const SERVICOS = [
   {
     icon: Disc,
     nome: 'Troca de Pneu',
-    descricao: 'Instalação, montagem e balanceamento em 30 min. Pneu novo com garantia.',
-    preco: 'A partir de R$ 30 (mão de obra)',
+    descricao: 'Instalação, montagem e balanceamento inclusos. Pneu novo com garantia.',
     tempo: '30 min',
     slug: 'troca-pneu-moto',
   },
@@ -54,41 +54,29 @@ const SERVICOS = [
     icon: Droplet,
     nome: 'Troca de Óleo',
     descricao: 'Óleo Mobil, Motul ou Castrol. Filtro original incluso. Descarte ecológico.',
-    preco: 'A partir de R$ 80 (com óleo)',
-    tempo: '20 min',
+    tempo: '30 min',
     slug: 'troca-oleo-moto',
   },
   {
     icon: Disc,
     nome: 'Pastilhas de Freio',
     descricao: 'Troca de pastilha dianteira e traseira. Sangria do fluido se necessário.',
-    preco: 'A partir de R$ 60 (mão de obra)',
-    tempo: '40 min',
+    tempo: '30 min',
     slug: 'pastilhas-freio-moto',
-  },
-  {
-    icon: Settings,
-    nome: 'Revisão Completa',
-    descricao: 'Checklist 30 pontos. Verificação de óleo, freio, corrente, suspensão.',
-    preco: 'A partir de R$ 150',
-    tempo: '1h30',
-    slug: 'revisao-moto',
   },
   {
     icon: Wrench,
     nome: 'Manutenção Preventiva',
     descricao: 'Pacote completo: óleo + filtro + verificação geral. Para rodar tranquilo.',
-    preco: 'A partir de R$ 250',
     tempo: '2h',
     slug: 'manutencao-preventiva-moto',
   },
   {
     icon: Settings,
-    nome: 'Corrente e Coroa',
-    descricao: 'Lubrificação, ajuste de tensão ou troca completa do kit relação.',
-    preco: 'A partir de R$ 90 (mão de obra)',
-    tempo: '50 min',
-    slug: 'corrente-coroa-moto',
+    nome: 'Kit de Transmissão',
+    descricao: 'Lubrificação, ajuste de tensão ou troca completa do kit (corrente, pinhão e coroa).',
+    tempo: '1h',
+    slug: 'kit-transmissao-moto',
   },
 ]
 
@@ -116,7 +104,7 @@ const FAQS = [
   {
     question: 'Qual o horário de funcionamento?',
     answer:
-      'Segunda a sexta das 8h às 18h, sábados das 8h às 13h. Fechamos aos domingos e feriados nacionais. Em caso de emergência, contate via WhatsApp.',
+      'Segunda a sexta das 9h às 18h, sábados das 8h às 12h. Fechamos aos domingos e feriados nacionais. Em caso de emergência, contate via WhatsApp.',
   },
   {
     question: 'Vocês buscam a moto em casa?',
@@ -129,7 +117,6 @@ const SERVICOS_SCHEMA = SERVICOS.map((s) =>
   getServiceSchema({
     nome: s.nome,
     descricao: s.descricao,
-    preco: s.preco.match(/\d+/)?.[0],
     url: `${SITE_URL}/servicos#${s.slug}`,
   })
 )
@@ -218,7 +205,7 @@ export default function ServicosPage() {
                   {s.descricao}
                 </p>
                 <p className="text-sm font-barlow font-bold text-[#d42b2b] mb-4">
-                  {s.preco}
+                  Solicite um orçamento para sua moto
                 </p>
                 <Link
                   href="/agendar"
@@ -286,8 +273,8 @@ export default function ServicosPage() {
                 <div className="flex items-center gap-3">
                   <Clock className="text-[#d42b2b]" size={18} />
                   <div className="text-sm">
-                    <p>Segunda a sexta: <strong>8h às 18h</strong></p>
-                    <p>Sábados: <strong>8h às 13h</strong></p>
+                    <p>Segunda a sexta: <strong>9h às 18h</strong></p>
+                    <p>Sábados: <strong>8h às 12h</strong></p>
                   </div>
                 </div>
               </div>

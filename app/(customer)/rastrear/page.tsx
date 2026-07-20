@@ -353,7 +353,7 @@ export default function RastrearPage({ searchParams }: { searchParams: { pedido?
                 Campinas/SP — CEP: 13073-041
                 <br />
                 <span className="text-xs text-faint mt-1.5 block font-semibold text-emerald-600 dark:text-emerald-400">
-                  🏁 Disponível para retirada de Segunda a Sexta das 8h às 18h e Sábado das 8h às 13h.
+                  🏁 Disponível para retirada de Segunda a Sexta das 9h às 18h e Sábado das 8h às 12h.
                 </span>
               </p>
             </div>

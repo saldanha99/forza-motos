@@ -34,7 +34,7 @@ export function ProductCard({ produto }: { produto: Produto }) {
 
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault()
-    adicionarItem({ id: produto.id, nome: produto.nome, slug: produto.slug, preco: precoFinal, imagem })
+    adicionarItem({ id: produto.id, nome: produto.nome, slug: produto.slug, preco: precoFinal, imagem, estoque: produto.estoque })
   }
 
   const esgotado = produto.estoque === 0

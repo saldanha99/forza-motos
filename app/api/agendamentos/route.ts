@@ -4,11 +4,19 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { enfileirarMensagem } from '@/lib/evolution/queue'
 import { normalizarWhatsApp } from '@/lib/evolution/client'
+import { horarioValido } from '@/lib/agendamento/horarios'
 
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions)
     const body = await req.json()
+
+    if (!horarioValido(body.dataPreferida, body.horarioPreferido)) {
+      return NextResponse.json(
+        { error: 'Horário fora do funcionamento: seg–sex 9h às 18h, sábado 8h às 12h, domingo fechado.' },
+        { status: 400 }
+      )
+    }
 
     const agendamento = await prisma.appointment.create({
       data: {

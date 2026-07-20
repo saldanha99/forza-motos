@@ -10,7 +10,7 @@ import { MODELOS_MOTOS, ESTILOS, getModelosPorMarca, type EstiloMoto } from '@/l
 import { BuscaPorPlaca } from '@/components/store/BuscaPorPlaca'
 import { CheckCircle2, Wrench, Clock, Shield, Award, Zap } from 'lucide-react'
 import { SITE_URL } from '@/lib/schema'
-import { LogoPirelli, LogoMichelin, LogoMetzeler, LogoBridgestone } from '@/components/store/BrandLogo'
+import { LogoPirelli, LogoMichelin, LogoMetzeler } from '@/components/store/BrandLogo'
 
 export const metadata: Metadata = {
   title: 'Pneus de Moto em Campinas — Credenciada Pirelli, Metzeler e Michelin',
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   alternates: { canonical: `${SITE_URL}/pneus` },
   openGraph: {
     title: 'Pneus de Moto em Campinas — Forza Motos',
-    description: 'Instalação inclusa. Pirelli · Metzeler · Michelin · Bridgestone.',
+    description: 'Instalação e balanceamento inclusos. Pirelli · Metzeler · Michelin.',
     type: 'website',
     url: `${SITE_URL}/pneus`,
   },
@@ -254,9 +254,6 @@ export default async function PneusPage({
             </div>
             <div className="opacity-80 hover:opacity-100 transition-opacity">
               <LogoMichelin height={30} />
-            </div>
-            <div className="opacity-80 hover:opacity-100 transition-opacity">
-              <LogoBridgestone height={28} />
             </div>
           </div>
           <p className="text-center text-[12px] text-[#aaa] mt-6 font-inter">

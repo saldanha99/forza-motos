@@ -8,6 +8,8 @@ export interface CartItem {
   preco: number
   imagem?: string
   quantidade: number
+  /** Estoque disponível no momento em que o item entrou no carrinho — teto da quantidade */
+  estoque?: number
 }
 
 interface CartStore {
@@ -18,11 +20,17 @@ interface CartStore {
   fecharDrawer: () => void
   _hasHydrated: boolean
   setHasHydrated: (v: boolean) => void
-  adicionarItem: (item: Omit<CartItem, 'quantidade'>) => void
+  adicionarItem: (item: Omit<CartItem, 'quantidade'>, quantidade?: number) => void
   removerItem: (id: string) => void
   atualizarQuantidade: (id: string, quantidade: number) => void
   limpar: () => void
   subtotal: () => number
+}
+
+/** Nunca deixa a quantidade passar do estoque conhecido do item */
+function limitarAoEstoque(quantidade: number, estoque?: number): number {
+  if (typeof estoque === 'number' && estoque >= 0) return Math.min(quantidade, estoque)
+  return quantidade
 }
 
 export const useCartStore = create<CartStore>()(
@@ -35,18 +43,23 @@ export const useCartStore = create<CartStore>()(
       _hasHydrated: false,
       setHasHydrated: (v) => set({ _hasHydrated: v }),
 
-      adicionarItem: (item) =>
+      adicionarItem: (item, quantidade = 1) =>
         set((state) => {
           const existe = state.items.find((i) => i.id === item.id)
           if (existe) {
             return {
               drawerAberto: true,
               items: state.items.map((i) =>
-                i.id === item.id ? { ...i, quantidade: i.quantidade + 1 } : i
+                i.id === item.id
+                  ? { ...i, ...item, quantidade: limitarAoEstoque(i.quantidade + quantidade, item.estoque ?? i.estoque) }
+                  : i
               ),
             }
           }
-          return { drawerAberto: true, items: [...state.items, { ...item, quantidade: 1 }] }
+          return {
+            drawerAberto: true,
+            items: [...state.items, { ...item, quantidade: limitarAoEstoque(quantidade, item.estoque) }],
+          }
         }),
 
       removerItem: (id) =>
@@ -56,7 +69,9 @@ export const useCartStore = create<CartStore>()(
         set((state) => {
           if (quantidade <= 0) return { items: state.items.filter((i) => i.id !== id) }
           return {
-            items: state.items.map((i) => (i.id === id ? { ...i, quantidade } : i)),
+            items: state.items.map((i) =>
+              i.id === id ? { ...i, quantidade: limitarAoEstoque(quantidade, i.estoque) } : i
+            ),
           }
         }),
 

@@ -168,8 +168,10 @@ export function CartDrawer() {
                         </span>
                         <button
                           onClick={() => atualizarQuantidade(item.id, item.quantidade + 1)}
-                          className="px-2 py-1 text-[#666] hover:bg-[#f5f5f5]"
+                          disabled={item.estoque != null && item.quantidade >= item.estoque}
+                          className="px-2 py-1 text-[#666] hover:bg-[#f5f5f5] disabled:opacity-30 disabled:cursor-not-allowed"
                           aria-label="Aumentar quantidade"
+                          title={item.estoque != null && item.quantidade >= item.estoque ? 'Máximo disponível em estoque' : undefined}
                         >
                           <Plus size={13} />
                         </button>

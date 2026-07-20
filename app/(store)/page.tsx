@@ -140,8 +140,8 @@ function TireArt() {
 }
 
 const POP_CATS = [
-  { id: 'Pneus',         label: 'Pneus Premium',          sub: 'Pirelli · Michelin · Bridgestone', img: '/images/categories/pneus.jpg',       href: '/produtos?categoria=Pneus' },
-  { id: 'Lubrificantes', label: 'Óleos e Lubrificantes',  sub: 'Motul · Castrol · Shell',          img: '/images/categories/oleos.jpg',       href: '/produtos?categoria=Lubrificantes' },
+  { id: 'Pneus',         label: 'Pneus Premium',          sub: 'Pirelli · Metzeler · Michelin',    img: '/images/categories/pneus.jpg',       href: '/produtos?categoria=Pneus' },
+  { id: 'Lubrificantes', label: 'Óleos e Lubrificantes',  sub: 'Motul · Castrol',                  img: '/images/categories/oleos.jpg',       href: '/produtos?categoria=Lubrificantes' },
   { id: 'Freios',        label: 'Freios e Segurança',     sub: 'EBC · Brembo · ATE',              img: '/images/categories/freios.jpg',      href: '/produtos?categoria=Freios' },
   { id: 'Transmissão',   label: 'Kit Transmissão',        sub: 'DID · RK · Regina',               img: '/images/categories/transmissao.jpg', href: '/produtos?categoria=Transmissão' },
 ]
@@ -150,29 +150,29 @@ const POP_CATS = [
 const SERVICOS = [
   {
     titulo: 'Troca de Pneu',
-    sub: 'Pirelli · Metzeler · Michelin',
-    tempo: '~20 min',
+    sub: 'Instalação e balanceamento inclusos',
+    tempo: '~30 min',
     img: '/images/services/pneu.jpg',
     cor: '#d42b2b',
   },
   {
     titulo: 'Pastilha de Freio',
     sub: 'Peças originais e homologadas',
-    tempo: '~15 min',
+    tempo: '~30 min',
     img: '/images/services/freio.jpg',
     cor: '#e05a00',
   },
   {
     titulo: 'Troca de Óleo',
     sub: 'Óleos certificados para motos',
-    tempo: '~20 min',
+    tempo: '~30 min',
     img: '/images/services/oleo.jpg',
     cor: '#0077cc',
   },
   {
     titulo: 'Kit Transmissão',
     sub: 'Corrente · Pinhão · Coroa',
-    tempo: '~30 min',
+    tempo: '~1h',
     img: '/images/services/transmissao.jpg',
     cor: '#1a7a2e',
   },
@@ -285,8 +285,8 @@ export default async function HomePage() {
             </div>
             <div className="text-right">
               <p className="font-inter text-[13px] text-[#888] leading-[1.6] max-w-xs">
-                Ferramental italiano exclusivo.<br />
-                Máquinas renovadas anualmente.<br />
+                Máquinas de pneus de última geração.<br />
+                Instalação e balanceamento inclusos.<br />
                 <strong className="text-[#555]">Credenciada oficial Pirelli, Metzeler e Michelin.</strong>
               </p>
               <Link
@@ -344,8 +344,8 @@ export default async function HomePage() {
           <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
               { titulo: '+10 Anos de Experiência', sub: 'Fundada em 2015, referência em Campinas/SP' },
-              { titulo: 'Ferramental Italiano', sub: 'Máquinas de pneu renovadas anualmente com emborrachadas novas' },
-              { titulo: 'Agendamento Online', sub: 'Agende pelo WhatsApp. Box rápido sem burocracia' },
+              { titulo: 'Máquinas de Última Geração', sub: 'Equipamento profissional para troca e balanceamento de pneus' },
+              { titulo: 'Agendamento Online', sub: 'Agende pelo WhatsApp. Box rápido com agendamento' },
             ].map(d => (
               <div key={d.titulo} className="flex items-start gap-4 bg-[#f9f9f9] border border-[#eee] rounded-lg p-4">
                 <div className="w-2 h-2 rounded-full bg-[#d42b2b] mt-2 shrink-0" />
