@@ -8,6 +8,7 @@ import {
   LayoutDashboard, ShoppingBag, Package, Users, Calendar,
   FileText, LogOut, ImagePlus, RefreshCw, ExternalLink,
   BookOpen, Search, MessageCircle, Ticket, Settings, Command, ListChecks,
+  Megaphone,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -48,6 +49,7 @@ const NAV_GROUPS: { title: string | null; items: NavItem[] }[] = [
       { href: '/admin/blog',      label: 'Blog / CMS', icon: FileText },
       { href: '/admin/glossario', label: 'Glossário',  icon: BookOpen },
       { href: '/admin/seo',       label: 'SEO',        icon: Search },
+      { href: '/admin/marketing', label: 'Marketing',  icon: Megaphone },
     ],
   },
   {

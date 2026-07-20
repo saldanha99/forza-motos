@@ -13,10 +13,11 @@ const SERVICOS = [
   'Troca de Pastilha de Freio',
   'Troca de Óleo',
   'Kit de Transmissão (corrente + coroa + pinhão)',
-  'Revisão Completa',
+  'Manutenção Preventiva',
   'Outro serviço',
 ]
 
+// Admin vê todos os slots possíveis (semana 9h–17h + sábado a partir das 8h)
 const HORARIOS = ['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00']
 
 const STATUS_LABELS: Record<string, string> = {

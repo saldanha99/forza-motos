@@ -109,8 +109,8 @@ Rua Funilense, 110 — Guanabara
 Campinas/SP
 
 ⏰ Horário de funcionamento:
-Segunda a Sexta: 8h às 18h
-Sábado: 8h às 13h
+Segunda a Sexta: 9h às 18h
+Sábado: 8h às 12h
 
 Venha nos visitar! Te esperamos. 🏍️`
 }

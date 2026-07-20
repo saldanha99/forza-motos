@@ -12,6 +12,7 @@
 import { prisma } from '@/lib/prisma'
 import { cotarMelhorEnvio, type CotacaoResultado } from './melhor-envio'
 import { dimensoesDoCarrinho } from './dimensoes'
+import { aplicarFreteGratisSP } from './regras'
 import { calcularFrete as fallbackFrete } from '@/lib/correios'
 
 export interface ItemCotacao {
@@ -111,7 +112,12 @@ export async function cotarFrete(input: {
       }))
       .sort((a, b) => a.preco - b.preco)
 
-    if (opcoes.length > 0) return [...opcoes, opcaoRetirada()]
+    if (opcoes.length > 0) {
+      return [
+        ...aplicarFreteGratisSP(opcoes, input.cepDestino, input.valorTotal),
+        opcaoRetirada(),
+      ]
+    }
     // Se vazio, cai pro fallback
   } catch (e) {
     console.warn('[frete] Melhor Envio falhou, usando fallback:', e)
@@ -119,15 +125,16 @@ export async function cotarFrete(input: {
 
   // 3) Fallback — tabela hardcoded por região
   const fallback = await fallbackFrete(input.cepDestino, dimensoes.peso, input.valorTotal)
+  const opcoesFallback = fallback.map((f) => ({
+    id: f.codigo,
+    nome: f.servico,
+    transportadora: 'Correios',
+    preco: f.valor,
+    prazo: f.prazo,
+    fonte: 'fallback' as const,
+  }))
   return [
-    ...fallback.map((f) => ({
-      id: f.codigo,
-      nome: f.servico,
-      transportadora: 'Correios',
-      preco: f.valor,
-      prazo: f.prazo,
-      fonte: 'fallback' as const,
-    })),
+    ...aplicarFreteGratisSP(opcoesFallback, input.cepDestino, input.valorTotal),
     opcaoRetirada(),
   ]
 }

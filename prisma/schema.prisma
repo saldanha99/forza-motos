@@ -648,3 +648,17 @@ enum EventoInscricaoStatus {
   PAGO
   CANCELADO
 }
+
+// ============================================================
+// MÓDULO MARKETING — banners/heros gerenciáveis pelo admin
+// ============================================================
+
+model MarketingBanner {
+  id        String   @id @default(cuid())
+  /// Slot fixo no site (ex: hero-pneus, home-slide-pneus) — ver lib/marketing.ts
+  chave     String   @unique
+  /// URL da imagem enviada pelo marketing; null = usa a imagem padrão do código
+  imagemUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

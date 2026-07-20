@@ -5,8 +5,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import {
-  LogoPirelli, LogoMichelin, LogoMetzeler,
-  LogoBridgestone, LogoMotul, LogoEBC, LogoDID,
+  LogoPirelli, LogoMetzeler,
+  LogoMotul, LogoEBC, LogoDID,
 } from './BrandLogo'
 
 // ── Tire SVG animado ──────────────────────────────────────────────────────────
@@ -73,12 +73,12 @@ const SLIDES = [
     badgeSub: 'Campinas / SP',
     headline: ['PNEUS E PEÇAS', 'PARA SUA MOTO'],
     accent: 'PARA SUA MOTO',
-    sub: 'Credenciada Pirelli, Metzeler e Michelin\nTroca de pneu em até 30 minutos, agende pelo WhatsApp',
+    sub: 'Credenciada Pirelli, Metzeler e Michelin\nInstalação e balanceamento inclusos na compra do pneu',
     cta: { label: 'VER PRODUTOS', href: '/produtos' },
     ctaSecond: { label: 'AGENDAR SERVIÇO', href: '/agendar' },
     visual: 'tire',
     bgImg: '/images/hero/slide-pneus.jpg',
-    accent1: { label: 'Credenciada', value: 'PIRELLI · MICHELIN' },
+    accent1: { label: 'Credenciada', value: 'PIRELLI · METZELER' },
     accent2: { label: 'Box rápido', value: '30 MINUTOS' },
   },
   {
@@ -87,13 +87,13 @@ const SLIDES = [
     badgeSub: 'Agende pelo WhatsApp',
     headline: ['MANUTENÇÃO', 'NO BOX RÁPIDO'],
     accent: 'NO BOX RÁPIDO',
-    sub: 'Pneu, freio, óleo e transmissão\nFerramental italiano exclusivo',
+    sub: 'Pneu, freio, óleo e kit de transmissão\nMáquinas de pneus de última geração',
     cta: { label: 'AGENDAR AGORA', href: '/agendar' },
     ctaSecond: { label: 'VER SERVIÇOS', href: '/#servicos' },
     visual: 'services',
     bgImg: '/images/hero/slide-servicos.jpg',
     accent1: { label: '+10 anos', value: 'EXPERIÊNCIA' },
-    accent2: { label: 'Tempo médio', value: '~20 MIN' },
+    accent2: { label: 'Tempo médio', value: '~30 MIN' },
   },
   {
     id: 'entrega',
@@ -107,21 +107,21 @@ const SLIDES = [
     visual: 'brands',
     bgImg: '/images/hero/slide-entrega.jpg',
     accent1: { label: 'Frete grátis', value: 'ACIMA R$499 SP' },
-    accent2: { label: 'Parcelas', value: 'ATÉ 12×' },
+    accent2: { label: 'Parcelas sem juros', value: 'ATÉ 6×' },
   },
 ]
 
 const SERVICE_CARDS = [
-  { img: '/images/services/card-pneu.jpg',    label: 'Pneu',    time: '~20min' },
-  { img: '/images/services/card-freio.jpg',   label: 'Freio',   time: '~15min' },
-  { img: '/images/services/card-oleo.jpg',    label: 'Óleo',    time: '~20min' },
-  { img: '/images/services/card-corrente.jpg',label: 'Corrente',time: '~30min' },
+  { img: '/images/services/card-pneu.jpg',    label: 'Pneu',        time: '~30min' },
+  { img: '/images/services/card-freio.jpg',   label: 'Freio',       time: '~30min' },
+  { img: '/images/services/card-oleo.jpg',    label: 'Óleo',        time: '~30min' },
+  { img: '/images/services/card-corrente.jpg',label: 'Transmissão', time: '~1h' },
 ]
 
+// Michelin volta à grade quando o Caio enviar o logo atualizado (substituir /images/brands/michelin.svg)
 const HERO_BRANDS = [
   { key: 'pirelli',     Logo: LogoPirelli,     h: 22, bg: false },
   { key: 'metzeler',    Logo: LogoMetzeler,    h: 14, bg: false },
-  { key: 'michelin',    Logo: LogoMichelin,    h: 22, bg: false },
   { key: 'motul',       Logo: LogoMotul,       h: 22, bg: true  }, // bg vermelho próprio
   { key: 'ebc',         Logo: LogoEBC,         h: 24, bg: false },
   { key: 'did',         Logo: LogoDID,         h: 20, bg: false },
@@ -154,7 +154,7 @@ function SlideVisual({ type, active }: { type: string; active: boolean }) {
         }}
       >
         <div className="text-[#666] text-[10px] font-inter">Credenciada</div>
-        <div className="text-white text-[13px] font-barlow font-bold tracking-wide">PIRELLI · MICHELIN</div>
+        <div className="text-white text-[13px] font-barlow font-bold tracking-wide">PIRELLI · METZELER</div>
       </div>
       {/* floating badge 2 */}
       <div
@@ -231,6 +231,8 @@ function SlideVisual({ type, active }: { type: string; active: boolean }) {
                 minHeight: 54,
                 backdropFilter: 'blur(4px)',
                 animation: active ? `fade-up 0.5s ease ${i * 0.08 + 0.15}s both` : 'none',
+                // Com quantidade ímpar de marcas, o último card ocupa a linha inteira
+                gridColumn: i === HERO_BRANDS.length - 1 && HERO_BRANDS.length % 2 === 1 ? 'span 2' : undefined,
               }}
             >
               <brand.Logo height={brand.h} />
@@ -255,7 +257,12 @@ function SlideVisual({ type, active }: { type: string; active: boolean }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export function HeroCarousel() {
+export function HeroCarousel({
+  bgImgs = {},
+}: {
+  /** Imagens de fundo por slide vindas do módulo de marketing (chave = id do slide) */
+  bgImgs?: Partial<Record<string, string>>
+}) {
   const [current, setCurrent] = useState(0)
   const [animating, setAnimating] = useState(false)
   const [direction, setDirection] = useState<'next' | 'prev'>('next')
@@ -318,7 +325,7 @@ export function HeroCarousel() {
             }}
           >
             <Image
-              src={s.bgImg}
+              src={bgImgs[s.id] ?? s.bgImg}
               alt=""
               fill
               sizes="100vw"

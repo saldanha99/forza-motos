@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import type { Metadata } from 'next'
 import { CategoryLanding } from '@/components/store/CategoryLanding'
+import { getBannerUrls } from '@/lib/marketing'
 import { SITE_URL } from '@/lib/schema'
 
 export const metadata: Metadata = {
@@ -47,7 +48,8 @@ const FAQS = [
   },
 ]
 
-export default function OleosPage() {
+export default async function OleosPage() {
+  const banners = await getBannerUrls()
   return (
     <CategoryLanding
       slug="oleos"
@@ -56,7 +58,7 @@ export default function OleosPage() {
       termosBusca={['óleo', 'oleo', 'lubrificante']}
       heroFrom="#1a3a1a"
       heroTo="#0e2a0e"
-      heroBgImage="/images/hero/hero-oleos.jpg"
+      heroBgImage={banners['hero-oleos']}
       bullets={[
         { titulo: 'Marcas premium', desc: 'Mobil, Motul, Castrol, Yamalube e Honda.' },
         { titulo: 'Troca rápida', desc: 'Em 20 minutos com filtro novo incluso.' },

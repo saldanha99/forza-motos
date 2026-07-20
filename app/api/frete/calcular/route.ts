@@ -10,9 +10,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cotarMelhorEnvio } from '@/lib/frete/melhor-envio'
 import { dimensoesPorCategoria } from '@/lib/frete/dimensoes'
 import { opcaoRetirada } from '@/lib/frete/cotar'
+import { aplicarFreteGratisSP } from '@/lib/frete/regras'
+
+// Cotação sempre ao vivo — cache guardava resultado velho e o cliente via
+// só "retirar na loja" ao voltar do checkout (bug relatado na reunião de 20/07)
+export const dynamic = 'force-dynamic'
 
 // Dimensões médias de um pedido de pneu/peça
 const DIMENSOES_PADRAO = dimensoesPorCategoria('pneus')
+
+const SEM_CACHE = { 'Cache-Control': 'no-store, must-revalidate' }
 
 export async function GET(req: NextRequest) {
   const cep      = req.nextUrl.searchParams.get('cep')?.replace(/\D/g, '') ?? ''
@@ -43,13 +50,16 @@ export async function GET(req: NextRequest) {
       .slice(0, 4) // máximo 4 opções de transportadora
 
     // retirada na loja sempre disponível, além do limite das 4
-    const opcoes = [...transportadoras, opcaoRetirada()]
+    const opcoes = [
+      ...aplicarFreteGratisSP(transportadoras, cep, subtotal),
+      opcaoRetirada(),
+    ]
 
-    return NextResponse.json({ opcoes })
+    return NextResponse.json({ opcoes }, { headers: SEM_CACHE })
   } catch (err: any) {
     console.error('[frete/calcular]', err?.message)
     // Melhor Envio fora do ar: ainda oferece retirada na loja, não deixa o
     // cliente sem NENHUMA opção de entrega
-    return NextResponse.json({ opcoes: [opcaoRetirada()] })
+    return NextResponse.json({ opcoes: [opcaoRetirada()] }, { headers: SEM_CACHE })
   }
 }

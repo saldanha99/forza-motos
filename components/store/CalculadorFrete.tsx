@@ -41,8 +41,8 @@ export function CalculadorFrete({ subtotal, compact = false }: Props) {
       setCidade(local.localidade)
       setEstado(local.uf)
 
-      // Cotação real via Melhor Envio (server-side)
-      const res  = await fetch(`/api/frete/calcular?cep=${cepLimpo}&subtotal=${subtotal}`)
+      // Cotação real via Melhor Envio (server-side) — sem cache: valores sempre atuais
+      const res  = await fetch(`/api/frete/calcular?cep=${cepLimpo}&subtotal=${subtotal}`, { cache: 'no-store' })
       const data = await res.json()
 
       if (!res.ok) throw new Error(data.error || 'Erro ao calcular frete')

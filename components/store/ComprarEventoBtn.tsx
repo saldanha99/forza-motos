@@ -25,6 +25,8 @@ export function ComprarEventoBtn({ slug, preco, titulo, gratuito, opcoesVaga = [
   const [form, setForm] = useState({ nome: '', email: '', telefone: '', quantidade: '1' })
 
   const precoUnitario = temOpcoes ? opcoesVaga[vagaIdx].preco : preco
+  // Com opções de vaga, quem define se é pago é a opção escolhida (ex.: piloto grátis, com garupa pago)
+  const gratisEfetivo = precoUnitario === 0
 
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }))
@@ -148,7 +150,7 @@ export function ComprarEventoBtn({ slug, preco, titulo, gratuito, opcoesVaga = [
                 />
               </div>
 
-              {!gratuito && temOpcoes && (
+              {temOpcoes && (
                 <div>
                   <label className="block text-xs font-semibold text-[#555] uppercase tracking-wider mb-1.5">Como você vai?</label>
                   <div className="space-y-2">
@@ -169,14 +171,18 @@ export function ComprarEventoBtn({ slug, preco, titulo, gratuito, opcoesVaga = [
                           />
                           {op.label}
                         </span>
-                        <span className="font-barlow font-bold text-[#d42b2b]">R$ {op.preco.toFixed(2)}</span>
+                        {op.preco > 0 ? (
+                          <span className="font-barlow font-bold text-[#d42b2b]">R$ {op.preco.toFixed(2)}</span>
+                        ) : (
+                          <span className="font-barlow font-bold text-emerald-600">Gratuito</span>
+                        )}
                       </label>
                     ))}
                   </div>
                 </div>
               )}
 
-              {!gratuito && (
+              {!gratisEfetivo && (
                 <div>
                   <label className="block text-xs font-semibold text-[#555] uppercase tracking-wider mb-1.5">Quantidade de ingressos</label>
                   <select
@@ -192,7 +198,7 @@ export function ComprarEventoBtn({ slug, preco, titulo, gratuito, opcoesVaga = [
               )}
 
               {/* Resumo de valor */}
-              {!gratuito && (
+              {!gratisEfetivo && (
                 <div className="bg-[#fafafa] border border-[#eee] rounded-xl px-4 py-3 flex justify-between items-center">
                   <span className="text-sm text-[#666] font-inter">Total</span>
                   <span className="font-barlow font-black text-xl text-[#d42b2b]">
@@ -213,14 +219,14 @@ export function ComprarEventoBtn({ slug, preco, titulo, gratuito, opcoesVaga = [
                 {loading ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    {gratuito ? 'Confirmando...' : 'Redirecionando para pagamento...'}
+                    {gratisEfetivo ? 'Confirmando...' : 'Redirecionando para pagamento...'}
                   </>
                 ) : (
-                  gratuito ? 'Confirmar inscrição' : `Pagar R$ ${total.toFixed(2)} no Mercado Pago`
+                  gratisEfetivo ? 'Confirmar inscrição' : `Pagar R$ ${total.toFixed(2)} no Mercado Pago`
                 )}
               </button>
 
-              {!gratuito && (
+              {!gratisEfetivo && (
                 <p className="text-center text-xs text-[#aaa] font-inter">
                   Pagamento 100% seguro via Mercado Pago · Cartão, Pix ou boleto
                 </p>

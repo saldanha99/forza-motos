@@ -4,9 +4,7 @@ import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
 import {
   LogoPirelli,
-  LogoMichelin,
   LogoMetzeler,
-  LogoBridgestone,
   LogoMotul,
   LogoEBC,
   LogoDID,
@@ -19,11 +17,10 @@ interface BrandItem {
   bg?: string   // fundo customizado (ex: Motul vermelho)
 }
 
+// Michelin volta ao ticker quando o Caio enviar o logo atualizado (substituir /images/brands/michelin.svg)
 const BRANDS: BrandItem[] = [
   { key: 'pirelli',     Logo: LogoPirelli,     h: 28 },
-  { key: 'michelin',    Logo: LogoMichelin,    h: 30 },
   { key: 'metzeler',    Logo: LogoMetzeler,    h: 20 },
-  { key: 'bridgestone', Logo: LogoBridgestone, h: 20 },
   { key: 'motul',       Logo: LogoMotul,       h: 32, bg: '#EE1C25' },
   { key: 'ebc',         Logo: LogoEBC,         h: 32 },
   { key: 'did',         Logo: LogoDID,         h: 28 },

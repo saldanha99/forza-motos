@@ -301,6 +301,7 @@ export function ProductDetail({
 }) {
   const imagens = Array.isArray(produto.imagens) ? produto.imagens : []
   const adicionarItem = useCartStore((s) => s.adicionarItem)
+  const [quantidade, setQuantidade] = useState(1)
 
   const preco = Number(produto.preco)
   const precoPromo = produto.precoPromocional ? Number(produto.precoPromocional) : null
@@ -311,13 +312,17 @@ export function ProductDetail({
     : []
 
   function handleAddToCart() {
-    adicionarItem({
-      id: produto.id,
-      nome: produto.nome,
-      slug: produto.slug,
-      preco: precoPromo ?? preco,
-      imagem: imagens[0],
-    })
+    adicionarItem(
+      {
+        id: produto.id,
+        nome: produto.nome,
+        slug: produto.slug,
+        preco: precoPromo ?? preco,
+        imagem: imagens[0],
+        estoque: produto.estoque,
+      },
+      quantidade
+    )
   }
 
   const whatsLink = whatsappLink(
@@ -364,14 +369,14 @@ export function ProductDetail({
                     -{disc}%
                   </span>
                 </div>
-                <p className="font-inter text-[12px] text-[#888] mt-1">ou em 12x sem juros no cartão</p>
+                <p className="font-inter text-[12px] text-[#888] mt-1">ou em 6x sem juros no cartão</p>
               </>
             ) : (
               <>
                 <div className="font-barlow font-black text-[44px] leading-none tracking-[-1px] text-[#111]">
                   {formatPrice(preco)}
                 </div>
-                <p className="font-inter text-[12px] text-[#888] mt-1">ou em 12x sem juros no cartão</p>
+                <p className="font-inter text-[12px] text-[#888] mt-1">ou em 6x sem juros no cartão</p>
               </>
             )}
           </div>
@@ -393,6 +398,39 @@ export function ProductDetail({
           <div className="mb-6">
             <CalculadorFrete subtotal={precoPromo ?? preco} compact />
           </div>
+
+          {/* Quantidade — limitada ao estoque disponível */}
+          {produto.estoque > 0 && (
+            <div className="flex items-center gap-4 mb-4">
+              <span className="font-inter text-[13px] text-[#555]">Quantidade:</span>
+              <div className="flex items-center" style={{ border: '1px solid #ddd', borderRadius: 4 }}>
+                <button
+                  onClick={() => setQuantidade((q) => Math.max(1, q - 1))}
+                  disabled={quantidade <= 1}
+                  aria-label="Diminuir quantidade"
+                  className="w-9 h-9 flex items-center justify-center text-[#555] hover:text-[#111] disabled:opacity-30 transition-colors text-[18px] font-bold"
+                >
+                  −
+                </button>
+                <span className="w-10 text-center font-barlow font-bold text-[16px] text-[#111]">
+                  {quantidade}
+                </span>
+                <button
+                  onClick={() => setQuantidade((q) => Math.min(produto.estoque, q + 1))}
+                  disabled={quantidade >= produto.estoque}
+                  aria-label="Aumentar quantidade"
+                  className="w-9 h-9 flex items-center justify-center text-[#555] hover:text-[#111] disabled:opacity-30 transition-colors text-[18px] font-bold"
+                >
+                  +
+                </button>
+              </div>
+              {quantidade >= produto.estoque && (
+                <span className="font-inter text-[12px] text-[#d42b2b]">
+                  Máximo disponível em estoque
+                </span>
+              )}
+            </div>
+          )}
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row gap-3 mb-8">

@@ -99,8 +99,12 @@ export function casarModeloPorNome(marcaModelo: string): ModeloMoto | undefined 
       const t = termo.toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').trim()
       if (t && alvo.includes(t)) pontos += t.length
     }
+    // Marca é só desempate — sozinha não casa modelo. Sem isso, uma
+    // BMW R1200GS caía na G310 (único modelo BMW do catálogo) apenas
+    // porque "BMW" batia. Bug real relatado na reunião de 20/07.
+    if (pontos === 0) continue
     if (alvo.includes(m.marca.toUpperCase())) pontos += 2
-    if (pontos > 0 && (!melhor || pontos > melhor.pontos)) melhor = { modelo: m, pontos }
+    if (!melhor || pontos > melhor.pontos) melhor = { modelo: m, pontos }
   }
   return melhor?.modelo
 }

@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import type { Metadata } from 'next'
 import { CategoryLanding } from '@/components/store/CategoryLanding'
+import { getBannerUrls } from '@/lib/marketing'
 import { SITE_URL } from '@/lib/schema'
 
 export const metadata: Metadata = {
@@ -45,7 +46,8 @@ const FAQS = [
   },
 ]
 
-export default function PastilhasPage() {
+export default async function PastilhasPage() {
+  const banners = await getBannerUrls()
   return (
     <CategoryLanding
       slug="pastilhas"
@@ -54,7 +56,7 @@ export default function PastilhasPage() {
       termosBusca={['pastilha', 'freio']}
       heroFrom="#3a1a1a"
       heroTo="#2a0e0e"
-      heroBgImage="/images/hero/hero-pastilhas.jpg"
+      heroBgImage={banners['hero-pastilhas']}
       bullets={[
         { titulo: 'Marcas confiáveis', desc: 'Cobreq, Fras-le, EBC e SBS.' },
         { titulo: 'Instalação inclusa', desc: 'Trocamos na loja em 40 minutos.' },

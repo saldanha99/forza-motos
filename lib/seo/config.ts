@@ -43,7 +43,7 @@ export const SEO_CONFIG = {
       latitude: -22.9068,
       longitude: -47.0626,
     },
-    openingHours: ['Mo-Fr 08:00-18:00', 'Sa 08:00-13:00'],
+    openingHours: ['Mo-Fr 09:00-18:00', 'Sa 08:00-12:00'],
     sameAs: [
       'https://www.instagram.com/forzamotos',
       'https://www.facebook.com/forzamotos',
