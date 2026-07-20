@@ -1,6 +1,8 @@
+export const dynamic = 'force-dynamic'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
+import { getBannerUrls } from '@/lib/marketing'
 import { Breadcrumb } from '@/components/store/Breadcrumb'
 import { FAQSection } from '@/components/store/FAQSection'
 import {
@@ -121,7 +123,8 @@ const SERVICOS_SCHEMA = SERVICOS.map((s) =>
   })
 )
 
-export default function ServicosPage() {
+export default async function ServicosPage() {
+  const banners = await getBannerUrls()
   return (
     <>
       {SERVICOS_SCHEMA.map((schema, idx) => (
@@ -138,7 +141,7 @@ export default function ServicosPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden" style={{ color: '#fff', padding: '64px 0 56px' }}>
-        <Image src="/images/hero/hero-servicos.jpg" alt="" fill sizes="100vw" className="object-cover object-center" priority />
+        <Image src={banners['hero-servicos']} alt="" fill sizes="100vw" className="object-cover object-center" priority />
         <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(180,20,20,0.9) 0%, rgba(100,10,10,0.85) 100%)' }} />
         <div className="relative z-10 max-w-[1280px] mx-auto px-6 md:px-12">
           <h1

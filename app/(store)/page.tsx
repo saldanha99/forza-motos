@@ -11,6 +11,7 @@ import { ScrollReveal } from '@/components/store/ScrollReveal'
 import { ArrowRight } from 'lucide-react'
 import type { Metadata } from 'next'
 import { getLocalBusinessSchema } from '@/lib/schema'
+import { getBannerUrls } from '@/lib/marketing'
 import { ReviewsSection } from '@/components/store/ReviewsSection'
 import { TrustBar } from '@/components/store/TrustBar'
 import { BrandMarquee } from '@/components/store/BrandMarquee'
@@ -182,14 +183,23 @@ const SERVICOS = [
 const LOCAL_BUSINESS_LD = getLocalBusinessSchema()
 
 export default async function HomePage() {
-  const { destaque, promos, maisVendidos, temVendasReais, proximosEventos } = await getHomeData()
+  const [{ destaque, promos, maisVendidos, temVendasReais, proximosEventos }, banners] = await Promise.all([
+    getHomeData(),
+    getBannerUrls(),
+  ])
 
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(LOCAL_BUSINESS_LD) }} />
 
       {/* ── Hero Carousel ─────────────────────────────────────────────────── */}
-      <HeroCarousel />
+      <HeroCarousel
+        bgImgs={{
+          pneus: banners['home-slide-pneus'],
+          servicos: banners['home-slide-servicos'],
+          entrega: banners['home-slide-entrega'],
+        }}
+      />
 
       {/* ── TrustBar ─────────────────────────────────────────────────────── */}
       <TrustBar />

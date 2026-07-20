@@ -257,7 +257,12 @@ function SlideVisual({ type, active }: { type: string; active: boolean }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export function HeroCarousel() {
+export function HeroCarousel({
+  bgImgs = {},
+}: {
+  /** Imagens de fundo por slide vindas do módulo de marketing (chave = id do slide) */
+  bgImgs?: Partial<Record<string, string>>
+}) {
   const [current, setCurrent] = useState(0)
   const [animating, setAnimating] = useState(false)
   const [direction, setDirection] = useState<'next' | 'prev'>('next')
@@ -320,7 +325,7 @@ export function HeroCarousel() {
             }}
           >
             <Image
-              src={s.bgImg}
+              src={bgImgs[s.id] ?? s.bgImg}
               alt=""
               fill
               sizes="100vw"

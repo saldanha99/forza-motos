@@ -7,6 +7,7 @@ import { ProductCard } from '@/components/store/ProductCard'
 import { Breadcrumb } from '@/components/store/Breadcrumb'
 import { FAQSection } from '@/components/store/FAQSection'
 import { MARCAS_PNEUS } from '@/lib/menu-loja'
+import { getBannerUrls } from '@/lib/marketing'
 import { BuscaPorPlaca } from '@/components/store/BuscaPorPlaca'
 import { CheckCircle2, Wrench, Clock, Shield, Award, Zap } from 'lucide-react'
 import { SITE_URL } from '@/lib/schema'
@@ -140,7 +141,10 @@ async function getDadosPneus() {
 }
 
 export default async function PneusPage() {
-  const { pneusDestaque, medidasPorAro } = await getDadosPneus()
+  const [{ pneusDestaque, medidasPorAro }, banners] = await Promise.all([
+    getDadosPneus(),
+    getBannerUrls(),
+  ])
 
   return (
     <>
@@ -150,8 +154,9 @@ export default async function PneusPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden" style={{ color: '#fff', padding: '64px 0 56px' }}>
-        <Image src="/images/hero/hero-pneus-bg.jpg" alt="" fill sizes="100vw" className="object-cover object-center" priority />
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(15,15,35,0.92) 0%, rgba(25,25,55,0.88) 100%)' }} />
+        <Image src={banners['hero-pneus']} alt="" fill sizes="100vw" className="object-cover object-center" priority />
+        {/* Arte já é escura com o pneu à direita — overlay só no lado do texto */}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(8,8,14,0.88) 0%, rgba(8,8,14,0.55) 45%, rgba(8,8,14,0.10) 100%)' }} />
         <div className="relative z-10 max-w-[1280px] mx-auto px-6 md:px-12 grid md:grid-cols-2 gap-10 items-center">
           <div>
             {/* Badge credenciada */}
@@ -192,39 +197,8 @@ export default async function PneusPage() {
               <span className="flex items-center gap-1.5"><Clock size={14} className="text-emerald-400" /> Box rápido com agendamento</span>
             </div>
           </div>
-          <div className="hidden md:flex justify-center">
-            <div className="relative w-72 h-72">
-              <div
-                className="absolute inset-0 rounded-full"
-                style={{
-                  background: 'radial-gradient(circle, #d42b2b22 0%, transparent 70%)',
-                  animation: 'pulse-glow 3s ease-in-out infinite',
-                }}
-              />
-              <svg viewBox="0 0 200 200" className="relative w-full h-full" style={{ animation: 'spin-slow 18s linear infinite' }}>
-                <circle cx="100" cy="100" r="92" fill="none" stroke="#444" strokeWidth="2" />
-                <circle cx="100" cy="100" r="55" fill="#1a1a2e" stroke="#d42b2b" strokeWidth="3" />
-                {Array.from({ length: 16 }).map((_, i) => {
-                  const a = (i / 16) * Math.PI * 2
-                  return (
-                    <line
-                      key={i}
-                      x1={100 + 60 * Math.cos(a)}
-                      y1={100 + 60 * Math.sin(a)}
-                      x2={100 + 88 * Math.cos(a)}
-                      y2={100 + 88 * Math.sin(a)}
-                      stroke="#666"
-                      strokeWidth="4"
-                      strokeLinecap="round"
-                    />
-                  )
-                })}
-                <text x="100" y="106" textAnchor="middle" fill="#d42b2b" fontSize="20" fontWeight="bold" fontFamily="Barlow">
-                  PNEUS
-                </text>
-              </svg>
-            </div>
-          </div>
+          {/* Coluna direita vazia de propósito: a arte do banner (pneu em close) ocupa esse espaço */}
+          <div className="hidden md:block" />
         </div>
       </section>
 
