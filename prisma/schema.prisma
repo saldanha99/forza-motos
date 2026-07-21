@@ -130,6 +130,7 @@ model Product {
 
   orderItems OrderItem[]
   reviews    Review[]
+  motos      ProdutoMoto[]
 
   @@index([variacaoDe])
 }
@@ -697,4 +698,38 @@ model Cupom {
   descricao   String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+}
+
+// ============================================================
+// MÓDULO MOTOS — peças compatíveis por moto e faixa de ano
+// ============================================================
+
+model Moto {
+  id        String   @id @default(cuid())
+  marca     String
+  modelo    String
+  /// Ano inicial da faixa (ex.: GS 1200 2013–2018 → anoDe=2013)
+  anoDe     Int
+  /// Ano final; null = "em diante"
+  anoAte    Int?
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  produtos  ProdutoMoto[]
+
+  @@unique([marca, modelo, anoDe, anoAte])
+  @@index([marca, modelo])
+}
+
+model ProdutoMoto {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  motoId    String
+  moto      Moto    @relation(fields: [motoId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, motoId])
+  @@index([motoId])
+  @@index([productId])
 }
