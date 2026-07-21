@@ -5,6 +5,7 @@
  */
 import { prisma } from '@/lib/prisma'
 import { casarModeloPorNome } from '@/lib/motos-modelos'
+import { casarMotoPorPlaca } from '@/lib/moto'
 
 export interface VeiculoPlaca {
   marca: string
@@ -48,6 +49,8 @@ export async function consultarPlaca(placaRaw: string): Promise<{
   modeloSlug: string | null
   /** Termo de busca para /produtos quando não há página dedicada */
   termoBusca: string | null
+  /** Slug em /moto/[slug] quando a moto+ano casa com uma Moto cadastrada (tudo compatível, não só pneus) */
+  motoSlug: string | null
 } | null> {
   const placa = normalizarPlaca(placaRaw)
   if (!placa) return null
@@ -67,7 +70,16 @@ export async function consultarPlaca(placaRaw: string): Promise<{
   }
   if (!veiculo) return null
 
-  // 2. Casa com o catálogo de modelos (página dedicada de pneus)
+  // 2a. Casa com uma Moto cadastrada (marca+modelo+ano) → página /moto/[slug]
+  //     com TODOS os produtos compatíveis (pneu, pastilha, filtro, óleo…)
+  const anoNum = parseInt(veiculo.ano, 10)
+  const motoCadastrada = await casarMotoPorPlaca(
+    veiculo.marca,
+    veiculo.modelo,
+    Number.isFinite(anoNum) ? anoNum : null,
+  ).catch(() => null)
+
+  // 2b. Casa com o catálogo estático de modelos (página dedicada de pneus)
   const marcaModelo = `${veiculo.marca} ${veiculo.modelo}`
   const modelo = casarModeloPorNome(marcaModelo)
 
@@ -82,5 +94,6 @@ export async function consultarPlaca(placaRaw: string): Promise<{
     veiculo,
     modeloSlug: modelo?.slug ?? null,
     termoBusca: modelo?.termosCompativeis[0] ?? termoBusca,
+    motoSlug: motoCadastrada?.slug ?? null,
   }
 }

@@ -29,6 +29,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     })),
 
+    // /moto/[slug] — peças compatíveis por moto/ano (long-tail SEO)
+    dbRoutes({
+      prefix: '/moto',
+      fetch: () =>
+        prisma.moto.findMany({
+          where: { produtos: { some: {} } }, // só motos com produtos vinculados
+          select: { slug: true, updatedAt: true },
+          orderBy: { updatedAt: 'desc' },
+        }),
+      priority: 0.7,
+      changeFrequency: 'weekly',
+    }),
+
     // Produtos ativos com imagem
     dbRoutes({
       prefix: '/produtos',

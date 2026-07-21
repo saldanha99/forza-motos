@@ -196,6 +196,8 @@ export async function POST(req: Request) {
           numero: enderecoComCpf?.numero ?? null,
         }),
         external_reference: pedido.id,
+        // Frete cobrado junto (antes não entrava na preferência — cliente não pagava frete)
+        freteCusto: Number(frete) || 0,
         back_urls: { success: '', failure: '', pending: '' },
       })
       init_point = preferencia.init_point

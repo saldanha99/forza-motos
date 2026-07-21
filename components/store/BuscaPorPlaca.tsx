@@ -12,6 +12,7 @@ type Resultado = {
   veiculo: { marca: string; modelo: string; ano: string; cor: string }
   modeloSlug: string | null
   termoBusca: string | null
+  motoSlug: string | null
 }
 
 export function BuscaPorPlaca() {
@@ -48,10 +49,13 @@ export function BuscaPorPlaca() {
     }
   }
 
+  // Prioridade: /moto/[slug] (tudo que serve na moto) > /pneus/[modelo] > busca genérica
   const linkProdutos = res
-    ? res.modeloSlug
-      ? `/pneus/${res.modeloSlug}`
-      : `/produtos?busca=${encodeURIComponent(res.termoBusca ?? res.veiculo.modelo)}`
+    ? res.motoSlug
+      ? `/moto/${res.motoSlug}`
+      : res.modeloSlug
+        ? `/pneus/${res.modeloSlug}`
+        : `/produtos?busca=${encodeURIComponent(res.termoBusca ?? res.veiculo.modelo)}`
     : '#'
 
   return (

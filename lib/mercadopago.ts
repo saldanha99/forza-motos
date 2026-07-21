@@ -83,6 +83,8 @@ export interface PreferenciaPagamento {
     failure: string
     pending: string
   }
+  /** Custo do frete cobrado junto do pedido (aparece como "Frete" no checkout do MP) */
+  freteCusto?: number
 }
 
 /** Monta o payer completo a partir dos dados do checkout (todos opcionais, defensivo) */
@@ -203,6 +205,11 @@ export async function criarPreferencia(dados: PreferenciaPagamento) {
     binary_mode: binaryMode,
     notification_url: `${baseUrl}/api/mercadopago/webhook`,
     statement_descriptor: 'FORZA MOTOS',
+  }
+
+  // Frete cobrado junto do pedido — MP soma ao total e mostra como "Frete"
+  if (dados.freteCusto && dados.freteCusto > 0) {
+    body.shipments = { mode: 'not_specified', cost: Number(dados.freteCusto.toFixed(2)) }
   }
 
   if (Object.keys(payment_methods).length > 0) {
