@@ -23,6 +23,8 @@ interface Produto {
   imagens?: string[]
   ativo?: boolean
   destaque?: boolean
+  preVenda?: boolean
+  prazoEntregaDias?: number | null
 }
 
 export function ProdutoForm({ produto }: { produto?: Produto }) {
@@ -41,6 +43,8 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
     marca: produto?.marca ?? '',
     ativo: produto?.ativo ?? true,
     destaque: produto?.destaque ?? false,
+    preVenda: produto?.preVenda ?? false,
+    prazoEntregaDias: produto?.prazoEntregaDias ?? '',
   })
   const [compatibilidade, setCompatibilidade] = useState<string[]>(produto?.compatibilidadeMotos ?? [])
   const [imagens, setImagens] = useState<string[]>(produto?.imagens ?? [])
@@ -201,7 +205,25 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
             <input type="checkbox" checked={form.destaque} onChange={(e) => update('destaque', e.target.checked)} className="w-4 h-4 rounded accent-brand-accent border-brand-border bg-brand-surface-2" />
             <span className="text-sm text-brand-muted group-hover:text-brand-text transition-colors">Produto em destaque</span>
           </label>
+          <label className="flex items-center gap-2.5 cursor-pointer select-none group">
+            <input type="checkbox" checked={form.preVenda} onChange={(e) => update('preVenda', e.target.checked)} className="w-4 h-4 rounded accent-brand-accent border-brand-border bg-brand-surface-2" />
+            <span className="text-sm text-brand-muted group-hover:text-brand-text transition-colors">Pré-venda (vende sem estoque)</span>
+          </label>
         </div>
+        {form.preVenda && (
+          <div className="pt-1">
+            <Input
+              label="Prazo de postagem (dias úteis)"
+              type="number"
+              value={form.prazoEntregaDias}
+              onChange={(e) => update('prazoEntregaDias', e.target.value)}
+              placeholder="Ex.: 15"
+            />
+            <p className="text-xs text-brand-muted mt-1">
+              Produto de pré-venda pode ser comprado mesmo com estoque 0 e aparece em <strong>/sorocaba</strong>. O estoque não é debitado na compra.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Imagens */}

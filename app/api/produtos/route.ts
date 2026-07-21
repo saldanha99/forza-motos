@@ -21,6 +21,8 @@ export async function POST(req: Request) {
         preco: Number(body.preco),
         precoPromocional: body.precoPromocional ? Number(body.precoPromocional) : null,
         estoque: Number(body.estoque ?? 0),
+        preVenda: Boolean(body.preVenda),
+        prazoEntregaDias: body.prazoEntregaDias ? Number(body.prazoEntregaDias) : null,
         compatibilidadeMotos: body.compatibilidadeMotos ?? [],
         imagens: body.imagens ?? [],
       },

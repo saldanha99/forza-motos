@@ -8,7 +8,7 @@ import {
   LayoutDashboard, ShoppingBag, Package, Users, Calendar,
   FileText, LogOut, ImagePlus, RefreshCw, ExternalLink,
   BookOpen, Search, MessageCircle, Ticket, Settings, Command, ListChecks,
-  Megaphone,
+  Megaphone, TicketPercent,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -25,6 +25,7 @@ const NAV_GROUPS: { title: string | null; items: NavItem[] }[] = [
       { href: '/admin/pedidos',      label: 'Pedidos',       icon: ShoppingBag },
       { href: '/admin/agendamentos', label: 'Agendamentos',  icon: Calendar },
       { href: '/admin/eventos',      label: 'Eventos',       icon: Ticket },
+      { href: '/admin/cupons',       label: 'Cupons',        icon: TicketPercent },
     ],
   },
   {

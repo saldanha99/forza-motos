@@ -40,6 +40,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       estoque,
       temImagem,
       ativo: finalAtivo,
+      preVenda: body.preVenda !== undefined ? Boolean(body.preVenda) : undefined,
+      prazoEntregaDias: body.prazoEntregaDias !== undefined
+        ? (body.prazoEntregaDias ? Number(body.prazoEntregaDias) : null)
+        : undefined,
     },
   })
 
