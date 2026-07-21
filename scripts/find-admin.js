@@ -1,11 +1,13 @@
+// Lista os usuários do banco. Usa DATABASE_URL do ambiente (Postgres da VPS).
+// Rode dentro do container do app:  docker exec forza-app node scripts/find-admin.js
 const { PrismaClient } = require('@prisma/client')
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: "postgresql://neondb_owner:npg_U9XBlqJo1pac@ep-rapid-unit-ac1bt18y.sa-east-1.aws.neon.tech/neondb?sslmode=require"
-    }
-  }
-})
+
+if (!process.env.DATABASE_URL) {
+  console.error('DATABASE_URL não definida — rode dentro do container do app (VPS).')
+  process.exit(1)
+}
+
+const prisma = new PrismaClient()
 
 async function main() {
   const users = await prisma.user.findMany()
