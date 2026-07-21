@@ -19,6 +19,9 @@ interface Produto {
   categoria: string
   /** Produto-pai de variações de tamanho: card mostra "a partir de" + escolher tamanho */
   ehPai?: boolean
+  /** Pré-venda: comprável mesmo sem estoque */
+  preVenda?: boolean
+  prazoEntregaDias?: number | null
 }
 
 export function ProductCard({ produto }: { produto: Produto }) {
@@ -34,10 +37,15 @@ export function ProductCard({ produto }: { produto: Produto }) {
 
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault()
-    adicionarItem({ id: produto.id, nome: produto.nome, slug: produto.slug, preco: precoFinal, imagem, estoque: produto.estoque })
+    // Pré-venda não tem teto de estoque → passa estoque undefined (sem limite)
+    adicionarItem({
+      id: produto.id, nome: produto.nome, slug: produto.slug, preco: precoFinal, imagem,
+      estoque: produto.preVenda ? undefined : produto.estoque,
+    })
   }
 
-  const esgotado = produto.estoque === 0
+  // Pré-venda nunca fica "esgotado" (vende sem estoque)
+  const esgotado = produto.estoque === 0 && !produto.preVenda
 
   return (
     <Link href={`/produtos/${produto.slug}`} className="group block h-full">
@@ -111,6 +119,16 @@ export function ProductCard({ produto }: { produto: Produto }) {
             </span>
           )}
 
+          {/* Pré-venda badge — top left */}
+          {produto.preVenda && (
+            <span
+              className="absolute top-2 left-2 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white"
+              style={{ background: 'rgba(37,99,235,0.92)' }}
+            >
+              Pré-venda
+            </span>
+          )}
+
           {/* Esgotado overlay */}
           {esgotado && (
             <div
@@ -162,7 +180,9 @@ export function ProductCard({ produto }: { produto: Produto }) {
               className="text-[9px] sm:text-[10px] mt-0.5 block"
               style={{ color: 'var(--card-installment)' }}
             >
-              ou {formatPrice(precoFinal / 12)}/mês
+              {produto.preVenda && produto.prazoEntregaDias
+                ? `Postagem em até ${produto.prazoEntregaDias} dias úteis`
+                : `ou 6x de ${formatPrice(precoFinal / 6)} sem juros`}
             </span>
           </div>
 

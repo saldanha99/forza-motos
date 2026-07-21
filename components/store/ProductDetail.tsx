@@ -20,6 +20,8 @@ interface Produto {
   marca: string
   categoria: string
   compatibilidadeMotos: any
+  preVenda?: boolean
+  prazoEntregaDias?: number | null
 }
 
 // ── Placeholder SVG (sem imagem) ──────────────────────────────────────────────
@@ -311,6 +313,8 @@ export function ProductDetail({
     ? produto.compatibilidadeMotos
     : []
 
+  const disponivel = produto.estoque > 0 || Boolean(produto.preVenda)
+
   function handleAddToCart() {
     adicionarItem(
       {
@@ -319,7 +323,8 @@ export function ProductDetail({
         slug: produto.slug,
         preco: precoPromo ?? preco,
         imagem: imagens[0],
-        estoque: produto.estoque,
+        // Pré-venda não tem teto de estoque
+        estoque: produto.preVenda ? undefined : produto.estoque,
       },
       quantidade
     )
@@ -381,8 +386,15 @@ export function ProductDetail({
             )}
           </div>
 
-          {/* Estoque */}
-          {produto.estoque > 0 ? (
+          {/* Estoque / Pré-venda */}
+          {produto.preVenda ? (
+            <div className="flex items-center gap-2 mb-6">
+              <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
+              <span className="text-[13px] font-inter text-blue-700">
+                Pré-venda{produto.prazoEntregaDias ? ` · postagem em até ${produto.prazoEntregaDias} dias úteis` : ''}
+              </span>
+            </div>
+          ) : produto.estoque > 0 ? (
             <div className="flex items-center gap-2 mb-6">
               <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
               <span className="text-[13px] font-inter text-green-700">Em estoque</span>
@@ -399,8 +411,10 @@ export function ProductDetail({
             <CalculadorFrete subtotal={precoPromo ?? preco} compact />
           </div>
 
-          {/* Quantidade — limitada ao estoque disponível */}
-          {produto.estoque > 0 && (
+          {/* Quantidade — limitada ao estoque (pré-venda: até 10) */}
+          {disponivel && (() => {
+            const maxQtd = produto.preVenda ? 10 : produto.estoque
+            return (
             <div className="flex items-center gap-4 mb-4">
               <span className="font-inter text-[13px] text-[#555]">Quantidade:</span>
               <div className="flex items-center" style={{ border: '1px solid #ddd', borderRadius: 4 }}>
@@ -416,30 +430,31 @@ export function ProductDetail({
                   {quantidade}
                 </span>
                 <button
-                  onClick={() => setQuantidade((q) => Math.min(produto.estoque, q + 1))}
-                  disabled={quantidade >= produto.estoque}
+                  onClick={() => setQuantidade((q) => Math.min(maxQtd, q + 1))}
+                  disabled={quantidade >= maxQtd}
                   aria-label="Aumentar quantidade"
                   className="w-9 h-9 flex items-center justify-center text-[#555] hover:text-[#111] disabled:opacity-30 transition-colors text-[18px] font-bold"
                 >
                   +
                 </button>
               </div>
-              {quantidade >= produto.estoque && (
+              {!produto.preVenda && quantidade >= maxQtd && (
                 <span className="font-inter text-[12px] text-[#d42b2b]">
                   Máximo disponível em estoque
                 </span>
               )}
             </div>
-          )}
+            )
+          })()}
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row gap-3 mb-8">
             <button
               onClick={handleAddToCart}
-              disabled={produto.estoque === 0}
+              disabled={!disponivel}
               className="flex-1 flex items-center justify-center gap-2 font-barlow font-bold text-[17px] uppercase tracking-[0.5px] text-white py-[14px] px-6 transition-colors disabled:opacity-40 active:scale-[0.98]"
               style={{ background: '#d42b2b', borderRadius: 3 }}
-              onMouseEnter={(e) => { if (produto.estoque > 0) (e.currentTarget as HTMLButtonElement).style.background = '#b82222' }}
+              onMouseEnter={(e) => { if (disponivel) (e.currentTarget as HTMLButtonElement).style.background = '#b82222' }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#d42b2b' }}
             >
               <ShoppingCart size={18} />
