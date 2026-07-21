@@ -1,17 +1,23 @@
+// Reseta a senha do admin. Usa DATABASE_URL do ambiente (Postgres da VPS).
+// Rode dentro do container do app, passando a nova senha por variável:
+//   docker exec -e ADMIN_NEW_PASSWORD='senhaForte' forza-app node scripts/reset-admin.js
 const { PrismaClient } = require('@prisma/client')
 const bcrypt = require('bcryptjs')
 
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: "postgresql://neondb_owner:npg_U9XBlqJo1pac@ep-rapid-unit-ac1bt18y.sa-east-1.aws.neon.tech/neondb?sslmode=require"
-    }
-  }
-})
+if (!process.env.DATABASE_URL) {
+  console.error('DATABASE_URL não definida — rode dentro do container do app (VPS).')
+  process.exit(1)
+}
+
+const prisma = new PrismaClient()
 
 async function main() {
-  const email = 'adm.ml@forzamotos.com.br'
-  const password = 'admin123'
+  const email = process.env.ADMIN_EMAIL || 'adm.ml@forzamotos.com.br'
+  const password = process.env.ADMIN_NEW_PASSWORD
+  if (!password) {
+    console.error('Defina ADMIN_NEW_PASSWORD com a nova senha antes de rodar.')
+    process.exit(1)
+  }
   const hashedPassword = await bcrypt.hash(password, 12)
 
   console.log(`Resetting admin password for ${email}...`)
@@ -23,7 +29,6 @@ async function main() {
 
   console.log('Admin password updated successfully!')
   console.log(`Email: ${updatedUser.email}`)
-  console.log(`New password: ${password}`)
 }
 
 main()

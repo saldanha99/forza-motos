@@ -189,7 +189,7 @@ export async function syncImagensLote(limite = 10) {
   // Prioridade 2: verificados há mais de 7 dias e ainda sem foto (re-tentativa semanal)
   // Prioridade 1: nunca verificados (imagensVerificadas=false)
   // Prioridade 2: verificados há mais de 7 dias e ainda sem foto
-  // Sem $queryRaw para compatibilidade com Neon Pooler
+  // Consultas via API do Prisma (sem $queryRaw) — simples e portável no Postgres da VPS
   const seteAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
 
   const naoVerif = await prisma.product.findMany({
@@ -366,7 +366,7 @@ export async function syncEstoquePrecos() {
 export async function syncEstoqueLote(limite = 18) {
   // Prioridade 1: produtos com estoque=999 (placeholder, nunca verificados)
   // Prioridade 2: produtos com estoque=0 (podem ter sido reabastecidos)
-  // Sem $queryRaw para compatibilidade com Neon Pooler (pgBouncer transaction mode)
+  // Consultas via API do Prisma (sem $queryRaw) — simples e portável no Postgres da VPS
 
   const naoVerificados = await prisma.product.findMany({
     where: { tinyId: { not: null }, estoque: 999 },

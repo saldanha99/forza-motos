@@ -4,9 +4,10 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DATABASE_URL_UNPOOLED")
+  // PostgreSQL próprio na VPS (container "db"). Conexão direta, sem pooler —
+  // por isso não há directUrl separado (isso era exigência do antigo Neon).
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Account {
