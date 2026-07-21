@@ -97,6 +97,10 @@ model Product {
   imagens              Json        @default("[]")
   ativo                Boolean     @default(true)
   destaque             Boolean     @default(false)
+  /// Pré-venda: pode ser comprado mesmo com estoque 0 (ex.: produtos Pirelli do evento de Sorocaba)
+  preVenda             Boolean     @default(false)
+  /// Prazo de postagem prometido na pré-venda, em dias úteis (exibido no card/página)
+  prazoEntregaDias     Int?
   /// ID do produto no Tiny ERP
   tinyId               String?
   /// Marca true após verificar imagens no Tiny (mesmo que não tenha nenhuma)
@@ -158,6 +162,8 @@ model Order {
   subtotal           Decimal     @db.Decimal(10, 2)
   frete              Decimal     @db.Decimal(10, 2)
   desconto           Decimal     @default(0) @db.Decimal(10, 2)
+  /// Código do cupom aplicado no pedido (o valor do desconto vai em `desconto`)
+  cupomCodigo        String?
   total              Decimal     @db.Decimal(10, 2)
   enderecoEntrega    Json
   pagamentoMetodo    String?
@@ -662,4 +668,33 @@ model MarketingBanner {
   imagemUrl String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ============================================================
+// MÓDULO CUPONS — descontos (usado na pré-venda de eventos)
+// ============================================================
+
+enum CupomTipo {
+  PERCENTUAL
+  VALOR
+}
+
+model Cupom {
+  id          String    @id @default(cuid())
+  /// Código digitado no checkout — sempre salvo em MAIÚSCULAS
+  codigo      String    @unique
+  tipo        CupomTipo
+  /// Valor do desconto: % quando PERCENTUAL, R$ quando VALOR
+  valor       Decimal   @db.Decimal(10, 2)
+  /// Subtotal mínimo para o cupom valer (null = sem mínimo)
+  minSubtotal Decimal?  @db.Decimal(10, 2)
+  /// Data limite de uso (null = sem validade)
+  validadeAte DateTime?
+  /// Máximo de usos (null = ilimitado)
+  usoMaximo   Int?
+  usados      Int       @default(0)
+  ativo       Boolean   @default(true)
+  descricao   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }

@@ -32,6 +32,10 @@ export default function CheckoutPage() {
   const [freteOpcoes, setFreteOpcoes]       = useState<OpcaoFrete[]>([])
   const [freteSelecionado, setFreteSelecionado] = useState<OpcaoFrete | null>(null)
 
+  const [cupomInput, setCupomInput]         = useState('')
+  const [cupom, setCupom]                   = useState<{ codigo: string; desconto: number; descricao: string | null } | null>(null)
+  const [loadingCupom, setLoadingCupom]     = useState(false)
+
   const [form, setForm] = useState({
     nome:        session?.user?.name  ?? '',
     email:       session?.user?.email ?? '',
@@ -117,6 +121,36 @@ export default function CheckoutPage() {
     }
   }
 
+  async function aplicarCupom() {
+    const codigo = cupomInput.trim()
+    if (!codigo) return
+    setLoadingCupom(true)
+    try {
+      const res = await fetch('/api/cupom/validar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codigo, subtotal: subtotal() }),
+      })
+      const data = await res.json()
+      if (data.erro) {
+        setCupom(null)
+        toast.error(data.erro)
+        return
+      }
+      setCupom({ codigo: data.codigo, desconto: data.desconto, descricao: data.descricao })
+      toast.success(`Cupom aplicado: −${formatPrice(data.desconto)}`)
+    } catch {
+      toast.error('Não foi possível validar o cupom.')
+    } finally {
+      setLoadingCupom(false)
+    }
+  }
+
+  function removerCupom() {
+    setCupom(null)
+    setCupomInput('')
+  }
+
   async function finalizarPedido() {
     if (!freteSelecionado) return
     setLoading(true)
@@ -137,7 +171,8 @@ export default function CheckoutPage() {
           freteTransportadora: freteSelecionado.transportadora,
           fretePrazo:          freteSelecionado.prazo,
           subtotal: subtotal(),
-          total:    subtotal() + freteSelecionado.preco,
+          cupomCodigo: cupom?.codigo,
+          total:    subtotal() + freteSelecionado.preco - (cupom?.desconto ?? 0),
         }),
       })
 
@@ -158,7 +193,7 @@ export default function CheckoutPage() {
     }
   }
 
-  const total      = subtotal() + (freteSelecionado?.preco ?? 0)
+  const total      = Math.max(0, subtotal() + (freteSelecionado?.preco ?? 0) - (cupom?.desconto ?? 0))
   const etapas: Etapa[] = ['dados', 'frete', 'pagamento']
   const etapaIdx   = etapas.indexOf(etapa)
 
@@ -351,10 +386,41 @@ export default function CheckoutPage() {
                   }
                 </span>
               </div>
+              {cupom && (
+                <div className="flex justify-between text-green-600 font-semibold">
+                  <span>Cupom {cupom.codigo}</span>
+                  <span>−{formatPrice(cupom.desconto)}</span>
+                </div>
+              )}
               <div className="flex justify-between font-bold text-ink text-base pt-1">
                 <span>Total</span>
                 <span>{formatPrice(total)}</span>
               </div>
+            </div>
+
+            {/* Cupom de desconto */}
+            <div className="mb-4">
+              {cupom ? (
+                <button
+                  onClick={removerCupom}
+                  className="text-xs text-faint hover:text-red-500 transition-colors underline"
+                >
+                  Remover cupom
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    value={cupomInput}
+                    onChange={(e) => setCupomInput(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => { if (e.key === 'Enter') aplicarCupom() }}
+                    placeholder="Cupom de desconto"
+                    className="flex-1 min-w-0 bg-surface border border-line rounded-lg px-3 py-2 text-sm text-ink uppercase outline-none focus:border-vermelho transition-colors"
+                  />
+                  <Button variant="surface" onClick={aplicarCupom} loading={loadingCupom} className="shrink-0">
+                    Aplicar
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Badge frete grátis no resumo */}

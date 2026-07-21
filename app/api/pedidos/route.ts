@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { gerarOrderNumber } from '@/lib/utils'
 import { criarPreferencia, montarPayer } from '@/lib/mercadopago'
 import { verificarEstoqueTiny } from '@/lib/tiny/verificar-estoque'
+import { validarCupom, consumirCupom } from '@/lib/cupom'
 // NOTE: a replicação do pedido para o Olist agora acontece APENAS
 // dentro do webhook do Mercado Pago, quando o pagamento é aprovado.
 // Isso evita que o Olist receba pedidos não pagos e dispare emissão
@@ -14,9 +15,9 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions)
     const body = await req.json()
-    const { items, enderecoEntrega, frete, subtotal, total } = body
+    const { items, enderecoEntrega, frete, subtotal } = body
     // CPF é obrigatório para o Olist emitir NF. Frete escolhido é replicado ao Olist.
-    const { cpf, freteServico, freteTransportadora, fretePrazo } = body
+    const { cpf, freteServico, freteTransportadora, fretePrazo, cupomCodigo } = body
 
     const cpfLimpo = String(cpf ?? enderecoEntrega?.cpf ?? '').replace(/\D/g, '')
     if (cpfLimpo.length !== 11 && cpfLimpo.length !== 14) {
@@ -28,6 +29,27 @@ export async function POST(req: Request) {
     // Garante que o CPF fica salvo no endereço do pedido (usado na replicação ao Olist)
     const enderecoComCpf = { ...enderecoEntrega, cpf: cpfLimpo }
 
+    // ── Cupom de desconto (validado e calculado no SERVIDOR) ──────────────
+    let desconto = 0
+    let cupomAplicado: string | undefined
+    if (cupomCodigo) {
+      const r = await validarCupom(String(cupomCodigo), Number(subtotal))
+      if ('erro' in r) {
+        return NextResponse.json({ error: r.erro }, { status: 400 })
+      }
+      desconto = r.desconto
+      cupomAplicado = r.codigo
+    }
+    // Total sempre recalculado no servidor — nunca confia no valor do cliente
+    const totalFinal = Math.max(0, Number(subtotal) + Number(frete) - desconto)
+
+    // Descobre quais itens são pré-venda (não consomem estoque nem são checados)
+    const infoProdutos = await prisma.product.findMany({
+      where: { id: { in: items.map((i: any) => i.productId) } },
+      select: { id: true, preVenda: true },
+    })
+    const ehPreVenda = (id: string) => infoProdutos.find((p) => p.id === id)?.preVenda === true
+
     // Gera número sequencial do pedido
     const ano = new Date().getFullYear()
     const count = await prisma.order.count({
@@ -38,8 +60,11 @@ export async function POST(req: Request) {
     // ── Verificação de estoque em tempo real no Tiny ──────────────────────
     // Bate na API do Tiny antes de criar o pedido para garantir que o
     // estoque não foi vendido no físico desde o último sync periódico.
+    // Itens de PRÉ-VENDA são pulados (vendem sem estoque, por definição).
     const verificacao = await verificarEstoqueTiny(
-      items.map((i: any) => ({ productId: i.productId, quantidade: i.quantidade }))
+      items
+        .filter((i: any) => !ehPreVenda(i.productId))
+        .map((i: any) => ({ productId: i.productId, quantidade: i.quantidade }))
     )
     if (!verificacao.ok) {
       const nomes = verificacao.esgotados.map((e) =>
@@ -58,7 +83,9 @@ export async function POST(req: Request) {
         userId: session?.user?.id,
         subtotal,
         frete,
-        total,
+        desconto,
+        cupomCodigo: cupomAplicado,
+        total: totalFinal,
         enderecoEntrega: enderecoComCpf,
         // Frete escolhido pelo cliente — replicado ao Olist na confirmação
         freteServico:        freteServico ?? undefined,
@@ -85,6 +112,8 @@ export async function POST(req: Request) {
     // Debita estoque (decrement atômico — dois checkouts simultâneos do último
     // item não podem ler o mesmo saldo) e desativa se zerar
     for (const item of pedido.items) {
+      // Pré-venda não tem estoque para debitar (nem deve ser desativado)
+      if (item.product.preVenda) continue
       const debitado = await prisma.product.updateMany({
         where: { id: item.productId, estoque: { gte: item.quantidade } },
         data: { estoque: { decrement: item.quantidade } },
@@ -103,6 +132,9 @@ export async function POST(req: Request) {
       })
     }
 
+    // Marca o uso do cupom (só após o pedido existir)
+    if (cupomAplicado) await consumirCupom(cupomAplicado)
+
     // Persiste o CPF no cadastro do cliente logado (para próximas compras / NF)
     if (session?.user?.id) {
       await prisma.user.update({
@@ -117,14 +149,14 @@ export async function POST(req: Request) {
         where: { userId: session.user.id },
         update: {
           totalPedidos: { increment: 1 },
-          totalGasto: { increment: total },
+          totalGasto: { increment: totalFinal },
           ultimaCompra: new Date(),
           etapaFunil: 'FECHADO',
         },
         create: {
           userId: session.user.id,
           totalPedidos: 1,
-          totalGasto: total,
+          totalGasto: totalFinal,
           ultimaCompra: new Date(),
           etapaFunil: 'FECHADO',
         },
@@ -134,13 +166,24 @@ export async function POST(req: Request) {
     // Tenta criar preferência Mercado Pago
     let init_point: string | null = null
     try {
+      // Com cupom, o MP recebe um item único com o valor já descontado
+      // (o MP não aceita preço negativo, então não dá pra mandar "linha de desconto").
+      const mpItems = desconto > 0
+        ? [{
+            id: pedido.id,
+            title: `Pedido ${orderNumber}${cupomAplicado ? ` — cupom ${cupomAplicado}` : ''}`,
+            quantity: 1,
+            unit_price: Math.max(1, Number((Number(subtotal) - desconto).toFixed(2))),
+          }]
+        : pedido.items.map((i) => ({
+            id: i.productId,
+            title: i.product.nome,
+            quantity: i.quantidade,
+            unit_price: Number(i.precoUnitario),
+          }))
+
       const preferencia = await criarPreferencia({
-        items: pedido.items.map((i) => ({
-          id: i.productId,
-          title: i.product.nome,
-          quantity: i.quantidade,
-          unit_price: Number(i.precoUnitario),
-        })),
+        items: mpItems,
         // Payer completo (CPF, telefone, endereço): alimenta o antifraude do MP
         // e habilita o Programa de Proteção ao Vendedor contra chargeback
         payer: montarPayer({
