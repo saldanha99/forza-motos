@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { consumirReservasDoAgendamento, cancelarReservasDoAgendamento } from '@/lib/estoque/reserva'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,6 +27,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       status: body.status,
     },
   })
+
+  // Ciclo de vida das reservas: serviço concluído consome; cancelado libera o estoque
+  if (body.status === 'concluido') await consumirReservasDoAgendamento(params.id)
+  else if (body.status === 'cancelado') await cancelarReservasDoAgendamento(params.id)
 
   return NextResponse.json(agendamento)
 }

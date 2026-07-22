@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { ChevronLeft, ChevronRight, Plus, X, MessageCircle, Trash2, Clock, Bike, Wrench } from 'lucide-react'
 import { whatsappLink } from '@/lib/utils'
+import { ReservaAgendamento } from '@/components/admin/ReservaAgendamento'
 
 const SERVICOS = [
   'Troca de Pneu Dianteiro',
@@ -358,6 +359,8 @@ export function AgendaCalendario({ agendamentos: initial }: Props) {
                             <Trash2 size={14} className="text-red-400" />
                           </button>
                         </div>
+                        {/* Reserva de estoque (assessoria) */}
+                        <ReservaAgendamento appointmentId={a.id} />
                       </div>
                     )
                   })}

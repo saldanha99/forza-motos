@@ -131,6 +131,7 @@ model Product {
   orderItems OrderItem[]
   reviews    Review[]
   motos      ProdutoMoto[]
+  reservas   ReservaEstoque[]
 
   @@index([variacaoDe])
 }
@@ -266,6 +267,8 @@ model Appointment {
   /// Valor cobrado pelo serviço (opcional, preenchido após conclusão)
   valorServico     Decimal? @db.Decimal(10, 2)
   createdAt        DateTime @default(now())
+
+  reservas         ReservaEstoque[]
 }
 
 // ============================================================
@@ -732,4 +735,29 @@ model ProdutoMoto {
   @@unique([productId, motoId])
   @@index([motoId])
   @@index([productId])
+}
+
+// ============================================================
+// MÓDULO ASSESSORIA DE ESTOQUE (Fase 1) — reserva por agendamento
+// ============================================================
+
+enum ReservaStatus {
+  ATIVA
+  CONSUMIDA
+  CANCELADA
+}
+
+model ReservaEstoque {
+  id            String        @id @default(cuid())
+  appointmentId String
+  appointment   Appointment   @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantidade    Int           @default(1)
+  status        ReservaStatus @default(ATIVA)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([productId, status])
+  @@index([appointmentId])
 }
