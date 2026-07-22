@@ -41,31 +41,35 @@ async function getHomeData() {
       take: 12,
     })
 
+    const ALVO_MAIS_VENDIDOS = 10
     let maisVendidos: any[] = []
-    let temVendasReais = false
 
-    if (topSold.length >= 4) {
-      // Tem vendas reais — busca os produtos do ranking
-      temVendasReais = true
-      const ids = topSold.map(t => t.productId)
+    // 1. Produtos do ranking de vendas reais que ainda estão disponíveis
+    const ids = topSold.map(t => t.productId)
+    if (ids.length > 0) {
       const prods = await prisma.product.findMany({
-        where: { id: { in: ids }, ativo: true, estoque: { gt: 0 }, preco: { gt: 0, not: 999 }, ...filtroCategoriasOcultas() },
+        where: { id: { in: ids }, ativo: true, estoque: { gt: 0 }, preco: { gt: 0, not: 999 }, variacaoDe: null, ...filtroCategoriasOcultas() },
       })
-      // Preserva ordem do ranking de vendas
       const map = new Map(prods.map(p => [p.id, p]))
-      maisVendidos = ids.map(id => map.get(id)).filter(Boolean)
-    } else {
-      // Sem vendas ainda — usa produtos com imagem real e estoque, melhor preço
-      maisVendidos = await prisma.$queryRaw`
-        SELECT id, nome, slug, preco, "precoPromocional", imagens, estoque, marca, categoria, ativo, "ehPai"
-        FROM "Product"
-        WHERE ativo = true AND estoque > 0 AND preco != 999 AND "variacaoDe" IS NULL${Prisma.raw(sqlCategoriasOcultas())}
-        ORDER BY
-          CASE WHEN "precoPromocional" IS NOT NULL THEN 0 ELSE 1 END,
-          estoque DESC,
-          "updatedAt" DESC
-        LIMIT 12
-      `
+      maisVendidos = ids.map(id => map.get(id)).filter(Boolean) as any[]
+    }
+    // Só rotula "baseado em pedidos reais" se de fato houver vendas suficientes disponíveis
+    const temVendasReais = maisVendidos.length >= 4
+
+    // 2. Completa a vitrine (o ranking real costuma render poucos itens disponíveis)
+    if (maisVendidos.length < ALVO_MAIS_VENDIDOS) {
+      const jaIds = maisVendidos.map(p => p.id)
+      const extras = await prisma.product.findMany({
+        where: {
+          ativo: true, estoque: { gt: 0 }, preco: { gt: 0, not: 999 }, variacaoDe: null,
+          temImagem: true,
+          id: { notIn: jaIds.length ? jaIds : ['__nenhum__'] },
+          ...filtroCategoriasOcultas(),
+        },
+        orderBy: [{ destaque: 'desc' }, { precoPromocional: { sort: 'desc', nulls: 'last' } }, { estoque: 'desc' }, { updatedAt: 'desc' }],
+        take: ALVO_MAIS_VENDIDOS - maisVendidos.length,
+      })
+      maisVendidos = [...maisVendidos, ...extras]
     }
 
     // ── Promoções com imagem ──
