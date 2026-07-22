@@ -23,7 +23,7 @@ async function getInstance(): Promise<string> {
 }
 
 /** JID do grupo: do banco (setting grupo_assessoria_jid) ou do env */
-async function getGrupoJid(): Promise<string | null> {
+export async function getGrupoJid(): Promise<string | null> {
   try {
     const s = await prisma.setting.findUnique({ where: { key: 'grupo_assessoria_jid' } })
     return s?.value || process.env.GRUPO_ASSESSORIA_JID || null
