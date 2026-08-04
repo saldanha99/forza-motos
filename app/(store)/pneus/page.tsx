@@ -236,11 +236,7 @@ export default async function PneusPage() {
       {indiceMedidas.length > 0 && (
         <section id="medida" className="py-14 scroll-mt-24" style={{ background: '#f7f7f8' }}>
           <div className="max-w-[1280px] mx-auto px-6 md:px-12">
-            <BuscaPorMedida indice={indiceMedidas} variante="barra" />
-            <p className="text-center text-[13px] text-[#888] font-inter mt-4">
-              A medida está gravada na lateral do seu pneu atual, no formato{' '}
-              <strong className="text-[#555]">largura / altura – aro</strong> (ex.: 150/60-17)
-            </p>
+            <BuscaPorMedida indice={indiceMedidas} />
           </div>
         </section>
       )}

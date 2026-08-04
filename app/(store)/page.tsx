@@ -207,9 +207,9 @@ export default async function HomePage() {
 
       {/* ── Busca por medida (barra sobreposta ao hero) ───────────────────── */}
       {indiceMedidas.length > 0 && (
-        <div className="relative z-20 -mt-8 md:-mt-10 mb-2">
+        <div className="relative z-30 -mt-10 md:-mt-14 mb-4">
           <div className="max-w-[1280px] mx-auto px-4 md:px-12">
-            <BuscaPorMedida indice={indiceMedidas} variante="barra" />
+            <BuscaPorMedida indice={indiceMedidas} />
           </div>
         </div>
       )}
