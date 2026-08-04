@@ -15,7 +15,7 @@ import { getBannerUrls } from '@/lib/marketing'
 import { ReviewsSection } from '@/components/store/ReviewsSection'
 import { TrustBar } from '@/components/store/TrustBar'
 import { BrandMarquee } from '@/components/store/BrandMarquee'
-import { BuscaPorMedida } from '@/components/store/BuscaPorMedida'
+import { BuscaCombinada } from '@/components/store/BuscaCombinada'
 import { getIndiceMedidas } from '@/lib/indice-medidas'
 
 export const metadata: Metadata = {
@@ -205,11 +205,11 @@ export default async function HomePage() {
         }}
       />
 
-      {/* ── Busca por medida (barra sobreposta ao hero) ───────────────────── */}
+      {/* ── Busca de pneu: medida ou placa, sobreposta ao hero ────────────── */}
       {indiceMedidas.length > 0 && (
         <div className="relative z-30 -mt-10 md:-mt-14 mb-4">
           <div className="max-w-[1280px] mx-auto px-4 md:px-12">
-            <BuscaPorMedida indice={indiceMedidas} />
+            <BuscaCombinada indice={indiceMedidas} />
           </div>
         </div>
       )}

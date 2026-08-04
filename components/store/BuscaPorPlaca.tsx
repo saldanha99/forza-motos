@@ -23,7 +23,12 @@ function linkMedida(medida: string): string | null {
   return `/produtos?largura=${m[1]}&perfil=${m[2]}&aro=${m[3]}`
 }
 
-export function BuscaPorPlaca() {
+export function BuscaPorPlaca({
+  onResultado,
+}: {
+  /** Avisa o pai da medida encontrada (o pneu ilustrado da home acompanha) */
+  onResultado?: (medidas: { dianteira: string; traseira: string } | null) => void
+} = {}) {
   const [placa, setPlaca] = useState('')
   const [carregando, setCarregando] = useState(false)
   const [erro, setErro] = useState('')
@@ -33,6 +38,7 @@ export function BuscaPorPlaca() {
     e.preventDefault()
     setErro('')
     setRes(null)
+    onResultado?.(null)
     if (placa.replace(/[^A-Za-z0-9]/g, '').length !== 7) {
       setErro('Digite a placa completa (7 caracteres).')
       return
@@ -50,6 +56,7 @@ export function BuscaPorPlaca() {
         return
       }
       setRes(data)
+      onResultado?.(data.medidas ?? null)
     } catch {
       setErro('Falha de conexão — tente novamente.')
     } finally {
