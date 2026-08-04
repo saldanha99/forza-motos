@@ -58,8 +58,8 @@ export function BuscaPorMedida({ indice }: { indice: IndiceMedidasJSON }) {
 
   return (
     <div className="fm-medida relative overflow-hidden rounded-2xl">
-      {/* Asfalto: gradiente + grão + vinheta */}
-      <div aria-hidden className="fm-medida__asfalto" />
+      {/* Fundo claro com leve textura e um respiro de cor nos cantos */}
+      <div aria-hidden className="fm-medida__fundo" />
       <div aria-hidden className="fm-medida__grao" />
       <div aria-hidden className="fm-medida__brilho" />
 
@@ -77,15 +77,15 @@ export function BuscaPorMedida({ indice }: { indice: IndiceMedidasJSON }) {
         <div className="flex-1 w-full min-w-0">
           <div className="flex items-center gap-2.5 mb-1.5">
             <span className="h-px w-7 bg-[#d42b2b]" />
-            <span className="text-[11px] font-semibold tracking-[2.5px] text-[#ff5a5a] uppercase font-inter">
+            <span className="text-[11px] font-semibold tracking-[2.5px] text-[#d42b2b] uppercase font-inter">
               Busque pela medida
             </span>
           </div>
 
-          <h3 className="font-barlow font-bold text-2xl md:text-[32px] text-white leading-[1.12] tracking-[-0.5px] mb-1.5">
-            Encontre o pneu certo <span className="text-[#ff4d4d]">da sua moto</span>
+          <h3 className="font-barlow font-bold text-2xl md:text-[32px] text-[#111] dark:text-white leading-[1.12] tracking-[-0.5px] mb-1.5">
+            Encontre o pneu certo <span className="text-[#d42b2b]">da sua moto</span>
           </h3>
-          <p className="text-[13.5px] text-white/65 font-inter leading-relaxed mb-5">
+          <p className="text-[13.5px] text-[#666] dark:text-white/65 font-inter leading-relaxed mb-5">
             A medida está gravada na lateral do seu pneu atual — igual à do desenho ao lado.
           </p>
 
@@ -135,15 +135,15 @@ export function BuscaPorMedida({ indice }: { indice: IndiceMedidasJSON }) {
           </div>
 
           {/* Faixa de status: confirma o que a busca vai entregar */}
-          <div className="mt-5 pt-4 border-t border-white/10 min-h-[24px]">
+          <div className="mt-5 pt-4 border-t border-[#e8e8ec] dark:border-white/10 min-h-[24px]">
             {completo ? (
-              <p className="flex items-center gap-2 text-[13.5px] font-inter text-white/85">
+              <p className="flex items-center gap-2 text-[13.5px] font-inter text-[#444] dark:text-white/85">
                 <span className="grid place-items-center w-[18px] h-[18px] rounded-full bg-[#1f9d55] shrink-0">
                   <Check size={11} strokeWidth={3.5} className="text-white" />
                 </span>
                 {qtd > 0 ? (
                   <>
-                    <strong className="text-white font-semibold">
+                    <strong className="text-[#111] dark:text-white font-semibold">
                       {qtd} {qtd === 1 ? 'pneu disponível' : 'pneus disponíveis'}
                     </strong>
                     na medida {largura}/{perfil}-{aro} · instalação e balanceamento inclusos
@@ -153,7 +153,7 @@ export function BuscaPorMedida({ indice }: { indice: IndiceMedidasJSON }) {
                 )}
               </p>
             ) : (
-              <p className="text-[13px] font-inter text-white/60">
+              <p className="text-[13px] font-inter text-[#888] dark:text-white/60">
                 {passo === 1 && 'Comece pela largura — é o primeiro número da medida'}
                 {passo === 2 && 'Agora a altura — o número do meio'}
                 {passo === 3 && 'Falta o aro — a polegada, último número'}
@@ -163,90 +163,6 @@ export function BuscaPorMedida({ indice }: { indice: IndiceMedidasJSON }) {
         </div>
       </div>
 
-      <style jsx>{`
-        .fm-medida {
-          background: #0b0b0e;
-          border: 1px solid rgba(255, 255, 255, 0.09);
-          box-shadow:
-            0 28px 60px -18px rgba(0, 0, 0, 0.75),
-            0 2px 0 0 rgba(255, 255, 255, 0.05) inset;
-        }
-        /* Asfalto */
-        .fm-medida__asfalto {
-          position: absolute;
-          inset: 0;
-          background:
-            radial-gradient(120% 90% at 12% 0%, #24242c 0%, #131318 45%, #0a0a0d 100%),
-            linear-gradient(180deg, #16161b 0%, #0b0b0e 100%);
-        }
-        /* Grão fino do piso */
-        .fm-medida__grao {
-          position: absolute;
-          inset: 0;
-          opacity: 0.5;
-          mix-blend-mode: overlay;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
-        }
-        /* Facho de luz vindo da esquerda, como uma lâmpada de oficina */
-        .fm-medida__brilho {
-          position: absolute;
-          inset: 0;
-          background:
-            radial-gradient(46% 70% at 14% 8%, rgba(255, 255, 255, 0.1) 0%, transparent 62%),
-            radial-gradient(38% 60% at 88% 100%, rgba(212, 43, 43, 0.16) 0%, transparent 70%);
-        }
-        .fm-medida__pneu {
-          transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
-        }
-        .fm-medida__pneu.is-completo {
-          transform: rotate(-8deg) scale(1.03);
-        }
-        /* Botão com relevo de metal pintado */
-        .fm-medida__btn {
-          background: linear-gradient(180deg, #e8413f 0%, #d42b2b 52%, #a81f1f 100%);
-          box-shadow:
-            0 1px 0 rgba(255, 255, 255, 0.35) inset,
-            0 -2px 0 rgba(0, 0, 0, 0.28) inset,
-            0 10px 22px -6px rgba(212, 43, 43, 0.55);
-          transition:
-            filter 180ms ease-out,
-            transform 120ms ease-out,
-            box-shadow 180ms ease-out;
-        }
-        .fm-medida__btn:hover:not(:disabled) {
-          filter: brightness(1.09);
-          box-shadow:
-            0 1px 0 rgba(255, 255, 255, 0.4) inset,
-            0 -2px 0 rgba(0, 0, 0, 0.28) inset,
-            0 14px 30px -6px rgba(212, 43, 43, 0.7);
-        }
-        .fm-medida__btn:active:not(:disabled) {
-          transform: translateY(1px);
-          box-shadow:
-            0 1px 0 rgba(255, 255, 255, 0.25) inset,
-            0 -1px 0 rgba(0, 0, 0, 0.3) inset,
-            0 5px 12px -4px rgba(212, 43, 43, 0.5);
-        }
-        .fm-medida__btn:disabled {
-          background: linear-gradient(180deg, #2e2e36 0%, #22222a 100%);
-          color: rgba(255, 255, 255, 0.38);
-          box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
-          cursor: not-allowed;
-        }
-        .fm-medida__btn:focus-visible {
-          outline: 3px solid #ff8f8f;
-          outline-offset: 3px;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .fm-medida__pneu,
-          .fm-medida__btn {
-            transition: none;
-          }
-          .fm-medida__pneu.is-completo {
-            transform: none;
-          }
-        }
-      `}</style>
     </div>
   )
 }
@@ -256,7 +172,7 @@ function Separador({ aro = false }: { aro?: boolean }) {
   return (
     <span
       aria-hidden
-      className="hidden sm:block self-end pb-3.5 text-white/25 font-barlow font-bold text-xl leading-none select-none"
+      className="hidden sm:block self-end pb-3.5 text-[#c0c0c8] dark:text-white/25 font-barlow font-bold text-xl leading-none select-none"
     >
       {aro ? '–' : '/'}
     </span>
@@ -286,7 +202,7 @@ function Campo({
       <span className="flex items-center gap-1.5 mb-1.5">
         <span
           className={`font-barlow font-bold text-[10px] uppercase tracking-[1.8px] transition-colors ${
-            ativo ? 'text-white/70' : 'text-white/30'
+            ativo ? 'text-[#666] dark:text-white/70' : 'text-[#b4b4bc] dark:text-white/30'
           }`}
         >
           {label}
@@ -300,7 +216,7 @@ function Campo({
           disabled={!ativo}
           aria-label={`${label} do pneu`}
           onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
-          className="fm-campo__select w-full sm:w-[112px] h-[52px] appearance-none rounded-xl pl-4 pr-9 font-barlow font-bold text-[19px] text-white cursor-pointer disabled:cursor-not-allowed"
+          className="fm-campo__select w-full sm:w-[112px] h-[52px] appearance-none rounded-xl pl-4 pr-9 font-barlow font-bold text-[19px] text-[#111] dark:text-white cursor-pointer disabled:cursor-not-allowed"
         >
           <option value="">—</option>
           {opcoes.map((o) => (
@@ -317,7 +233,7 @@ function Campo({
         >
           <path
             d="M1 1.5L6 6.5L11 1.5"
-            stroke={ativo ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.2)'}
+            className={ativo ? 'stroke-[#777] dark:stroke-white/55' : 'stroke-[#c4c4cc] dark:stroke-white/20'}
             strokeWidth="1.8"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -325,63 +241,6 @@ function Campo({
         </svg>
       </div>
 
-      <style jsx>{`
-        /* Campo "entalhado" no painel, como instrumento de oficina */
-        .fm-campo__select {
-          background: linear-gradient(180deg, #16161c 0%, #1d1d24 100%);
-          border: 1px solid rgba(255, 255, 255, 0.13);
-          box-shadow:
-            0 2px 6px rgba(0, 0, 0, 0.5) inset,
-            0 1px 0 rgba(255, 255, 255, 0.06);
-          transition:
-            border-color 180ms ease-out,
-            box-shadow 180ms ease-out;
-        }
-        .fm-campo__select:hover:not(:disabled) {
-          border-color: rgba(255, 255, 255, 0.26);
-        }
-        .fm-campo__select:focus {
-          outline: none;
-          border-color: #d42b2b;
-          box-shadow:
-            0 2px 6px rgba(0, 0, 0, 0.5) inset,
-            0 0 0 3px rgba(212, 43, 43, 0.28);
-        }
-        .fm-campo__select:disabled {
-          background: linear-gradient(180deg, #131317 0%, #16161b 100%);
-          color: rgba(255, 255, 255, 0.28);
-          border-color: rgba(255, 255, 255, 0.07);
-        }
-        .fm-campo__select option {
-          background: #17171d;
-          color: #fff;
-        }
-        /* Ponto pulsante indicando o campo da vez */
-        .fm-campo__pulso {
-          width: 6px;
-          height: 6px;
-          border-radius: 9999px;
-          background: #ff4d4d;
-          box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.6);
-          animation: fm-pulso 1.8s ease-out infinite;
-        }
-        @keyframes fm-pulso {
-          70% {
-            box-shadow: 0 0 0 7px rgba(255, 77, 77, 0);
-          }
-          100% {
-            box-shadow: 0 0 0 0 rgba(255, 77, 77, 0);
-          }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .fm-campo__pulso {
-            animation: none;
-          }
-          .fm-campo__select {
-            transition: none;
-          }
-        }
-      `}</style>
     </label>
   )
 }

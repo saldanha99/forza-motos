@@ -500,4 +500,138 @@
     100% { transform: translateX(-50%); }
   }
   .products-scroll { animation: products-scroll 28s linear infinite; }
+
+  /* ── Busca por medida de pneu (components/store/BuscaPorMedida) ──────────
+     Painel claro com leve profundidade; o pneu ilustrado é o contraponto
+     escuro. Aqui em vez de styled-jsx para o `.dark` funcionar direto.       */
+  .fm-medida {
+    background: #ffffff;
+    border: 1px solid #e6e6ea;
+    box-shadow:
+      0 24px 54px -20px rgba(15, 15, 20, 0.28),
+      0 2px 6px rgba(15, 15, 20, 0.05);
+  }
+  .fm-medida__fundo {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(120% 95% at 10% 0%, #ffffff 0%, #f7f7f9 52%, #f1f1f4 100%);
+  }
+  /* Grão discreto — textura sem sujar o branco */
+  .fm-medida__grao {
+    position: absolute;
+    inset: 0;
+    opacity: 0.35;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.16'/%3E%3C/svg%3E");
+  }
+  /* Respiro de luz e um toque da cor da marca no canto */
+  .fm-medida__brilho {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(46% 70% at 12% 6%, rgba(255, 255, 255, 0.9) 0%, transparent 60%),
+      radial-gradient(40% 62% at 92% 104%, rgba(212, 43, 43, 0.09) 0%, transparent 72%);
+  }
+  .dark .fm-medida {
+    background: #101014;
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 24px 54px -20px rgba(0, 0, 0, 0.7);
+  }
+  .dark .fm-medida__fundo {
+    background: radial-gradient(120% 95% at 10% 0%, #1c1c22 0%, #131317 55%, #0d0d10 100%);
+  }
+  .dark .fm-medida__grao { mix-blend-mode: overlay; opacity: 0.5; }
+  .dark .fm-medida__brilho {
+    background:
+      radial-gradient(46% 70% at 12% 6%, rgba(255, 255, 255, 0.08) 0%, transparent 60%),
+      radial-gradient(40% 62% at 92% 104%, rgba(212, 43, 43, 0.16) 0%, transparent 72%);
+  }
+
+  .fm-medida__pneu { transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .fm-medida__pneu.is-completo { transform: rotate(-8deg) scale(1.03); }
+
+  /* Botão com relevo de metal pintado */
+  .fm-medida__btn {
+    background: linear-gradient(180deg, #e8413f 0%, #d42b2b 52%, #a81f1f 100%);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.35) inset,
+      0 -2px 0 rgba(0, 0, 0, 0.28) inset,
+      0 10px 22px -6px rgba(212, 43, 43, 0.45);
+    transition: filter 180ms ease-out, transform 120ms ease-out, box-shadow 180ms ease-out;
+  }
+  .fm-medida__btn:hover:not(:disabled) {
+    filter: brightness(1.09);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.4) inset,
+      0 -2px 0 rgba(0, 0, 0, 0.28) inset,
+      0 14px 30px -6px rgba(212, 43, 43, 0.6);
+  }
+  .fm-medida__btn:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.25) inset,
+      0 -1px 0 rgba(0, 0, 0, 0.3) inset,
+      0 5px 12px -4px rgba(212, 43, 43, 0.45);
+  }
+  .fm-medida__btn:disabled {
+    background: linear-gradient(180deg, #e4e4e9 0%, #dcdce2 100%);
+    color: #9a9aa4;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+    cursor: not-allowed;
+  }
+  .dark .fm-medida__btn:disabled {
+    background: linear-gradient(180deg, #2e2e36 0%, #22222a 100%);
+    color: rgba(255, 255, 255, 0.38);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  }
+  .fm-medida__btn:focus-visible { outline: 3px solid #d42b2b; outline-offset: 3px; }
+
+  /* Campos do funil */
+  .fm-campo__select {
+    background: linear-gradient(180deg, #ffffff 0%, #f6f6f8 100%);
+    border: 1.5px solid #dcdce2;
+    box-shadow:
+      0 1px 2px rgba(15, 15, 20, 0.05) inset,
+      0 1px 0 rgba(255, 255, 255, 0.9);
+    transition: border-color 180ms ease-out, box-shadow 180ms ease-out;
+  }
+  .fm-campo__select:hover:not(:disabled) { border-color: #b9b9c2; }
+  .fm-campo__select:focus {
+    outline: none;
+    border-color: #d42b2b;
+    box-shadow: 0 0 0 3px rgba(212, 43, 43, 0.18);
+  }
+  .fm-campo__select:disabled { background: #f2f2f5; color: #b4b4bc; border-color: #e6e6ea; }
+  .dark .fm-campo__select {
+    background: linear-gradient(180deg, #16161c 0%, #1d1d24 100%);
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5) inset;
+  }
+  .dark .fm-campo__select:disabled {
+    background: #131317;
+    color: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  /* Ponto pulsante no campo da vez */
+  .fm-campo__pulso {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: #d42b2b;
+    box-shadow: 0 0 0 0 rgba(212, 43, 43, 0.55);
+    animation: fm-pulso 1.8s ease-out infinite;
+  }
+  @keyframes fm-pulso {
+    70%  { box-shadow: 0 0 0 7px rgba(212, 43, 43, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(212, 43, 43, 0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fm-medida__pneu,
+    .fm-medida__btn,
+    .fm-campo__select { transition: none; }
+    .fm-medida__pneu.is-completo { transform: none; }
+    .fm-campo__pulso { animation: none; }
+  }
 }
