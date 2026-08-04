@@ -9,6 +9,8 @@ import { FAQSection } from '@/components/store/FAQSection'
 import { MARCAS_PNEUS } from '@/lib/menu-loja'
 import { getBannerUrls } from '@/lib/marketing'
 import { BuscaPorPlaca } from '@/components/store/BuscaPorPlaca'
+import { BuscaPorMedida } from '@/components/store/BuscaPorMedida'
+import { getIndiceMedidas } from '@/lib/indice-medidas'
 import { CheckCircle2, Wrench, Clock, Shield, Award, Zap } from 'lucide-react'
 import { SITE_URL } from '@/lib/schema'
 import { LogoPirelli, LogoMichelin, LogoMetzeler } from '@/components/store/BrandLogo'
@@ -67,43 +69,6 @@ const FAQS = [
   },
 ]
 
-/**
- * Extrai a medida do pneu do nome do produto.
- * Aceita as grafias reais do catálogo: "100/90-18", "150/70R18", "100/90 - 19",
- * "180/55 ZR17" etc. Normaliza para exibição e agrupa por aro.
- */
-const REGEX_MEDIDA = /(\d{2,3})\s*\/\s*(\d{2,3})\s*(?:[-–]\s*)?(?:Z?R)?\s*(\d{2})\b/i
-
-type Medida = { chave: string; exibicao: string; busca: string; aro: string; qtd: number }
-
-function extrairMedidas(nomes: string[]): Map<string, Medida[]> {
-  const porChave = new Map<string, Medida>()
-  for (const nome of nomes) {
-    const m = nome.match(REGEX_MEDIDA)
-    if (!m) continue
-    const [raw, largura, perfil, aro] = m
-    const chave = `${largura}/${perfil}-${aro}`
-    const atual = porChave.get(chave)
-    if (atual) {
-      atual.qtd++
-    } else {
-      // `busca` usa o trecho como escrito no catálogo → o link /produtos?busca= acha
-      porChave.set(chave, { chave, exibicao: chave, busca: raw.trim(), aro, qtd: 1 })
-    }
-  }
-  // Agrupa por aro (17, 18, 19…), medidas mais comuns primeiro
-  const todas = Array.from(porChave.values())
-  const porAro = new Map<string, Medida[]>()
-  const aros = Array.from(new Set(todas.map((x) => x.aro))).sort()
-  for (const aro of aros) {
-    porAro.set(
-      aro,
-      todas.filter((x) => x.aro === aro).sort((a, b) => b.qtd - a.qtd)
-    )
-  }
-  return porAro
-}
-
 async function getDadosPneus() {
   const wherePneus = {
     ativo: true,
@@ -116,7 +81,7 @@ async function getDadosPneus() {
     ],
   }
 
-  const [pneusDestaque, marcas, todosNomes] = await Promise.all([
+  const [pneusDestaque, marcas, indiceMedidas] = await Promise.all([
     prisma.product.findMany({
       where: wherePneus,
       take: 12,
@@ -127,21 +92,18 @@ async function getDadosPneus() {
       select: { marca: true },
       distinct: ['marca'],
     }),
-    prisma.product.findMany({
-      where: wherePneus,
-      select: { nome: true },
-    }),
+    getIndiceMedidas(),
   ])
 
   return {
     pneusDestaque,
     marcas: marcas.map((m) => m.marca).filter(Boolean),
-    medidasPorAro: extrairMedidas(todosNomes.map((p) => p.nome)),
+    indiceMedidas,
   }
 }
 
 export default async function PneusPage() {
-  const [{ pneusDestaque, medidasPorAro }, banners] = await Promise.all([
+  const [{ pneusDestaque, indiceMedidas }, banners] = await Promise.all([
     getDadosPneus(),
     getBannerUrls(),
   ])
@@ -271,37 +233,14 @@ export default async function PneusPage() {
       </section>
 
       {/* Busca pela MEDIDA do pneu */}
-      {medidasPorAro.size > 0 && (
+      {indiceMedidas.length > 0 && (
         <section id="medida" className="py-14 scroll-mt-24" style={{ background: '#f7f7f8' }}>
           <div className="max-w-[1280px] mx-auto px-6 md:px-12">
-            <h2 className="font-barlow font-bold text-3xl md:text-4xl text-[#111] text-center mb-2" style={{ letterSpacing: '-0.5px' }}>
-              Busque pela medida do pneu
-            </h2>
-            <p className="text-center text-[#666] font-inter mb-10">
-              A medida está gravada na lateral do seu pneu atual (ex.: <strong>100/90-18</strong>)
+            <BuscaPorMedida indice={indiceMedidas} variante="barra" />
+            <p className="text-center text-[13px] text-[#888] font-inter mt-4">
+              A medida está gravada na lateral do seu pneu atual, no formato{' '}
+              <strong className="text-[#555]">largura / altura – aro</strong> (ex.: 150/60-17)
             </p>
-
-            <div className="space-y-7">
-              {Array.from(medidasPorAro.entries()).map(([aro, medidas]) => (
-                <div key={aro}>
-                  <h3 className="font-barlow font-bold text-base text-[#333] mb-3 uppercase tracking-wider">
-                    Aro {aro}
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {medidas.map((m) => (
-                      <Link
-                        key={m.chave}
-                        href={`/produtos?busca=${encodeURIComponent(m.busca)}`}
-                        className="inline-flex items-center gap-1.5 bg-white border border-[#e2e2e6] hover:border-[#d42b2b] hover:text-[#d42b2b] text-[#333] rounded-full px-4 py-2 text-sm font-semibold font-inter transition-colors"
-                      >
-                        {m.exibicao}
-                        <span className="text-[11px] text-[#999] font-normal">({m.qtd})</span>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </section>
       )}

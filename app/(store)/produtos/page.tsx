@@ -5,6 +5,7 @@ import { ProductCard } from '@/components/store/ProductCard'
 import { FiltrosProdutos, FiltrosMobile } from '@/components/store/FiltrosProdutos'
 import { Package } from 'lucide-react'
 import { filtroCategoriasOcultas } from '@/lib/categorias-ocultas'
+import { parseMedidaDigitada } from '@/lib/medida-pneu'
 
 interface SearchParams {
   [key: string]: string | undefined
@@ -13,7 +14,21 @@ interface SearchParams {
   minPreco?: string
   maxPreco?: string
   busca?: string
+  /** Funil de medida de pneu (BuscaPorMedida) */
+  largura?: string
+  perfil?: string
+  aro?: string
   page?: string
+}
+
+/** Converte ?largura=150&perfil=60&aro=17 em filtro Prisma (null se incompleto) */
+function filtroMedidaDeParams(params: SearchParams) {
+  const largura = Number(params.largura)
+  const perfil = Number(params.perfil)
+  const aro = Number(params.aro)
+  if (!Number.isFinite(largura) || !Number.isFinite(perfil) || !Number.isFinite(aro)) return null
+  if (!params.largura || !params.perfil || !params.aro) return null
+  return { medidaLargura: largura, medidaPerfil: perfil, medidaAro: aro }
 }
 
 async function getProdutos(params: SearchParams) {
@@ -21,11 +36,25 @@ async function getProdutos(params: SearchParams) {
   // filtroCategoriasOcultas → esconde categorias que a loja não vende agora (capacetes)
   const where: any = { ativo: true, estoque: { gt: 0 }, preco: { gt: 0, not: 999 }, variacaoDe: null, ...filtroCategoriasOcultas() }
 
+  // Filtro por medida — vem do funil largura/altura/aro
+  const medidaParams = filtroMedidaDeParams(params)
+  if (medidaParams) Object.assign(where, medidaParams)
+
   if (params.busca) {
-    where.OR = [
-      { nome: { contains: params.busca, mode: 'insensitive' } },
-      { descricao: { contains: params.busca, mode: 'insensitive' } },
-    ]
+    // "150/60 17", "150-60-17", "150/60R17" descrevem o MESMO pneu, mas o
+    // catálogo do Olist só tem uma dessas grafias. Quando a busca é uma
+    // medida, filtra pelas colunas normalizadas em vez de casar texto.
+    const medida = parseMedidaDigitada(params.busca)
+    if (medida) {
+      where.medidaLargura = medida.largura
+      where.medidaPerfil = medida.perfil
+      where.medidaAro = medida.aro
+    } else {
+      where.OR = [
+        { nome: { contains: params.busca, mode: 'insensitive' } },
+        { descricao: { contains: params.busca, mode: 'insensitive' } },
+      ]
+    }
   }
   if (params.categoria) where.categoria = { equals: params.categoria, mode: 'insensitive' }
   if (params.marca) where.marca = { equals: params.marca, mode: 'insensitive' }
@@ -72,6 +101,12 @@ export default async function ProdutosPage({ searchParams }: { searchParams: Sea
   // Active filter chips
   const activeFilters: { label: string; removeKey: string }[] = []
   if (searchParams.busca) activeFilters.push({ label: `"${searchParams.busca}"`, removeKey: 'busca' })
+  if (searchParams.largura && searchParams.perfil && searchParams.aro) {
+    activeFilters.push({
+      label: `Medida ${searchParams.largura}/${searchParams.perfil}-${searchParams.aro}`,
+      removeKey: 'medida',
+    })
+  }
   if (searchParams.categoria) activeFilters.push({ label: searchParams.categoria, removeKey: 'categoria' })
   if (searchParams.marca) activeFilters.push({ label: searchParams.marca, removeKey: 'marca' })
   if (searchParams.minPreco || searchParams.maxPreco) {
@@ -84,6 +119,7 @@ export default async function ProdutosPage({ searchParams }: { searchParams: Sea
   function buildFilterUrl(removeKey: string) {
     const q = { ...searchParams }
     if (removeKey === 'preco') { delete q.minPreco; delete q.maxPreco }
+    else if (removeKey === 'medida') { delete q.largura; delete q.perfil; delete q.aro }
     else delete q[removeKey]
     delete q.page
     const params = new URLSearchParams()

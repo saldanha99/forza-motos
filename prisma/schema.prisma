@@ -125,6 +125,12 @@ model Product {
   largura              Decimal?    @db.Decimal(8, 2)
   /// Comprimento em cm
   comprimento          Decimal?    @db.Decimal(8, 2)
+  /// Medida do pneu decomposta a partir do nome — o Olist mistura as grafias
+  /// ("150/60-17", "150/60 R17", "150/60ZR17"), então a busca usa estes 3
+  /// inteiros em vez de texto. Null = produto não é pneu. Ver lib/medida-pneu.ts
+  medidaLargura        Int?
+  medidaPerfil         Int?
+  medidaAro            Int?
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt
 
@@ -134,6 +140,7 @@ model Product {
   reservas   ReservaEstoque[]
 
   @@index([variacaoDe])
+  @@index([medidaLargura, medidaPerfil, medidaAro])
 }
 
 model Review {

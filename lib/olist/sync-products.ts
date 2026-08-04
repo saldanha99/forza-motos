@@ -11,6 +11,7 @@
 import { fetchTinyProductPage, fetchTinyProduct, fetchTinyProductEstoque, extrairImagensTiny, fetchTinyEstoqueDelta, fetchTinyProdutosDelta, dataDiasAtras } from './client'
 import { prisma } from '../prisma'
 import { gerarSlug } from '../utils'
+import { parseMedida } from '../medida-pneu'
 
 /** Parse tolerante de preço: aceita número ou string com vírgula; null quando ausente/inválido */
 function parsePrecoOuNull(v: any): number | null {
@@ -40,9 +41,17 @@ function mapearListagem(p: any) {
   const preco = parsePrecoOuNull(p.preco ?? p.preco_venda)
   const promo = parsePrecoOuNull(p.preco_promocional)
 
+  // Medida do pneu extraída do nome — alimenta o funil largura/perfil/aro.
+  // Null quando o produto não é pneu (ou o nome não traz medida).
+  const nome = p.nome || 'Produto sem nome'
+  const medida = parseMedida(nome)
+
   return {
     sku:      String(p.codigo || p.id),
-    nome:     p.nome || 'Produto sem nome',
+    nome,
+    medidaLargura: medida?.largura ?? null,
+    medidaPerfil:  medida?.perfil ?? null,
+    medidaAro:     medida?.aro ?? null,
     // preco=null sinaliza "payload sem preço" — não gravar R$ 0,00 no banco
     preco,
     precoPromocional: promo && promo > 0 ? promo : null,
@@ -109,6 +118,9 @@ export async function syncPaginaListagem(pagina: number) {
         where: { sku: d.sku },
         data: {
           nome:             d.nome,
+          medidaLargura:    d.medidaLargura,
+          medidaPerfil:     d.medidaPerfil,
+          medidaAro:        d.medidaAro,
           // preco=null (payload sem preço) → não tocar; com preço, promo é
           // gravada mesmo quando null (limpa promoção encerrada no Tiny)
           ...(d.preco !== null && { preco: d.preco, precoPromocional: d.precoPromocional }),
@@ -125,6 +137,9 @@ export async function syncPaginaListagem(pagina: number) {
         data: {
           sku:               d.sku,
           nome:              d.nome,
+          medidaLargura:     d.medidaLargura,
+          medidaPerfil:      d.medidaPerfil,
+          medidaAro:         d.medidaAro,
           slug,
           descricao:         '',
           preco:             d.preco ?? 0,
@@ -661,6 +676,9 @@ export async function syncDeltaProdutos(diasAtras = 2): Promise<{
           where: { id: existing.id },
           data: {
             nome: d.nome,
+            medidaLargura: d.medidaLargura,
+            medidaPerfil: d.medidaPerfil,
+            medidaAro: d.medidaAro,
             ...(preco !== null && { preco, precoPromocional }),
             ...(estoque !== null && { estoque }),
             ativo: ativo,

@@ -49,13 +49,23 @@ export function BuscaPorPlaca() {
     }
   }
 
-  // Prioridade: /moto/[slug] (tudo que serve na moto) > /pneus/[modelo] > busca genérica
+  // Prioridade: /moto/[slug] (tudo que serve na moto) > /pneus/[modelo] > busca genérica.
+  // Sem nenhum dos três, NÃO inventamos uma busca: mandar o cliente para uma
+  // listagem aleatória é pior que assumir que ainda não temos a moto mapeada.
   const linkProdutos = res
     ? res.motoSlug
       ? `/moto/${res.motoSlug}`
       : res.modeloSlug
         ? `/pneus/${res.modeloSlug}`
-        : `/produtos?busca=${encodeURIComponent(res.termoBusca ?? res.veiculo.modelo)}`
+        : res.termoBusca
+          ? `/produtos?busca=${encodeURIComponent(res.termoBusca)}`
+          : null
+    : null
+
+  const linkWhatsapp = res
+    ? `https://wa.me/5519974049445?text=${encodeURIComponent(
+        `Olá! Tenho uma ${res.veiculo.marca} ${res.veiculo.modelo}${res.veiculo.ano ? ` ${res.veiculo.ano}` : ''}. Quais pneus vocês têm para ela?`,
+      )}`
     : '#'
 
   return (
@@ -90,22 +100,46 @@ export function BuscaPorPlaca() {
       )}
 
       {res && (
-        <div className="flex flex-wrap items-center gap-3 bg-white border-2 border-emerald-500/40 rounded-xl px-4 py-3 mt-3">
-          <Bike size={22} className="text-emerald-600 shrink-0" />
-          <div className="flex-1 min-w-[180px]">
-            <p className="font-barlow font-bold text-[#111] leading-tight">
-              {res.veiculo.marca} {res.veiculo.modelo}
-            </p>
-            <p className="text-xs text-[#777]">
-              {res.veiculo.ano}{res.veiculo.cor ? ` · ${res.veiculo.cor.toLowerCase()}` : ''}
-            </p>
+        <div className="bg-white border-2 border-emerald-500/40 rounded-xl px-4 py-3 mt-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Bike size={22} className="text-emerald-600 shrink-0" />
+            <div className="flex-1 min-w-[180px]">
+              <p className="font-barlow font-bold text-[#111] leading-tight">
+                {res.veiculo.marca} {res.veiculo.modelo}
+              </p>
+              <p className="text-xs text-[#777]">
+                {res.veiculo.ano}{res.veiculo.cor ? ` · ${res.veiculo.cor.toLowerCase()}` : ''}
+              </p>
+            </div>
+            {linkProdutos ? (
+              <Link
+                href={linkProdutos}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-barlow font-bold uppercase px-5 py-2.5 rounded-lg text-xs tracking-wider transition-colors"
+              >
+                Ver produtos compatíveis →
+              </Link>
+            ) : (
+              <a
+                href={linkWhatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-[#25D366] hover:bg-[#1eb85a] text-white font-barlow font-bold uppercase px-5 py-2.5 rounded-lg text-xs tracking-wider transition-colors"
+              >
+                Consultar no WhatsApp →
+              </a>
+            )}
           </div>
-          <Link
-            href={linkProdutos}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-barlow font-bold uppercase px-5 py-2.5 rounded-lg text-xs tracking-wider transition-colors"
-          >
-            Ver produtos compatíveis →
-          </Link>
+
+          {!linkProdutos && (
+            <p className="text-[13px] text-[#666] font-inter border-t border-[#eee] mt-3 pt-3">
+              Identificamos sua moto, mas ainda não temos as medidas dela mapeadas no site.
+              Chame no WhatsApp que a gente confirma o pneu certo na hora — ou{' '}
+              <a href="#medida" className="text-[#d42b2b] font-semibold hover:underline">
+                busque pela medida
+              </a>{' '}
+              gravada no seu pneu atual.
+            </p>
+          )}
         </div>
       )}
     </div>
