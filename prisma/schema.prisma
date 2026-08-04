@@ -131,6 +131,9 @@ model Product {
   medidaLargura        Int?
   medidaPerfil         Int?
   medidaAro            Int?
+  /// Construção do pneu: "radial" (150/70R17) ou "diagonal" (150/70-17).
+  /// Não é estilo de escrita — são pneus diferentes e não intercambiáveis.
+  medidaConstrucao     String?
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt
 

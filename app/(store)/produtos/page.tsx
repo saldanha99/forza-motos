@@ -18,6 +18,8 @@ interface SearchParams {
   largura?: string
   perfil?: string
   aro?: string
+  /** Construção do pneu: "radial" | "diagonal" — refina a mesma medida */
+  construcao?: string
   page?: string
 }
 
@@ -40,15 +42,22 @@ async function getProdutos(params: SearchParams) {
   const medidaParams = filtroMedidaDeParams(params)
   if (medidaParams) Object.assign(where, medidaParams)
 
+  // Radial (150/70R17) e diagonal (150/70-17) são pneus diferentes na mesma
+  // medida — quem pediu um dos dois não pode receber o outro na listagem.
+  if (params.construcao === 'radial' || params.construcao === 'diagonal') {
+    where.medidaConstrucao = params.construcao
+  }
+
   if (params.busca) {
-    // "150/60 17", "150-60-17", "150/60R17" descrevem o MESMO pneu, mas o
-    // catálogo do Olist só tem uma dessas grafias. Quando a busca é uma
-    // medida, filtra pelas colunas normalizadas em vez de casar texto.
+    // O catálogo do Olist grava a mesma medida de várias formas ("150/60 17",
+    // "150/60R17"), então a busca textual vira filtro pelas colunas. O
+    // marcador R/ZR também define a construção: se o cliente digitou, respeita.
     const medida = parseMedidaDigitada(params.busca)
     if (medida) {
       where.medidaLargura = medida.largura
       where.medidaPerfil = medida.perfil
       where.medidaAro = medida.aro
+      if (/\d\s*Z?R\s*\d/i.test(params.busca)) where.medidaConstrucao = 'radial'
     } else {
       where.OR = [
         { nome: { contains: params.busca, mode: 'insensitive' } },
@@ -73,7 +82,23 @@ async function getProdutos(params: SearchParams) {
     prisma.product.count({ where }),
   ])
 
-  return { produtos, total, pages: Math.ceil(total / pageSize) }
+  // Quando a busca é por medida, conta radiais e diagonais para o refino —
+  // o cliente precisa saber que os dois tipos existem naquela medida.
+  let construcoes: { radial: number; diagonal: number } | null = null
+  if (medidaParams) {
+    const { medidaConstrucao: _, ...semConstrucao } = where
+    const grupos = await prisma.product.groupBy({
+      by: ['medidaConstrucao'],
+      where: semConstrucao,
+      _count: { _all: true },
+    })
+    const achar = (c: string) => grupos.find((g) => g.medidaConstrucao === c)?._count._all ?? 0
+    const radial = achar('radial')
+    const diagonal = achar('diagonal')
+    if (radial > 0 && diagonal > 0) construcoes = { radial, diagonal }
+  }
+
+  return { produtos, total, pages: Math.ceil(total / pageSize), construcoes }
 }
 
 async function getFiltrosDisponiveis() {
@@ -91,7 +116,7 @@ async function getFiltrosDisponiveis() {
 export const metadata = { title: 'Produtos' }
 
 export default async function ProdutosPage({ searchParams }: { searchParams: SearchParams }) {
-  const [{ produtos, total, pages }, filtros] = await Promise.all([
+  const [{ produtos, total, pages, construcoes }, filtros] = await Promise.all([
     getProdutos(searchParams),
     getFiltrosDisponiveis(),
   ])
@@ -101,6 +126,12 @@ export default async function ProdutosPage({ searchParams }: { searchParams: Sea
   // Active filter chips
   const activeFilters: { label: string; removeKey: string }[] = []
   if (searchParams.busca) activeFilters.push({ label: `"${searchParams.busca}"`, removeKey: 'busca' })
+  if (searchParams.construcao === 'radial' || searchParams.construcao === 'diagonal') {
+    activeFilters.push({
+      label: searchParams.construcao === 'radial' ? 'Radial' : 'Diagonal',
+      removeKey: 'construcao',
+    })
+  }
   if (searchParams.largura && searchParams.perfil && searchParams.aro) {
     activeFilters.push({
       label: `Medida ${searchParams.largura}/${searchParams.perfil}-${searchParams.aro}`,
@@ -182,6 +213,35 @@ export default async function ProdutosPage({ searchParams }: { searchParams: Sea
           </div>
         )}
       </div>
+
+      {/* Radial x Diagonal: mesma medida, pneus diferentes — o cliente escolhe */}
+      {construcoes && !searchParams.construcao && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+          <div className="rounded-xl border border-amber-300/60 bg-amber-50 px-4 py-3">
+            <p className="text-[13.5px] text-[#5c4813] font-inter mb-2.5">
+              Essa medida tem <strong>pneu radial e pneu diagonal</strong> — são construções
+              diferentes e não devem ser misturadas na mesma moto. Confira no manual (ou na lateral
+              do seu pneu atual) qual é o da sua.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={`${buildFilterUrl('nada')}${buildFilterUrl('nada').includes('?') ? '&' : '?'}construcao=radial`}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-[#d8bd7a] px-3 py-1.5 text-[13px] font-semibold text-[#5c4813] hover:border-[#5c4813] transition-colors"
+              >
+                Radial <span className="font-mono text-[11px] opacity-70">(…R{searchParams.aro})</span>
+                <span className="opacity-60">· {construcoes.radial}</span>
+              </Link>
+              <Link
+                href={`${buildFilterUrl('nada')}${buildFilterUrl('nada').includes('?') ? '&' : '?'}construcao=diagonal`}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-[#d8bd7a] px-3 py-1.5 text-[13px] font-semibold text-[#5c4813] hover:border-[#5c4813] transition-colors"
+              >
+                Diagonal <span className="font-mono text-[11px] opacity-70">(…-{searchParams.aro})</span>
+                <span className="opacity-60">· {construcoes.diagonal}</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Main layout ─────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 lg:py-8">

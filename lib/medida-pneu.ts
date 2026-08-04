@@ -1,14 +1,20 @@
 /**
  * Medida de pneu — parsing, normalização e formatação.
  *
- * O catálogo do Olist mistura todas as grafias possíveis da mesma medida:
- * "150/60-17", "150/60 R17", "150/60ZR17", "150/60 17"… Buscar por texto
- * (contains) faz o cliente perder o produto por causa de um hífen.
+ * O catálogo do Olist mistura as grafias da mesma medida ("150/60 R17",
+ * "150/60ZR17", "150/60 17"), e buscar por texto faz o cliente perder o
+ * produto por causa de um espaço. Por isso a medida é guardada decomposta em
+ * 3 inteiros no Product (medidaLargura / medidaPerfil / medidaAro).
  *
- * A solução é guardar a medida decomposta em 3 inteiros no Product
- * (medidaLargura / medidaPerfil / medidaAro) e buscar por eles. Este módulo é
- * a única fonte de verdade de como o nome do produto vira esses três números.
+ * ATENÇÃO — o separador NÃO é só estilo: ele diz a construção do pneu.
+ *   "150/70R17"  → R/ZR = RADIAL
+ *   "150/70-17"  → hífen = DIAGONAL
+ * Radial e diagonal de mesma medida não são intercambiáveis (os fabricantes
+ * desaconselham inclusive misturar os dois tipos na mesma moto), então a
+ * construção é guardada à parte e a formatação devolve a grafia correta.
  */
+
+export type Construcao = 'radial' | 'diagonal'
 
 export interface MedidaPneu {
   /** Primeira medida: 150 em "150/60-17" (mm) */
@@ -17,6 +23,13 @@ export interface MedidaPneu {
   perfil: number
   /** Polegada do aro: 17 em "150/60-17" */
   aro: number
+  /** Radial (R/ZR) ou diagonal (hífen, espaço ou B de cinturado) */
+  construcao: Construcao
+}
+
+export const LABEL_CONSTRUCAO: Record<Construcao, string> = {
+  radial: 'Radial',
+  diagonal: 'Diagonal',
 }
 
 /**
@@ -31,10 +44,17 @@ const ARO_MIN = 10
 const ARO_MAX = 23
 
 /**
- * Aceita as grafias reais do catálogo:
+ * Aceita as grafias reais do catálogo, capturando o marcador de construção:
  * "100/90-18" · "150/70R18" · "100/90 - 19" · "180/55 ZR17" · "120/70 17"
+ * Grupos: 1=largura 2=perfil 3=marcador(ZR|R|B) 4=aro
  */
-const REGEX_MEDIDA = /(\d{2,3})\s*\/\s*(\d{2,3})\s*(?:[-–]\s*)?(?:Z?R|B)?\s*[-–]?\s*(\d{2})(?!\d)/gi
+const REGEX_MEDIDA = /(\d{2,3})\s*\/\s*(\d{2,3})\s*(?:[-–]\s*)?(ZR|R|B)?\s*[-–]?\s*(\d{2})(?!\d)/gi
+
+/** R e ZR são radiais; hífen, espaço e B (cinturado) contam como diagonal */
+function construcaoDoMarcador(marcador: string | undefined): Construcao {
+  const m = (marcador ?? '').toUpperCase()
+  return m === 'R' || m === 'ZR' ? 'radial' : 'diagonal'
+}
 
 /** Extrai a PRIMEIRA medida válida de um texto (nome do produto). */
 export function parseMedida(texto: string): MedidaPneu | null {
@@ -54,20 +74,33 @@ export function parseMedidas(texto: string): MedidaPneu[] {
   while ((m = re.exec(texto)) !== null) {
     const largura = Number(m[1])
     const perfil = Number(m[2])
-    const aro = Number(m[3])
+    const aro = Number(m[4])
     if (largura < LARGURA_MIN || largura > LARGURA_MAX) continue
     if (perfil < PERFIL_MIN || perfil > PERFIL_MAX) continue
     if (aro < ARO_MIN || aro > ARO_MAX) continue
     const chave = `${largura}/${perfil}-${aro}`
     if (vistas[chave]) continue
     vistas[chave] = true
-    achadas.push({ largura, perfil, aro })
+    achadas.push({ largura, perfil, aro, construcao: construcaoDoMarcador(m[3]) })
   }
   return achadas
 }
 
-/** Forma canônica de exibição: "150/60-17" */
+/**
+ * Grafia correta da medida, respeitando a construção:
+ * radial → "150/60R17" · diagonal → "150/60-17"
+ */
 export function formatarMedida(m: MedidaPneu): string {
+  const sep = m.construcao === 'radial' ? 'R' : '-'
+  return `${m.largura}/${m.perfil}${sep}${m.aro}`
+}
+
+/** Só os três números, sem afirmar construção — usado em rótulos de filtro */
+export function formatarMedidaNeutra(m: {
+  largura: number
+  perfil: number
+  aro: number
+}): string {
   return `${m.largura}/${m.perfil}-${m.aro}`
 }
 
@@ -79,14 +112,16 @@ export function formatarMedida(m: MedidaPneu): string {
 export function parseMedidaDigitada(input: string): MedidaPneu | null {
   const direto = parseMedida(input)
   if (direto) return direto
-  // "150 60 17" / "150-60-17" — sem barra nenhuma
+  // "150 60 17" / "150-60-17" — sem barra nenhuma. Sem marcador de
+  // construção, assume diagonal só para completar o tipo; quem busca assim
+  // está informando a medida, não a construção (o filtro ignora esse campo).
   const m = input.match(/\b(\d{2,3})[\s-](\d{2,3})[\s-](\d{2})\b/)
   if (!m) return null
   const [, largura, perfil, aro] = m.map(Number)
   if (largura < LARGURA_MIN || largura > LARGURA_MAX) return null
   if (perfil < PERFIL_MIN || perfil > PERFIL_MAX) return null
   if (aro < ARO_MIN || aro > ARO_MAX) return null
-  return { largura, perfil, aro }
+  return { largura, perfil, aro, construcao: 'diagonal' }
 }
 
 /**

@@ -52,6 +52,7 @@ function mapearListagem(p: any) {
     medidaLargura: medida?.largura ?? null,
     medidaPerfil:  medida?.perfil ?? null,
     medidaAro:     medida?.aro ?? null,
+    medidaConstrucao: medida?.construcao ?? null,
     // preco=null sinaliza "payload sem preço" — não gravar R$ 0,00 no banco
     preco,
     precoPromocional: promo && promo > 0 ? promo : null,
@@ -121,6 +122,7 @@ export async function syncPaginaListagem(pagina: number) {
           medidaLargura:    d.medidaLargura,
           medidaPerfil:     d.medidaPerfil,
           medidaAro:        d.medidaAro,
+          medidaConstrucao: d.medidaConstrucao,
           // preco=null (payload sem preço) → não tocar; com preço, promo é
           // gravada mesmo quando null (limpa promoção encerrada no Tiny)
           ...(d.preco !== null && { preco: d.preco, precoPromocional: d.precoPromocional }),
@@ -140,6 +142,7 @@ export async function syncPaginaListagem(pagina: number) {
           medidaLargura:     d.medidaLargura,
           medidaPerfil:      d.medidaPerfil,
           medidaAro:         d.medidaAro,
+          medidaConstrucao:  d.medidaConstrucao,
           slug,
           descricao:         '',
           preco:             d.preco ?? 0,
@@ -679,6 +682,7 @@ export async function syncDeltaProdutos(diasAtras = 2): Promise<{
             medidaLargura: d.medidaLargura,
             medidaPerfil: d.medidaPerfil,
             medidaAro: d.medidaAro,
+            medidaConstrucao: d.medidaConstrucao,
             ...(preco !== null && { preco, precoPromocional }),
             ...(estoque !== null && { estoque }),
             ativo: ativo,

@@ -16,7 +16,7 @@ const dryRun = process.argv.includes('--dry')
 
 async function main() {
   const produtos = await prisma.product.findMany({
-    select: { id: true, nome: true, medidaLargura: true, medidaPerfil: true, medidaAro: true },
+    select: { id: true, nome: true, medidaLargura: true, medidaPerfil: true, medidaAro: true, medidaConstrucao: true },
   })
   console.log(`${produtos.length} produtos no catálogo${dryRun ? ' (simulação)' : ''}`)
 
@@ -29,7 +29,8 @@ async function main() {
     const igual =
       (m?.largura ?? null) === p.medidaLargura &&
       (m?.perfil ?? null) === p.medidaPerfil &&
-      (m?.aro ?? null) === p.medidaAro
+      (m?.aro ?? null) === p.medidaAro &&
+      (m?.construcao ?? null) === p.medidaConstrucao
     if (igual) {
       inalterados++
       continue
@@ -41,6 +42,7 @@ async function main() {
           medidaLargura: m?.largura ?? null,
           medidaPerfil: m?.perfil ?? null,
           medidaAro: m?.aro ?? null,
+          medidaConstrucao: m?.construcao ?? null,
         },
       })
     }
