@@ -5,7 +5,8 @@ import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/store/ProductCard'
 import { Breadcrumb } from '@/components/store/Breadcrumb'
-import { MODELOS_MOTOS, getModelo, variantesMedida } from '@/lib/motos-modelos'
+import { MODELOS_MOTOS, getModelo } from '@/lib/motos-modelos'
+import { variantesMedida, parseMedida } from '@/lib/medida-pneu'
 import { SITE_URL } from '@/lib/schema'
 import { ArrowLeft, CheckCircle2, Phone } from 'lucide-react'
 
@@ -55,6 +56,12 @@ export default async function PneusModeloPage({
   //    que realmente acha pneus, já que pneu não tem nome de moto no título
   // 2. Termos do modelo no nome/descrição (pega peças/acessórios compatíveis)
   const orConditions = [
+    // Colunas normalizadas — imunes à grafia usada no cadastro do Olist
+    ...(modelo.medidas ?? []).flatMap((medida) => {
+      const m = parseMedida(medida)
+      return m ? [{ medidaLargura: m.largura, medidaPerfil: m.perfil, medidaAro: m.aro }] : []
+    }),
+    // Texto — cobre produtos ainda não normalizados pelo backfill
     ...(modelo.medidas ?? []).flatMap((medida) =>
       variantesMedida(medida).map((v) => ({
         nome: { contains: v, mode: 'insensitive' as const },

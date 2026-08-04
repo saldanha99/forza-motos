@@ -85,15 +85,49 @@ export async function consultarPlaca(placaRaw: string): Promise<{
 
   // 3. Fallback: extrai o "nome de família" do modelo p/ busca genérica
   //    Ex.: "CG 160 TITAN S" → "CG 160" · "FAZER YS250" → "FAZER"
+  //    Só vale se o termo for específico o bastante — sem isso, "BMW/R 1200 GS"
+  //    virava busca pela letra "R" e a Harley "FAT BOY" virava "FAT",
+  //    devolvendo o catálogo inteiro como "produto compatível".
   let termoBusca: string | null = null
   const m = veiculo.modelo.toUpperCase().match(/([A-Z]{2,6})\s?-?\s?(\d{2,4})/)
   if (m) termoBusca = `${m[1]} ${m[2]}`.trim()
-  else termoBusca = veiculo.modelo.split(/[\s/]/)[0] || null
+  else {
+    const primeiro = veiculo.modelo.split(/[\s/]/)[0] ?? ''
+    // Nome solto só serve se tiver corpo e não for a própria marca repetida
+    termoBusca =
+      primeiro.length >= 4 && primeiro.toUpperCase() !== veiculo.marca.toUpperCase()
+        ? primeiro
+        : null
+  }
+
+  const termoFinal = modelo?.termosCompativeis[0] ?? termoBusca
 
   return {
     veiculo,
     modeloSlug: modelo?.slug ?? null,
-    termoBusca: modelo?.termosCompativeis[0] ?? termoBusca,
+    // Só devolve o termo se ele de fato acha produto — mandar o cliente para
+    // uma listagem vazia é pior que assumir que a moto não está mapeada.
+    termoBusca: termoFinal && (await temProduto(termoFinal)) ? termoFinal : null,
     motoSlug: motoCadastrada?.slug ?? null,
   }
+}
+
+/** Existe algum produto à venda que casa com o termo? */
+async function temProduto(termo: string): Promise<boolean> {
+  const achou = await prisma.product
+    .findFirst({
+      where: {
+        ativo: true,
+        estoque: { gt: 0 },
+        preco: { gt: 0, not: 999 },
+        variacaoDe: null,
+        OR: [
+          { nome: { contains: termo, mode: 'insensitive' } },
+          { descricao: { contains: termo, mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true },
+    })
+    .catch(() => null)
+  return achou !== null
 }

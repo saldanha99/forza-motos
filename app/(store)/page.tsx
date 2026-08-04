@@ -15,6 +15,8 @@ import { getBannerUrls } from '@/lib/marketing'
 import { ReviewsSection } from '@/components/store/ReviewsSection'
 import { TrustBar } from '@/components/store/TrustBar'
 import { BrandMarquee } from '@/components/store/BrandMarquee'
+import { BuscaPorMedida } from '@/components/store/BuscaPorMedida'
+import { getIndiceMedidas } from '@/lib/indice-medidas'
 
 export const metadata: Metadata = {
   title: 'Forza Motos — Pneus e Peças para Moto em Campinas/SP',
@@ -187,10 +189,8 @@ const SERVICOS = [
 const LOCAL_BUSINESS_LD = getLocalBusinessSchema()
 
 export default async function HomePage() {
-  const [{ destaque, promos, maisVendidos, temVendasReais, proximosEventos }, banners] = await Promise.all([
-    getHomeData(),
-    getBannerUrls(),
-  ])
+  const [{ destaque, promos, maisVendidos, temVendasReais, proximosEventos }, banners, indiceMedidas] =
+    await Promise.all([getHomeData(), getBannerUrls(), getIndiceMedidas().catch(() => [])])
 
   return (
     <>
@@ -204,6 +204,15 @@ export default async function HomePage() {
           entrega: banners['home-slide-entrega'],
         }}
       />
+
+      {/* ── Busca por medida (barra sobreposta ao hero) ───────────────────── */}
+      {indiceMedidas.length > 0 && (
+        <div className="relative z-20 -mt-8 md:-mt-10 mb-2">
+          <div className="max-w-[1280px] mx-auto px-4 md:px-12">
+            <BuscaPorMedida indice={indiceMedidas} variante="barra" />
+          </div>
+        </div>
+      )}
 
       {/* ── TrustBar ─────────────────────────────────────────────────────── */}
       <TrustBar />

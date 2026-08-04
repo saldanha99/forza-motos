@@ -57,25 +57,9 @@ export function getModelo(slug: string): ModeloMoto | undefined {
   return MODELOS_MOTOS.find((m) => m.slug === slug)
 }
 
-/**
- * Gera as variantes de notação de uma medida como aparecem no catálogo:
- * "120/70-17" → também "120/70R17", "120/70ZR17", "120/70B17", "120/70 R17"…
- * (diagonais usam hífen; radiais usam R/ZR; o Tiny mistura tudo)
- */
-export function variantesMedida(medida: string): string[] {
-  const m = medida.match(/^(\d{2,3}\/\d{2,3})[-\sRZB]*(\d{2})$/i)
-  if (!m) return [medida]
-  const [, base, aro] = m
-  return [
-    `${base}-${aro}`,
-    `${base}R${aro}`,
-    `${base}ZR${aro}`,
-    `${base}B${aro}`,
-    `${base} R${aro}`,
-    `${base} ZR${aro}`,
-    `${base} ${aro}`,
-  ]
-}
+// Parsing/normalização de medida vive em lib/medida-pneu.ts (fonte única).
+// Reexportado aqui porque as páginas de modelo já importavam deste módulo.
+export { variantesMedida } from './medida-pneu'
 
 export function getModelosPorMarca(modelos: ModeloMoto[] = MODELOS_MOTOS) {
   const map = new Map<string, ModeloMoto[]>()
