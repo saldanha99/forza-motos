@@ -6,18 +6,23 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { parseMedida, formatarMedida } from '@/lib/medida-pneu'
+import { parseMedida, formatarMedidaNeutra } from '@/lib/medida-pneu'
 
 export const dynamic = 'force-dynamic'
 
-/** Aceita a medida em qualquer grafia e devolve a forma canônica */
+/**
+ * Aceita a medida em qualquer grafia e guarda SEM construção.
+ * A mesma moto costuma aceitar radial e diagonal na medida de fábrica (uma
+ * CB 300 ou uma GS 800 rodam com os dois) — a construção é escolha do
+ * cliente na hora de comprar, não característica da moto.
+ */
 function normalizar(valor: unknown): { ok: true; medida: string | null } | { ok: false } {
   if (valor === null || valor === undefined || String(valor).trim() === '') {
     return { ok: true, medida: null }
   }
   const m = parseMedida(String(valor))
   if (!m) return { ok: false }
-  return { ok: true, medida: formatarMedida(m) }
+  return { ok: true, medida: formatarMedidaNeutra(m) }
 }
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {

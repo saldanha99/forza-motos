@@ -37,6 +37,10 @@ export default async function MotosAdminPage() {
             <strong>{aConferir} moto{aConferir === 1 ? '' : 's'} com medida pré-preenchida aguardando conferência.</strong>{' '}
             Confira a medida e clique em <em>Conferir</em> — só as conferidas aparecem para o cliente na busca por placa.
           </p>
+          <p className="text-[13px] text-brand-muted mt-1.5">
+            Informe só os números (ex.: <strong>120/70-19</strong>). Não precisa dizer se é radial ou
+            diagonal: a mesma moto aceita os dois, e o cliente escolhe na hora da compra.
+          </p>
         </div>
       )}
 

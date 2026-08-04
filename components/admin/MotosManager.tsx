@@ -260,7 +260,7 @@ function LinhaMoto({
         </button>
       </div>
 
-      {/* Medidas de fábrica */}
+      {/* Medidas de fábrica — só os números; a moto aceita radial e diagonal */}
       <div className="flex flex-wrap items-end gap-3 mt-3 pt-3 border-t border-brand-line">
         <div>
           <label className="block text-[10px] font-semibold text-brand-muted uppercase tracking-wider mb-1">
@@ -311,6 +311,7 @@ function LinhaMoto({
                 'Medidas conferidas — já valem na busca por placa',
               )
             }
+            title="Só os números da medida — quem escolhe radial ou diagonal é o cliente"
             disabled={salvando || !dianteira || !traseira}
             className="h-[38px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center gap-1.5"
           >

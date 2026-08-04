@@ -12,6 +12,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { PrismaClient } from '@prisma/client'
 import { gerarSlugMoto } from '../lib/moto'
+import { parseMedida, formatarMedidaNeutra } from '../lib/medida-pneu'
 
 const prisma = new PrismaClient()
 const dryRun = process.argv.includes('--dry')
@@ -26,6 +27,16 @@ interface Linha {
 
 /** Faixa aberta: vale para qualquer ano até a loja refinar as gerações */
 const ANO_DE = 1990
+
+/**
+ * A medida de fábrica é guardada SEM construção (só os três números).
+ * A mesma moto costuma aceitar radial e diagonal — quem escolhe é o cliente
+ * na hora de comprar, então o site não fixa um dos dois pela moto.
+ */
+function medidaNeutra(bruta: string): string | null {
+  const m = parseMedida(bruta)
+  return m ? formatarMedidaNeutra(m) : null
+}
 
 async function main() {
   const arquivo = join(process.cwd(), 'data', 'medidas-motos.json')
@@ -46,6 +57,9 @@ async function main() {
       continue
     }
 
+    const dianteira = medidaNeutra(l.medidaDianteira)
+    const traseira = medidaNeutra(l.medidaTraseira)
+
     if (!dryRun) {
       await prisma.moto.upsert({
         where: { slug },
@@ -55,14 +69,14 @@ async function main() {
           anoDe: ANO_DE,
           anoAte: null,
           slug,
-          medidaDianteira: l.medidaDianteira,
-          medidaTraseira: l.medidaTraseira,
+          medidaDianteira: dianteira,
+          medidaTraseira: traseira,
           medidasConferidas: false,
           fonteMedidas: l.fonte,
         },
         update: {
-          medidaDianteira: l.medidaDianteira,
-          medidaTraseira: l.medidaTraseira,
+          medidaDianteira: dianteira,
+          medidaTraseira: traseira,
           fonteMedidas: l.fonte,
         },
       })

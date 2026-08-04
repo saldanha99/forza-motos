@@ -151,6 +151,11 @@ export function BuscaPorPlaca({
               <p className="text-[11px] font-semibold tracking-[1.5px] text-[#999] uppercase mb-2">
                 Medidas de fábrica da sua moto
               </p>
+              {/* A moto aceita radial e diagonal na mesma medida — a escolha
+                  é do cliente na listagem, então aqui não se afirma um tipo */}
+              <p className="text-[12px] text-[#888] font-inter -mt-1 mb-2">
+                Nessas medidas você escolhe entre pneu radial ou diagonal
+              </p>
               <div className="flex flex-wrap gap-2">
                 {([
                   ['Dianteiro', res.medidas.dianteira],
