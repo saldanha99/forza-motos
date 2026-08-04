@@ -33,16 +33,32 @@ export async function casarMotoPorPlaca(
   marca: string,
   modelo: string,
   ano: number | null,
-): Promise<{ slug: string; marca: string; modelo: string; anoDe: number; anoAte: number | null } | null> {
-  const alvo = `${marca} ${modelo}`.toUpperCase()
+): Promise<{
+  slug: string
+  marca: string
+  modelo: string
+  anoDe: number
+  anoAte: number | null
+  medidaDianteira: string | null
+  medidaTraseira: string | null
+  medidasConferidas: boolean
+} | null> {
+  // O Denatran escreve "R1200 GS"; o cadastro, "R 1200 GS". Comparar sem
+  // espaços/pontuação faz as duas grafias baterem.
+  const compactar = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  const alvo = compactar(`${marca} ${modelo}`)
   const candidatas = await prisma.moto.findMany({
-    select: { slug: true, marca: true, modelo: true, anoDe: true, anoAte: true },
+    select: {
+      slug: true, marca: true, modelo: true, anoDe: true, anoAte: true,
+      medidaDianteira: true, medidaTraseira: true, medidasConferidas: true,
+    },
   })
 
   const compatíveis = candidatas.filter((m) => {
-    const nome = `${m.marca} ${m.modelo}`.toUpperCase()
-    // marca+modelo do catálogo aparece no retorno da placa (ou vice-versa)
-    const casaNome = alvo.includes(m.modelo.toUpperCase()) && alvo.includes(m.marca.toUpperCase())
+    // O cadastro precisa estar CONTIDO no retorno da placa — nunca o contrário,
+    // senão uma "R 1200 GS" casaria com o cadastro "R 1200 GS Adventure".
+    const casaNome =
+      alvo.includes(compactar(m.modelo)) && alvo.includes(compactar(m.marca))
     if (!casaNome) return false
     if (ano == null) return true
     const dentroFaixa = ano >= m.anoDe && (m.anoAte == null || ano <= m.anoAte)
@@ -50,11 +66,13 @@ export async function casarMotoPorPlaca(
   })
 
   if (compatíveis.length === 0) return null
-  // Faixa mais estreita primeiro (mais específica)
+  // Faixa mais estreita primeiro (mais específica); com medida conferida à
+  // frente da genérica quando as faixas empatam
   compatíveis.sort((a, b) => {
     const la = (a.anoAte ?? 9999) - a.anoDe
     const lb = (b.anoAte ?? 9999) - b.anoDe
-    return la - lb
+    if (la !== lb) return la - lb
+    return Number(b.medidasConferidas) - Number(a.medidasConferidas)
   })
   return compatíveis[0]
 }

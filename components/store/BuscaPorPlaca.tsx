@@ -13,6 +13,14 @@ type Resultado = {
   modeloSlug: string | null
   termoBusca: string | null
   motoSlug: string | null
+  medidas: { dianteira: string; traseira: string } | null
+}
+
+/** "120/70-19" → /produtos?largura=120&perfil=70&aro=19 */
+function linkMedida(medida: string): string | null {
+  const m = medida.match(/(\d{2,3})\/(\d{2,3})[-\sRZB]*(\d{2})/i)
+  if (!m) return null
+  return `/produtos?largura=${m[1]}&perfil=${m[2]}&aro=${m[3]}`
 }
 
 export function BuscaPorPlaca() {
@@ -130,7 +138,45 @@ export function BuscaPorPlaca() {
             )}
           </div>
 
-          {!linkProdutos && (
+          {/* Medida de fábrica da moto — o atalho que o cliente realmente quer */}
+          {res.medidas && (
+            <div className="border-t border-[#eee] mt-3 pt-3">
+              <p className="text-[11px] font-semibold tracking-[1.5px] text-[#999] uppercase mb-2">
+                Medidas de fábrica da sua moto
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {([
+                  ['Dianteiro', res.medidas.dianteira],
+                  ['Traseiro', res.medidas.traseira],
+                ] as const).map(([rotulo, medida]) => {
+                  const href = linkMedida(medida)
+                  const conteudo = (
+                    <>
+                      <span className="text-[10px] uppercase tracking-wider text-[#999] block leading-none mb-1">
+                        {rotulo}
+                      </span>
+                      <span className="font-barlow font-bold text-[17px] text-[#111] leading-none">{medida}</span>
+                    </>
+                  )
+                  return href ? (
+                    <Link
+                      key={rotulo}
+                      href={href}
+                      className="px-4 py-2 rounded-lg border-2 border-[#e2e2e6] hover:border-[#d42b2b] transition-colors"
+                    >
+                      {conteudo}
+                    </Link>
+                  ) : (
+                    <span key={rotulo} className="px-4 py-2 rounded-lg border-2 border-[#e2e2e6]">
+                      {conteudo}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {!linkProdutos && !res.medidas && (
             <p className="text-[13px] text-[#666] font-inter border-t border-[#eee] mt-3 pt-3">
               Identificamos sua moto, mas ainda não temos as medidas dela mapeadas no site.
               Chame no WhatsApp que a gente confirma o pneu certo na hora — ou{' '}

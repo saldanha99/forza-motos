@@ -1,0 +1,835 @@
+[
+  {
+    "marca": "BMW",
+    "modelo": "F 750 GS",
+    "medidaDianteira": "110/80-19",
+    "medidaTraseira": "150/70-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "BMW",
+    "modelo": "F 800 GS",
+    "medidaDianteira": "90/90-21",
+    "medidaTraseira": "150/70-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "BMW",
+    "modelo": "F 850 GS",
+    "medidaDianteira": "90/90-21",
+    "medidaTraseira": "150/70-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "BMW",
+    "modelo": "F 900 R",
+    "medidaDianteira": "120/70-17",
+    "medidaTraseira": "180/55-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "BMW",
+    "modelo": "F 900 XR",
+    "medidaDianteira": "120/70-17",
+    "medidaTraseira": "180/55-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "BMW",
+    "modelo": "G 310 GS",
+    "medidaDianteira": "110/80-19",
+    "medidaTraseira": "150/70-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "BMW",
+    "modelo": "G 310 R",
+    "medidaDianteira": "110/70-17",
+    "medidaTraseira": "150/60-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "BMW",
+    "modelo": "G 650 GS",
+    "medidaDianteira": "100/90-19",
+    "medidaTraseira": "130/80-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "BMW",
+    "modelo": "R 1200 GS",
+    "medidaDianteira": "120/70-19",
+    "medidaTraseira": "170/60-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "BMW",
+    "modelo": "R 1200 GS Adventure",
+    "medidaDianteira": "120/70-19",
+    "medidaTraseira": "170/60-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "BMW",
+    "modelo": "R 1250 GS",
+    "medidaDianteira": "120/70-19",
+    "medidaTraseira": "170/60-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "BMW",
+    "modelo": "R 1250 GS Adventure",
+    "medidaDianteira": "120/70-19",
+    "medidaTraseira": "170/60-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "BMW",
+    "modelo": "R 1250 RT",
+    "medidaDianteira": "120/70-17",
+    "medidaTraseira": "180/55-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "BMW",
+    "modelo": "S 1000 RR",
+    "medidaDianteira": "120/70-17",
+    "medidaTraseira": "190/55-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "BMW",
+    "modelo": "S 1000 XR",
+    "medidaDianteira": "120/70-17",
+    "medidaTraseira": "190/55-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "Dafra",
+    "modelo": "Comet GT 250",
+    "medidaDianteira": "110/70-17",
+    "medidaTraseira": "130/70-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Dafra",
+    "modelo": "Comet GT 650",
+    "medidaDianteira": "120/60-17",
+    "medidaTraseira": "160/60-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Dafra",
+    "modelo": "Kansas 150",
+    "medidaDianteira": "2.75-18",
+    "medidaTraseira": "90/90-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Dafra",
+    "modelo": "Mirage 150",
+    "medidaDianteira": "110/90-16",
+    "medidaTraseira": "3.25-16",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Dafra",
+    "modelo": "Next 250",
+    "medidaDianteira": "110/70-17",
+    "medidaTraseira": "130/70-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Ducati",
+    "modelo": "Monster 797",
+    "medidaDianteira": "120/70-17",
+    "medidaTraseira": "180/55-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "Ducati",
+    "modelo": "Monster 821",
+    "medidaDianteira": "120/70-17",
+    "medidaTraseira": "180/55-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "Ducati",
+    "modelo": "Multistrada 1260",
+    "medidaDianteira": "120/70-19",
+    "medidaTraseira": "170/60-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "Ducati",
+    "modelo": "Multistrada 950",
+    "medidaDianteira": "120/70-19",
+    "medidaTraseira": "170/60-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "Ducati",
+    "modelo": "Panigale V4",
+    "medidaDianteira": "120/70-17",
+    "medidaTraseira": "200/60-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "Ducati",
+    "modelo": "Scrambler 800",
+    "medidaDianteira": "110/80-18",
+    "medidaTraseira": "180/55-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "Haojue",
+    "modelo": "DR 160",
+    "medidaDianteira": "100/80 R17",
+    "medidaTraseira": "130/70 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Harley-Davidson",
+    "modelo": "Fat Boy",
+    "medidaDianteira": "160/60 R18",
+    "medidaTraseira": "240/40 R18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Harley-Davidson",
+    "modelo": "Pan America",
+    "medidaDianteira": "120/70 R19",
+    "medidaTraseira": "170/60 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Harley-Davidson",
+    "modelo": "Street 750",
+    "medidaDianteira": "100/80 R17",
+    "medidaTraseira": "140/75 R15",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "ADV 160",
+    "medidaDianteira": "110/80-14",
+    "medidaTraseira": "130/70-13",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "Africa Twin",
+    "medidaDianteira": "90/90-21",
+    "medidaTraseira": "150/70 R18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "BIZ 100",
+    "medidaDianteira": "60/100-17",
+    "medidaTraseira": "80/100-14",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "BIZ 110",
+    "medidaDianteira": "60/100-17",
+    "medidaTraseira": "80/100-14",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "BIZ 125",
+    "medidaDianteira": "60/100-17",
+    "medidaTraseira": "80/100-14",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "Bros 150",
+    "medidaDianteira": "90/90-19",
+    "medidaTraseira": "110/90-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "Bros 160",
+    "medidaDianteira": "90/90-19",
+    "medidaTraseira": "110/90-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "CB 300",
+    "medidaDianteira": "110/70-17",
+    "medidaTraseira": "140/70-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "CB 300F",
+    "medidaDianteira": "110/70 R17",
+    "medidaTraseira": "150/60 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "CB 300R",
+    "medidaDianteira": "110/70-17",
+    "medidaTraseira": "140/70-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "CB 500F",
+    "medidaDianteira": "120/70 R17",
+    "medidaTraseira": "160/60 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "CB 650R",
+    "medidaDianteira": "120/70 R17",
+    "medidaTraseira": "180/55 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "CBR 1000RR",
+    "medidaDianteira": "120/70 R17",
+    "medidaTraseira": "190/50 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "CBR 600RR",
+    "medidaDianteira": "120/70 R17",
+    "medidaTraseira": "180/55 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "CG 125",
+    "medidaDianteira": "2.75-18",
+    "medidaTraseira": "90/90-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "CG 150",
+    "medidaDianteira": "80/100-18",
+    "medidaTraseira": "90/90-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "CG 160",
+    "medidaDianteira": "80/100-18",
+    "medidaTraseira": "90/90-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "CG 160 Fan",
+    "medidaDianteira": "80/100-18",
+    "medidaTraseira": "90/90-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "CG 160 Start",
+    "medidaDianteira": "80/100-18",
+    "medidaTraseira": "90/90-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "CG 160 Titan",
+    "medidaDianteira": "80/100-18",
+    "medidaTraseira": "90/90-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "CRF 230",
+    "medidaDianteira": "80/100-21",
+    "medidaTraseira": "100/100-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "Elite 125",
+    "medidaDianteira": "90/90-12",
+    "medidaTraseira": "100/90-10",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "Fan 125",
+    "medidaDianteira": "2.75-18",
+    "medidaTraseira": "90/90-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "Fan 150",
+    "medidaDianteira": "80/100-18",
+    "medidaTraseira": "90/90-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "PCX 150",
+    "medidaDianteira": "90/90-14",
+    "medidaTraseira": "100/90-14",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "PCX 160",
+    "medidaDianteira": "110/70-14",
+    "medidaTraseira": "130/70-13",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "Pop 100",
+    "medidaDianteira": "60/100-17",
+    "medidaTraseira": "80/100-14",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "Pop 110I",
+    "medidaDianteira": "60/100-17",
+    "medidaTraseira": "80/100-14",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "Sahara 300",
+    "medidaDianteira": "90/90-21",
+    "medidaTraseira": "120/80-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "Start 160",
+    "medidaDianteira": "80/100-18",
+    "medidaTraseira": "90/90-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "Titan 150",
+    "medidaDianteira": "80/100-18",
+    "medidaTraseira": "90/90-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "Twister",
+    "medidaDianteira": "110/70-17",
+    "medidaTraseira": "140/70-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "XR 300L",
+    "medidaDianteira": "90/90-21",
+    "medidaTraseira": "120/80-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "XRE 190",
+    "medidaDianteira": "90/90-19",
+    "medidaTraseira": "110/90-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Honda",
+    "modelo": "XRE 300",
+    "medidaDianteira": "90/90-21",
+    "medidaTraseira": "120/80-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Kawasaki",
+    "modelo": "Ninja 400",
+    "medidaDianteira": "110/70 R17",
+    "medidaTraseira": "150/60 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Kawasaki",
+    "modelo": "Ninja 650",
+    "medidaDianteira": "120/70 R17",
+    "medidaTraseira": "160/60 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Kawasaki",
+    "modelo": "Versys 650",
+    "medidaDianteira": "120/70 R17",
+    "medidaTraseira": "160/60 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Kawasaki",
+    "modelo": "W800",
+    "medidaDianteira": "100/90-19",
+    "medidaTraseira": "130/80-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Kawasaki",
+    "modelo": "Z400",
+    "medidaDianteira": "110/70 R17",
+    "medidaTraseira": "150/60 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Kawasaki",
+    "modelo": "Z900",
+    "medidaDianteira": "120/70 R17",
+    "medidaTraseira": "180/55 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "KTM",
+    "modelo": "1290 Super Adventure",
+    "medidaDianteira": "120/70-19",
+    "medidaTraseira": "170/60-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "KTM",
+    "modelo": "890 Adventure",
+    "medidaDianteira": "90/90-21",
+    "medidaTraseira": "150/70-18",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "KTM",
+    "modelo": "Duke 200",
+    "medidaDianteira": "110/70-17",
+    "medidaTraseira": "150/60-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "KTM",
+    "modelo": "Duke 390",
+    "medidaDianteira": "110/70-17",
+    "medidaTraseira": "150/60-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "Royal Enfield",
+    "modelo": "Himalayan",
+    "medidaDianteira": "90/90-21",
+    "medidaTraseira": "120/90-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Royal Enfield",
+    "modelo": "Hunter 350",
+    "medidaDianteira": "110/70-17",
+    "medidaTraseira": "140/70-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Royal Enfield",
+    "modelo": "Meteor 350",
+    "medidaDianteira": "100/90-19",
+    "medidaTraseira": "140/70-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Royal Enfield",
+    "modelo": "Scram 411",
+    "medidaDianteira": "100/90-19",
+    "medidaTraseira": "120/90-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Shineray",
+    "modelo": "Shi 175",
+    "medidaDianteira": "90/90-19",
+    "medidaTraseira": "110/90-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Shineray",
+    "modelo": "Xy 125",
+    "medidaDianteira": "2.50-17",
+    "medidaTraseira": "80/100-14",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Shineray",
+    "modelo": "Xy 150",
+    "medidaDianteira": "90/90-19",
+    "medidaTraseira": "110/90-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Shineray",
+    "modelo": "Xy 50",
+    "medidaDianteira": "2.50-17",
+    "medidaTraseira": "80/100-14",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Suzuki",
+    "modelo": "Burgman 125",
+    "medidaDianteira": "90/90-10",
+    "medidaTraseira": "100/90-10",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Suzuki",
+    "modelo": "GS 120",
+    "medidaDianteira": "2.75-18",
+    "medidaTraseira": "90/90-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Suzuki",
+    "modelo": "GSX R750",
+    "medidaDianteira": "120/70 R17",
+    "medidaTraseira": "180/55 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Suzuki",
+    "modelo": "GSX S1000",
+    "medidaDianteira": "120/70 R17",
+    "medidaTraseira": "190/50 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Suzuki",
+    "modelo": "V Strom 650",
+    "medidaDianteira": "110/80 R19",
+    "medidaTraseira": "150/70 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Triumph",
+    "modelo": "Bonneville T100",
+    "medidaDianteira": "100/90-18",
+    "medidaTraseira": "150/70-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "Triumph",
+    "modelo": "Bonneville T120",
+    "medidaDianteira": "100/90-18",
+    "medidaTraseira": "150/70-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "Triumph",
+    "modelo": "Speed Triple 1200",
+    "medidaDianteira": "120/70-17",
+    "medidaTraseira": "190/55-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "Triumph",
+    "modelo": "Street Triple 765",
+    "medidaDianteira": "120/70-17",
+    "medidaTraseira": "180/55-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "Triumph",
+    "modelo": "Tiger 1200",
+    "medidaDianteira": "120/70-19",
+    "medidaTraseira": "150/70-18",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "Triumph",
+    "modelo": "Tiger 800",
+    "medidaDianteira": "90/90-21",
+    "medidaTraseira": "150/70-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "Triumph",
+    "modelo": "Tiger 900",
+    "medidaDianteira": "90/90-21",
+    "medidaTraseira": "150/70-17",
+    "fonte": "curadoria"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "Crosser 150",
+    "medidaDianteira": "90/90-19",
+    "medidaTraseira": "110/90-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "Crypton",
+    "medidaDianteira": "70/90-17",
+    "medidaTraseira": "80/90-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "Crypton 115",
+    "medidaDianteira": "70/90-17",
+    "medidaTraseira": "80/90-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "Factor 125",
+    "medidaDianteira": "2.75-18",
+    "medidaTraseira": "90/90-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "Factor 150",
+    "medidaDianteira": "80/100-18",
+    "medidaTraseira": "90/90-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "Fazer 250",
+    "medidaDianteira": "100/80-17",
+    "medidaTraseira": "130/70-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "Fluo 125",
+    "medidaDianteira": "110/70-12",
+    "medidaTraseira": "120/70-12",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "Jog",
+    "medidaDianteira": "80/90-10",
+    "medidaTraseira": "90/90-10",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "Lander 250",
+    "medidaDianteira": "80/90-21",
+    "medidaTraseira": "120/80-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "MT 03",
+    "medidaDianteira": "110/70 R17",
+    "medidaTraseira": "140/70 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "MT 07",
+    "medidaDianteira": "120/70 R17",
+    "medidaTraseira": "180/55 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "MT 09",
+    "medidaDianteira": "120/70 R17",
+    "medidaTraseira": "180/55 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "Neo 125",
+    "medidaDianteira": "80/80-14",
+    "medidaTraseira": "90/90-14",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "Nmax 160",
+    "medidaDianteira": "110/70 R13",
+    "medidaTraseira": "130/70 R13",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "R1",
+    "medidaDianteira": "120/70 R17",
+    "medidaTraseira": "190/55 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "R15",
+    "medidaDianteira": "100/80-17",
+    "medidaTraseira": "140/70-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "R3",
+    "medidaDianteira": "110/70 R17",
+    "medidaTraseira": "140/70 R17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "Tenere 250",
+    "medidaDianteira": "80/90-21",
+    "medidaTraseira": "120/80-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "Tenere 700",
+    "medidaDianteira": "90/90 R21",
+    "medidaTraseira": "150/70 R18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "XT 660",
+    "medidaDianteira": "90/90-21",
+    "medidaTraseira": "130/80-17",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "XTZ 250",
+    "medidaDianteira": "80/90-21",
+    "medidaTraseira": "120/80-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "YBR 125",
+    "medidaDianteira": "2.75-18",
+    "medidaTraseira": "90/90-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "YBR 150",
+    "medidaDianteira": "80/100-18",
+    "medidaTraseira": "90/90-18",
+    "fonte": "pneus.org"
+  },
+  {
+    "marca": "Yamaha",
+    "modelo": "Ys 150 Fazer",
+    "medidaDianteira": "80/100-18",
+    "medidaTraseira": "90/90-18",
+    "fonte": "pneus.org"
+  }
+]

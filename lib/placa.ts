@@ -51,6 +51,8 @@ export async function consultarPlaca(placaRaw: string): Promise<{
   termoBusca: string | null
   /** Slug em /moto/[slug] quando a moto+ano casa com uma Moto cadastrada (tudo compatível, não só pneus) */
   motoSlug: string | null
+  /** Medidas de fábrica — só as conferidas pela loja chegam aqui */
+  medidas: { dianteira: string; traseira: string } | null
 } | null> {
   const placa = normalizarPlaca(placaRaw)
   if (!placa) return null
@@ -102,8 +104,18 @@ export async function consultarPlaca(placaRaw: string): Promise<{
 
   const termoFinal = modelo?.termosCompativeis[0] ?? termoBusca
 
+  // Medida de fábrica: só sai para o cliente depois de conferida no admin —
+  // a API de placa não devolve medida, então o dado é da loja
+  const medidas =
+    motoCadastrada?.medidasConferidas &&
+    motoCadastrada.medidaDianteira &&
+    motoCadastrada.medidaTraseira
+      ? { dianteira: motoCadastrada.medidaDianteira, traseira: motoCadastrada.medidaTraseira }
+      : null
+
   return {
     veiculo,
+    medidas,
     modeloSlug: modelo?.slug ?? null,
     // Só devolve o termo se ele de fato acha produto — mandar o cliente para
     // uma listagem vazia é pior que assumir que a moto não está mapeada.

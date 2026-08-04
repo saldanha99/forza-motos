@@ -723,6 +723,15 @@ model Moto {
   /// Ano final; null = "em diante"
   anoAte    Int?
   slug      String   @unique
+  /// Medida de fábrica do pneu dianteiro (ex.: "120/70-19")
+  medidaDianteira   String?
+  /// Medida de fábrica do pneu traseiro (ex.: "170/60-17")
+  medidaTraseira    String?
+  /// Só medidas conferidas pela loja aparecem na busca por placa — o
+  /// pré-preenchimento entra como false para o Caio validar no admin
+  medidasConferidas Boolean @default(false)
+  /// De onde veio a medida: "pneus.org", "curadoria", "loja"
+  fonteMedidas      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

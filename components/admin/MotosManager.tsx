@@ -12,6 +12,10 @@ interface Moto {
   anoAte: number | null
   slug: string
   produtos: number
+  medidaDianteira: string | null
+  medidaTraseira: string | null
+  medidasConferidas: boolean
+  fonteMedidas: string | null
 }
 
 interface ProdutoLite {
@@ -34,6 +38,15 @@ export function MotosManager({ motosIniciais }: { motosIniciais: Moto[] }) {
   const [form, setForm] = useState(FORM_VAZIO)
   const [salvando, setSalvando] = useState(false)
   const [vinculando, setVinculando] = useState<Moto | null>(null)
+  const [filtro, setFiltro] = useState('')
+  const [soAConferir, setSoAConferir] = useState(false)
+
+  const visiveis = motos.filter((m) => {
+    if (soAConferir && m.medidasConferidas) return false
+    if (!filtro.trim()) return true
+    const alvo = `${m.marca} ${m.modelo}`.toLowerCase()
+    return alvo.includes(filtro.trim().toLowerCase())
+  })
 
   async function criar(e: React.FormEvent) {
     e.preventDefault()
@@ -112,31 +125,46 @@ export function MotosManager({ motosIniciais }: { motosIniciais: Moto[] }) {
 
       {/* Lista */}
       <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <div className="relative flex-1">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" />
+            <input
+              value={filtro}
+              onChange={(e) => setFiltro(e.target.value)}
+              placeholder="Filtrar por marca ou modelo…"
+              className="w-full bg-brand-card border border-brand-line rounded-lg pl-9 pr-3 py-2 text-sm text-brand-text outline-none focus:border-[#d42b2b]"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm text-brand-muted whitespace-nowrap cursor-pointer">
+            <input
+              type="checkbox"
+              checked={soAConferir}
+              onChange={(e) => setSoAConferir(e.target.checked)}
+              className="accent-[#d42b2b] w-4 h-4"
+            />
+            Só as que faltam conferir
+          </label>
+          <span className="text-xs text-brand-muted whitespace-nowrap">
+            {visiveis.length} de {motos.length}
+          </span>
+        </div>
+
         {motos.length === 0 && (
           <div className="bg-brand-card border border-brand-line rounded-xl p-8 text-center text-brand-muted text-sm">
             <Bike size={28} className="mx-auto mb-2 opacity-50" />
             Nenhuma moto cadastrada. Comece cadastrando ao lado.
           </div>
         )}
-        {motos.map((m) => (
-          <div key={m.id} className="bg-brand-card border border-brand-line rounded-xl p-4 flex items-center gap-4">
-            <div className="flex-1 min-w-0">
-              <p className="font-barlow font-bold text-brand-text">
-                {m.marca} {m.modelo} <span className="text-brand-muted font-normal">· {faixa(m.anoDe, m.anoAte)}</span>
-              </p>
-              <p className="text-xs text-brand-muted mt-0.5">
-                {m.produtos} produto{m.produtos === 1 ? '' : 's'} vinculado{m.produtos === 1 ? '' : 's'} · <span className="opacity-70">/moto/{m.slug}</span>
-              </p>
-            </div>
-            <button onClick={() => setVinculando(m)}
-              className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3 py-2 rounded-lg bg-[#d42b2b]/10 text-[#d42b2b] hover:bg-[#d42b2b] hover:text-white transition-colors">
-              <Link2 size={14} /> Vincular produtos
-            </button>
-            <button onClick={() => remover(m)} title="Excluir"
-              className="p-2 rounded-lg text-brand-muted hover:text-red-500 hover:bg-red-500/10 transition-colors">
-              <Trash2 size={16} />
-            </button>
-          </div>
+        {visiveis.map((m) => (
+          <LinhaMoto
+            key={m.id}
+            moto={m}
+            onVincular={() => setVinculando(m)}
+            onRemover={() => remover(m)}
+            onAtualizar={(dados) =>
+              setMotos((lista) => lista.map((x) => (x.id === m.id ? { ...x, ...dados } : x)))
+            }
+          />
         ))}
       </div>
 
@@ -147,6 +175,149 @@ export function MotosManager({ motosIniciais }: { motosIniciais: Moto[] }) {
           onSaved={(total) => { onVinculado(vinculando.id, total); setVinculando(null) }}
         />
       )}
+    </div>
+  )
+}
+
+// ── Linha da lista: dados da moto + medidas de fábrica ─────────────────────
+function LinhaMoto({
+  moto,
+  onVincular,
+  onRemover,
+  onAtualizar,
+}: {
+  moto: Moto
+  onVincular: () => void
+  onRemover: () => void
+  onAtualizar: (dados: Partial<Moto>) => void
+}) {
+  const [dianteira, setDianteira] = useState(moto.medidaDianteira ?? '')
+  const [traseira, setTraseira] = useState(moto.medidaTraseira ?? '')
+  const [salvando, setSalvando] = useState(false)
+
+  const sujo =
+    dianteira !== (moto.medidaDianteira ?? '') || traseira !== (moto.medidaTraseira ?? '')
+
+  async function patch(corpo: Record<string, unknown>, msg: string) {
+    setSalvando(true)
+    try {
+      const res = await fetch(`/api/admin/motos/${moto.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(corpo),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao salvar')
+      onAtualizar({
+        medidaDianteira: data.medidaDianteira,
+        medidaTraseira: data.medidaTraseira,
+        medidasConferidas: data.medidasConferidas,
+        fonteMedidas: data.fonteMedidas,
+      })
+      setDianteira(data.medidaDianteira ?? '')
+      setTraseira(data.medidaTraseira ?? '')
+      toast.success(msg)
+    } catch (err: any) {
+      toast.error(err.message)
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  return (
+    <div className="bg-brand-card border border-brand-line rounded-xl p-4">
+      <div className="flex items-center gap-4">
+        <div className="flex-1 min-w-0">
+          <p className="font-barlow font-bold text-brand-text flex items-center gap-2 flex-wrap">
+            {moto.marca} {moto.modelo}
+            <span className="text-brand-muted font-normal">· {faixa(moto.anoDe, moto.anoAte)}</span>
+            {moto.medidasConferidas ? (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500">
+                <Check size={11} /> Conferida
+              </span>
+            ) : moto.medidaDianteira ? (
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500">
+                A conferir{moto.fonteMedidas ? ` · ${moto.fonteMedidas}` : ''}
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand-line text-brand-muted">
+                Sem medida
+              </span>
+            )}
+          </p>
+          <p className="text-xs text-brand-muted mt-0.5">
+            {moto.produtos} produto{moto.produtos === 1 ? '' : 's'} vinculado{moto.produtos === 1 ? '' : 's'} ·{' '}
+            <span className="opacity-70">/moto/{moto.slug}</span>
+          </p>
+        </div>
+        <button onClick={onVincular}
+          className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3 py-2 rounded-lg bg-[#d42b2b]/10 text-[#d42b2b] hover:bg-[#d42b2b] hover:text-white transition-colors">
+          <Link2 size={14} /> Vincular produtos
+        </button>
+        <button onClick={onRemover} title="Excluir"
+          className="p-2 rounded-lg text-brand-muted hover:text-red-500 hover:bg-red-500/10 transition-colors">
+          <Trash2 size={16} />
+        </button>
+      </div>
+
+      {/* Medidas de fábrica */}
+      <div className="flex flex-wrap items-end gap-3 mt-3 pt-3 border-t border-brand-line">
+        <div>
+          <label className="block text-[10px] font-semibold text-brand-muted uppercase tracking-wider mb-1">
+            Pneu dianteiro
+          </label>
+          <input
+            value={dianteira}
+            onChange={(e) => setDianteira(e.target.value)}
+            placeholder="120/70-19"
+            className="w-[130px] bg-brand-bg border border-brand-line rounded-lg px-3 py-2 text-sm font-mono text-brand-text outline-none focus:border-[#d42b2b]"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-semibold text-brand-muted uppercase tracking-wider mb-1">
+            Pneu traseiro
+          </label>
+          <input
+            value={traseira}
+            onChange={(e) => setTraseira(e.target.value)}
+            placeholder="170/60-17"
+            className="w-[130px] bg-brand-bg border border-brand-line rounded-lg px-3 py-2 text-sm font-mono text-brand-text outline-none focus:border-[#d42b2b]"
+          />
+        </div>
+
+        {sujo && (
+          <button
+            onClick={() => patch({ medidaDianteira: dianteira, medidaTraseira: traseira }, 'Medidas salvas')}
+            disabled={salvando}
+            className="h-[38px] px-4 rounded-lg bg-brand-line hover:bg-brand-muted/30 text-brand-text text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-60"
+          >
+            Salvar
+          </button>
+        )}
+
+        {moto.medidasConferidas ? (
+          <button
+            onClick={() => patch({ medidasConferidas: false }, 'Voltou para conferência')}
+            disabled={salvando}
+            className="h-[38px] px-4 rounded-lg border border-brand-line text-brand-muted hover:text-brand-text text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-60"
+          >
+            Desfazer conferência
+          </button>
+        ) : (
+          <button
+            onClick={() =>
+              patch(
+                { medidaDianteira: dianteira, medidaTraseira: traseira, medidasConferidas: true },
+                'Medidas conferidas — já valem na busca por placa',
+              )
+            }
+            disabled={salvando || !dianteira || !traseira}
+            className="h-[38px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center gap-1.5"
+          >
+            <Check size={14} /> Conferir
+          </button>
+        )}
+      </div>
     </div>
   )
 }
