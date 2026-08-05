@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { prisma } from '@/lib/prisma'
 import { MotosManager } from '@/components/admin/MotosManager'
+import { PageHeader } from '@/components/admin/ui/primitives'
 
 export const metadata = { title: 'Motos & Compatibilidade — Forza Admin' }
 
@@ -23,21 +24,18 @@ export default async function MotosAdminPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">Motos & Compatibilidade</h1>
-        <p className="text-brand-muted text-sm mt-1">
-          Cadastre motos por faixa de ano, confira as medidas de fábrica e vincule os produtos que servem em cada uma.
-          Aparece em <strong>/moto/[slug]</strong> e na busca por placa.
-        </p>
-      </div>
+      <PageHeader
+        titulo="Motos & Compatibilidade"
+        descricao="Cadastre motos por faixa de ano, confira as medidas de pneu e vincule os produtos compatíveis — alimenta a busca por placa e as páginas de moto."
+      />
 
       {aConferir > 0 && (
-        <div className="mb-5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+        <div className="mb-5 rounded-xl bg-brand-warning-soft px-4 py-3">
           <p className="text-sm text-brand-text">
             <strong>{aConferir} moto{aConferir === 1 ? '' : 's'} com medida pré-preenchida aguardando conferência.</strong>{' '}
             Confira a medida e clique em <em>Conferir</em> — só as conferidas aparecem para o cliente na busca por placa.
           </p>
-          <p className="text-[13px] text-brand-muted mt-1.5">
+          <p className="mt-1.5 text-[13px] text-brand-muted">
             Informe só os números (ex.: <strong>120/70-19</strong>). Não precisa dizer se é radial ou
             diagonal: a mesma moto aceita os dois, e o cliente escolhe na hora da compra.
           </p>

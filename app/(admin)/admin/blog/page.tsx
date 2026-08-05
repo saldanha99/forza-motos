@@ -1,9 +1,13 @@
 export const dynamic = 'force-dynamic'
-import { prisma } from '@/lib/prisma'
-import { formatDate } from '@/lib/utils'
+
 import Link from 'next/link'
-import { Badge } from '@/components/ui/Badge'
-import { Plus } from 'lucide-react'
+import { FileText, Plus } from 'lucide-react'
+import { prisma } from '@/lib/prisma'
+import { cn, formatDate } from '@/lib/utils'
+import {
+  Badge, BotaoLink, EmptyState, PageHeader, Tabela,
+  TD_CELULA, THEAD_TH, TR_LINHA,
+} from '@/components/admin/ui/primitives'
 
 export const metadata = { title: 'Blog / CMS — Forza Admin' }
 
@@ -15,46 +19,59 @@ export default async function BlogAdminPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">Blog / CMS</h1>
-        <Link
-          href="/admin/blog/novo"
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-brand-accent to-brand-accent-hover hover:opacity-90 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 shadow-md shadow-brand-accent/20"
-        >
-          <Plus size={16} /> Novo post
-        </Link>
-      </div>
+      <PageHeader
+        titulo="Blog / CMS"
+        descricao="Posts do blog da loja — publicados aparecem no site, rascunhos ficam só aqui."
+        acoes={
+          <BotaoLink href="/admin/blog/novo">
+            <Plus size={16} /> Novo post
+          </BotaoLink>
+        }
+      />
 
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl overflow-hidden shadow-xl">
-        <table className="w-full text-sm">
-          <thead className="border-b border-brand-border/20 bg-white/[0.01]">
-            <tr className="text-xs text-brand-muted uppercase tracking-widest">
-              <th className="text-left px-6 py-3 font-medium">Título</th>
-              <th className="text-left px-6 py-3 font-medium">Autor</th>
-              <th className="text-left px-6 py-3 font-medium">Status</th>
-              <th className="text-left px-6 py-3 font-medium">Data</th>
-              <th className="px-6 py-3" />
+      {posts.length === 0 ? (
+        <EmptyState
+          icone={FileText}
+          titulo="Nenhum post ainda"
+          descricao="Crie o primeiro post — assim que marcar como publicado, ele aparece no blog da loja."
+          acao={<BotaoLink href="/admin/blog/novo">Novo post</BotaoLink>}
+        />
+      ) : (
+        <Tabela
+          cabecalho={
+            <>
+              <th className={THEAD_TH}>Título</th>
+              <th className={THEAD_TH}>Autor</th>
+              <th className={THEAD_TH}>Status</th>
+              <th className={THEAD_TH}>Data</th>
+              <th className={THEAD_TH} />
+            </>
+          }
+        >
+          {posts.map((p) => (
+            <tr key={p.id} className={TR_LINHA}>
+              <td className={cn(TD_CELULA, 'font-medium text-brand-text')}>{p.titulo}</td>
+              <td className={cn(TD_CELULA, 'text-brand-muted')}>{p.autor}</td>
+              <td className={TD_CELULA}>
+                {p.publicado ? (
+                  <Badge tom="success">Publicado</Badge>
+                ) : (
+                  <Badge tom="warning">Rascunho</Badge>
+                )}
+              </td>
+              <td className={cn(TD_CELULA, 'text-brand-muted')}>{formatDate(p.createdAt)}</td>
+              <td className={TD_CELULA}>
+                <Link
+                  href={`/admin/blog/${p.id}`}
+                  className="text-xs text-brand-dim transition-colors hover:text-brand-accent"
+                >
+                  Editar →
+                </Link>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {posts.map((p) => (
-              <tr key={p.id} className="border-b border-brand-border/10 hover:bg-white/[0.04] transition-colors">
-                <td className="px-6 py-3.5 text-brand-text font-medium">{p.titulo}</td>
-                <td className="px-6 py-3.5 text-brand-muted">{p.autor}</td>
-                <td className="px-6 py-3.5">
-                  {p.publicado ? <Badge variant="success">Publicado</Badge> : <Badge variant="warning">Rascunho</Badge>}
-                </td>
-                <td className="px-6 py-3.5 text-brand-muted">{formatDate(p.createdAt)}</td>
-                <td className="px-6 py-3.5">
-                  <Link href={`/admin/blog/${p.id}`} className="text-xs text-brand-muted hover:text-brand-text transition-colors">
-                    Editar →
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </Tabela>
+      )}
     </div>
   )
 }

@@ -1,9 +1,13 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
+import { AlertTriangle, ArrowLeft, CheckCircle2 } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
-import { formatDate } from '@/lib/utils'
-import { ArrowLeft, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { cn, formatDate } from '@/lib/utils'
+import {
+  Badge, Card, EmptyState, PageHeader, Tabela,
+  TD_CELULA, THEAD_TH, TR_LINHA,
+} from '@/components/admin/ui/primitives'
 
 export const metadata = { title: 'Monitor de 404 — Forza Admin' }
 
@@ -21,87 +25,72 @@ export default async function NotFoundMonitorPage() {
     <div>
       <Link
         href="/admin/seo"
-        className="inline-flex items-center gap-2 text-sm text-brand-muted hover:text-brand-accent mb-4 transition-colors"
+        className="mb-4 inline-flex items-center gap-2 text-sm text-brand-muted transition-colors hover:text-brand-accent"
       >
         <ArrowLeft size={14} /> Voltar ao SEO Dashboard
       </Link>
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">
-            Monitor de 404
-          </h1>
-          <p className="text-brand-muted text-sm mt-1">
-            URLs quebradas detectadas em produção. Cada path agregado por hits.
-            {' '}<strong className="text-brand-text">{resolvidos}</strong> já foram resolvidas com redirect.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        titulo="Monitor de 404"
+        descricao={`Toda URL acessada que não existe mais no site vira um registro aqui, agrupado por quantidade de acessos. ${resolvidos} já foram resolvidos com redirect.`}
+      />
 
-      <div className="admin-glass !bg-black/15 border border-brand-border/30 rounded-2xl p-4 mb-4 text-sm text-brand-muted">
-        💡 <strong className="text-brand-text">Como resolver:</strong> Para cada 404 frequente,
-        crie um redirect 301 em{' '}
+      <Card className="mb-4 p-4 text-sm text-brand-muted">
+        <strong className="text-brand-text">Como resolver:</strong> para cada 404 frequente, crie
+        um redirect 301 em{' '}
         <Link href="/admin/seo/redirects" className="text-brand-accent hover:underline">
           Redirects
         </Link>{' '}
         apontando para a URL correta. Depois marque aqui como resolvido.
-      </div>
+      </Card>
 
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl overflow-hidden shadow-xl">
-        <table className="w-full text-sm">
-          <thead className="border-b border-brand-border/20 bg-white/[0.01]">
-            <tr className="text-xs text-brand-muted uppercase tracking-widest">
-              <th className="text-left px-6 py-3 font-medium">Path</th>
-              <th className="text-left px-4 py-3 font-medium">Hits</th>
-              <th className="text-left px-4 py-3 font-medium">Referer</th>
-              <th className="text-left px-4 py-3 font-medium">Último acesso</th>
-              <th className="text-left px-4 py-3 font-medium">Primeiro</th>
-            </tr>
-          </thead>
-          <tbody>
-            {naoResolvidos.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-6 py-16 text-center text-brand-muted">
-                  <CheckCircle2
-                    size={32}
-                    className="mx-auto mb-3 opacity-50 text-emerald-400"
-                  />
-                  Nenhum 404 não resolvido. Parabéns!
-                </td>
-              </tr>
-            )}
-            {naoResolvidos.map((p) => (
-              <tr
-                key={p.id}
-                className="border-b border-brand-border/10 hover:bg-white/[0.02]"
+      {naoResolvidos.length === 0 ? (
+        <EmptyState
+          icone={CheckCircle2}
+          titulo="Nenhum 404 não resolvido"
+          descricao="Um registro aparece aqui sempre que alguém acessa, em produção, uma URL do site que não existe mais."
+        />
+      ) : (
+        <Tabela
+          cabecalho={
+            <>
+              <th className={THEAD_TH}>Path</th>
+              <th className={THEAD_TH}>Hits</th>
+              <th className={THEAD_TH}>Referer</th>
+              <th className={THEAD_TH}>Último acesso</th>
+              <th className={THEAD_TH}>Primeiro</th>
+            </>
+          }
+        >
+          {naoResolvidos.map((p) => (
+            <tr key={p.id} className={TR_LINHA}>
+              <td
+                className={cn(TD_CELULA, 'max-w-md truncate font-mono text-xs text-brand-text')}
+                title={p.path}
               >
-                <td className="px-6 py-3 font-mono text-brand-text text-xs max-w-md truncate" title={p.path}>
-                  {p.path}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`inline-flex items-center gap-1 font-semibold ${
-                      p.hits > 20 ? 'text-rose-400' : p.hits > 5 ? 'text-amber-400' : 'text-brand-muted'
-                    }`}
-                  >
-                    <AlertTriangle size={12} />
-                    {p.hits}×
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-brand-muted text-xs max-w-xs truncate" title={p.referer || ''}>
-                  {p.referer || '—'}
-                </td>
-                <td className="px-4 py-3 text-brand-muted text-xs">
-                  {formatDate(p.ultimoAcesso)}
-                </td>
-                <td className="px-4 py-3 text-brand-muted text-xs">
-                  {formatDate(p.createdAt)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                {p.path}
+              </td>
+              <td className={TD_CELULA}>
+                <Badge tom={p.hits > 20 ? 'danger' : p.hits > 5 ? 'warning' : 'neutro'}>
+                  <AlertTriangle size={11} /> {p.hits}×
+                </Badge>
+              </td>
+              <td
+                className={cn(TD_CELULA, 'max-w-xs truncate text-xs text-brand-muted')}
+                title={p.referer || ''}
+              >
+                {p.referer || '—'}
+              </td>
+              <td className={cn(TD_CELULA, 'text-xs text-brand-muted')}>
+                {formatDate(p.ultimoAcesso)}
+              </td>
+              <td className={cn(TD_CELULA, 'text-xs text-brand-muted')}>
+                {formatDate(p.createdAt)}
+              </td>
+            </tr>
+          ))}
+        </Tabela>
+      )}
     </div>
   )
 }

@@ -1,7 +1,9 @@
 export const dynamic = 'force-dynamic'
-import { prisma } from '@/lib/prisma'
+
 import { notFound } from 'next/navigation'
+import { prisma } from '@/lib/prisma'
 import { BlogForm } from '@/components/admin/BlogForm'
+import { PageHeader } from '@/components/admin/ui/primitives'
 
 export default async function EditarBlogPage({ params }: { params: { id: string } }) {
   const post = await prisma.blogPost.findUnique({ where: { id: params.id } })
@@ -9,7 +11,10 @@ export default async function EditarBlogPage({ params }: { params: { id: string 
 
   return (
     <div className="max-w-3xl">
-      <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight mb-8">Editar Post</h1>
+      <PageHeader
+        titulo="Editar Post"
+        descricao="Altere o conteúdo e salve para atualizar o post publicado."
+      />
       <BlogForm post={post as any} />
     </div>
   )

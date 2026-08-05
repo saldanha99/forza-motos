@@ -1,12 +1,16 @@
 'use client'
 
 /**
- * Busca global do admin — abre com ⌘K / Ctrl+K (ou pelo botão do sidebar,
+ * Busca global do painel — abre com ⌘K / Ctrl+K (ou pelo botão da sidebar,
  * que dispara o evento 'open-command-palette').
+ *
+ * Navegação só por teclado: ↑ ↓ percorrem os resultados, Enter abre, Esc fecha.
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Package, ShoppingBag, Users, LoaderCircle } from 'lucide-react'
+import { LoaderCircle, Package, Search, ShoppingBag, Users } from 'lucide-react'
+import { formatPrice, cn } from '@/lib/utils'
+import { StatusPill } from './ui/primitives'
 
 type Resultados = {
   produtos: { id: string; nome: string; sku: string; estoque: number; ativo: boolean }[]
@@ -16,38 +20,99 @@ type Resultados = {
 
 const VAZIO: Resultados = { produtos: [], pedidos: [], clientes: [] }
 
+type Linha = {
+  chave: string
+  grupo: string
+  href: string
+  icone: typeof Package
+  principal: string
+  secundario: React.ReactNode
+}
+
 export function CommandPalette() {
   const router = useRouter()
   const [aberto, setAberto] = useState(false)
   const [q, setQ] = useState('')
   const [res, setRes] = useState<Resultados>(VAZIO)
   const [carregando, setCarregando] = useState(false)
+  const [selecionado, setSelecionado] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
+  const listaRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
 
   const fechar = useCallback(() => {
     setAberto(false)
     setQ('')
     setRes(VAZIO)
+    setSelecionado(0)
   }, [])
 
-  // Atalho ⌘K / Ctrl+K + evento do sidebar
+  // Uma lista achatada para o teclado percorrer, sem perder o agrupamento visual
+  const linhas = useMemo<Linha[]>(
+    () => [
+      ...res.produtos.map((p) => ({
+        chave: `prod-${p.id}`,
+        grupo: 'Produtos',
+        href: `/admin/produtos?q=${encodeURIComponent(p.sku)}`,
+        icone: Package,
+        principal: p.nome,
+        secundario: (
+          <span className="text-[11px] text-brand-dim">
+            SKU {p.sku} · {p.ativo ? `${p.estoque} un` : 'inativo'}
+          </span>
+        ),
+      })),
+      ...res.pedidos.map((p) => ({
+        chave: `ped-${p.id}`,
+        grupo: 'Pedidos',
+        href: `/admin/pedidos/${p.id}`,
+        icone: ShoppingBag,
+        principal: p.orderNumber,
+        secundario: (
+          <span className="flex items-center gap-2">
+            <StatusPill status={p.status} ponto={false} />
+            <span className="text-[11px] tabular-nums text-brand-dim">
+              {formatPrice(p.total)}
+            </span>
+          </span>
+        ),
+      })),
+      ...res.clientes.map((c) => ({
+        chave: `cli-${c.id}`,
+        grupo: 'Clientes',
+        href: `/admin/clientes/${c.id}`,
+        icone: Users,
+        principal: c.nome ?? 'Sem nome',
+        secundario: <span className="truncate text-[11px] text-brand-dim">{c.email}</span>,
+      })),
+    ],
+    [res],
+  )
+
+  const ir = useCallback(
+    (href: string) => {
+      fechar()
+      router.push(href)
+    },
+    [fechar, router],
+  )
+
+  // Atalhos globais
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setAberto((v) => !v)
       }
-      if (e.key === 'Escape') fechar()
     }
-    function onOpen() { setAberto(true) }
+    const onOpen = () => setAberto(true)
     window.addEventListener('keydown', onKey)
     window.addEventListener('open-command-palette', onOpen)
     return () => {
       window.removeEventListener('keydown', onKey)
       window.removeEventListener('open-command-palette', onOpen)
     }
-  }, [fechar])
+  }, [])
 
   useEffect(() => {
     if (aberto) setTimeout(() => inputRef.current?.focus(), 50)
@@ -56,7 +121,11 @@ export function CommandPalette() {
   // Busca com debounce
   useEffect(() => {
     clearTimeout(debounceRef.current)
-    if (q.trim().length < 2) { setRes(VAZIO); return }
+    setSelecionado(0)
+    if (q.trim().length < 2) {
+      setRes(VAZIO)
+      return
+    }
     debounceRef.current = setTimeout(async () => {
       setCarregando(true)
       try {
@@ -69,116 +138,113 @@ export function CommandPalette() {
     return () => clearTimeout(debounceRef.current)
   }, [q])
 
-  function ir(href: string) {
-    fechar()
-    router.push(href)
-  }
+  // Mantém o item selecionado visível ao navegar com as setas
+  useEffect(() => {
+    listaRef.current
+      ?.querySelector<HTMLElement>('[data-selecionado="true"]')
+      ?.scrollIntoView({ block: 'nearest' })
+  }, [selecionado])
 
   if (!aberto) return null
 
-  const nenhum =
-    q.trim().length >= 2 && !carregando &&
-    res.produtos.length === 0 && res.pedidos.length === 0 && res.clientes.length === 0
+  function onKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      fechar()
+      return
+    }
+    if (!linhas.length) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSelecionado((i) => (i + 1) % linhas.length)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelecionado((i) => (i - 1 + linhas.length) % linhas.length)
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      const alvo = linhas[selecionado]
+      if (alvo) ir(alvo.href)
+    }
+  }
+
+  const nenhum = q.trim().length >= 2 && !carregando && linhas.length === 0
+  let grupoAnterior = ''
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center pt-[12vh] px-4 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-start justify-center bg-[color:var(--brand-overlay)] px-4 pt-[12vh] backdrop-blur-sm"
       onClick={fechar}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Busca global"
     >
       <div
-        className="w-full max-w-xl admin-glass !bg-[#0d0d0d]/95 border border-brand-border/40 rounded-2xl shadow-2xl overflow-hidden"
+        className="w-full max-w-xl overflow-hidden rounded-2xl border border-brand-border bg-brand-surface shadow-pop"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={onKeyDown}
       >
-        {/* Input */}
-        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-brand-border/20">
+        <div className="flex items-center gap-3 border-b border-brand-hair px-4 py-3.5">
           {carregando ? (
-            <LoaderCircle size={17} className="text-brand-accent animate-spin" />
+            <LoaderCircle size={17} className="animate-spin text-brand-accent" />
           ) : (
-            <Search size={17} className="text-brand-muted" />
+            <Search size={17} className="text-brand-dim" />
           )}
           <input
             ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar produto, pedido ou cliente…"
-            className="flex-1 bg-transparent outline-none text-brand-text placeholder:text-brand-muted/60 text-sm"
+            aria-label="Buscar"
+            className="flex-1 bg-transparent text-sm text-brand-text outline-none placeholder:text-brand-dim"
           />
-          <kbd className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/5 border border-brand-border/30 text-brand-muted">
+          <kbd className="rounded-md border border-brand-border bg-brand-surface-2 px-1.5 py-0.5 text-[10px] text-brand-dim">
             Esc
           </kbd>
         </div>
 
-        {/* Resultados */}
-        <div className="max-h-[50vh] overflow-y-auto admin-scroll">
+        <div ref={listaRef} className="admin-scroll max-h-[50vh] overflow-y-auto">
+          {q.trim().length < 2 && (
+            <p className="px-4 py-6 text-center text-sm text-brand-muted">
+              Digite ao menos 2 caracteres. Use ↑ ↓ para navegar e Enter para abrir.
+            </p>
+          )}
+
           {nenhum && (
-            <p className="px-4 py-6 text-sm text-brand-muted text-center">
+            <p className="px-4 py-6 text-center text-sm text-brand-muted">
               Nada encontrado para “{q}”
             </p>
           )}
 
-          {res.produtos.length > 0 && (
-            <Grupo titulo="Produtos">
-              {res.produtos.map((p) => (
-                <Item key={p.id} onClick={() => ir(`/admin/produtos?q=${encodeURIComponent(p.sku)}`)}>
-                  <Package size={15} className="text-brand-muted shrink-0" />
-                  <span className="truncate flex-1">{p.nome}</span>
-                  <span className="text-[11px] text-brand-muted shrink-0">
-                    SKU {p.sku} · {p.ativo ? `${p.estoque} un` : 'inativo'}
-                  </span>
-                </Item>
-              ))}
-            </Grupo>
-          )}
-
-          {res.pedidos.length > 0 && (
-            <Grupo titulo="Pedidos">
-              {res.pedidos.map((p) => (
-                <Item key={p.id} onClick={() => ir(`/admin/pedidos/${p.id}`)}>
-                  <ShoppingBag size={15} className="text-brand-muted shrink-0" />
-                  <span className="flex-1">{p.orderNumber}</span>
-                  <span className="text-[11px] text-brand-muted">
-                    {p.status} · R$ {p.total.toFixed(2)}
-                  </span>
-                </Item>
-              ))}
-            </Grupo>
-          )}
-
-          {res.clientes.length > 0 && (
-            <Grupo titulo="Clientes">
-              {res.clientes.map((c) => (
-                <Item key={c.id} onClick={() => ir(`/admin/clientes/${c.id}`)}>
-                  <Users size={15} className="text-brand-muted shrink-0" />
-                  <span className="flex-1 truncate">{c.nome ?? 'Sem nome'}</span>
-                  <span className="text-[11px] text-brand-muted truncate">{c.email}</span>
-                </Item>
-              ))}
-            </Grupo>
-          )}
+          {linhas.map((linha, i) => {
+            const novoGrupo = linha.grupo !== grupoAnterior
+            grupoAnterior = linha.grupo
+            const ativo = i === selecionado
+            const Icone = linha.icone
+            return (
+              <div key={linha.chave}>
+                {novoGrupo && (
+                  <p className="px-4 pb-1 pt-3 text-[10px] font-bold uppercase tracking-[0.16em] text-brand-dim">
+                    {linha.grupo}
+                  </p>
+                )}
+                <button
+                  data-selecionado={ativo}
+                  onMouseEnter={() => setSelecionado(i)}
+                  onClick={() => ir(linha.href)}
+                  className={cn(
+                    'flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors',
+                    ativo ? 'bg-brand-accent-soft text-brand-text' : 'text-brand-muted',
+                  )}
+                >
+                  <Icone size={15} className="shrink-0 text-brand-dim" />
+                  <span className="min-w-0 flex-1 truncate">{linha.principal}</span>
+                  <span className="shrink-0">{linha.secundario}</span>
+                </button>
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>
-  )
-}
-
-function Grupo({ titulo, children }: { titulo: string; children: React.ReactNode }) {
-  return (
-    <div className="py-2">
-      <p className="px-4 pb-1 text-[10px] font-bold uppercase tracking-widest text-brand-muted/60">
-        {titulo}
-      </p>
-      {children}
-    </div>
-  )
-}
-
-function Item({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-brand-text hover:bg-brand-accent/10 transition-colors text-left"
-    >
-      {children}
-    </button>
   )
 }

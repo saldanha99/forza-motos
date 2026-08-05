@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, LoaderCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { Botao } from '@/components/admin/ui/primitives'
 
 interface CuradoriaBulkActionsProps {
   cat: string
@@ -41,7 +42,7 @@ export function CuradoriaBulkActions({ cat, q, estado, total }: CuradoriaBulkAct
           ? 'Todos os produtos filtrados foram ocultados!'
           : 'Produtos filtrados atualizados com sucesso!'
       )
-      
+
       router.refresh()
     } catch (e: any) {
       console.error(e)
@@ -52,34 +53,38 @@ export function CuradoriaBulkActions({ cat, q, estado, total }: CuradoriaBulkAct
   }
 
   return (
-    <div className="flex gap-2 items-center">
-      <button
+    <div className="flex items-center gap-2">
+      <Botao
+        type="button"
+        variante="perigo"
+        tamanho="sm"
         onClick={() => executar('desativar')}
         disabled={carregando !== null}
-        className="flex items-center gap-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 disabled:opacity-50 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all"
         title="Ocultar todos os produtos que atendem ao filtro atual"
       >
         {carregando === 'desativar' ? (
-          <LoaderCircle size={13} className="animate-spin text-rose-400" />
+          <LoaderCircle size={13} className="animate-spin" />
         ) : (
-          <EyeOff size={13} className="text-rose-400" />
+          <EyeOff size={13} />
         )}
         Ocultar todos do filtro
-      </button>
+      </Botao>
 
-      <button
+      <Botao
+        type="button"
+        tamanho="sm"
         onClick={() => executar('ativar')}
         disabled={carregando !== null}
-        className="flex items-center gap-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 disabled:opacity-50 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all"
         title="Ativar/Exibir todos os produtos que atendem ao filtro atual e possuem imagem/estoque"
+        className="bg-brand-success text-brand-on-accent hover:brightness-95"
       >
         {carregando === 'ativar' ? (
-          <LoaderCircle size={13} className="animate-spin text-emerald-400" />
+          <LoaderCircle size={13} className="animate-spin" />
         ) : (
-          <Eye size={13} className="text-emerald-400" />
+          <Eye size={13} />
         )}
         Exibir todos do filtro
-      </button>
+      </Botao>
     </div>
   )
 }

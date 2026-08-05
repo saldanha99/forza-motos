@@ -39,15 +39,15 @@ export function SyncProdutoButton({ produtoId, hasTinyId }: Props) {
       onClick={handleSync}
       disabled={loading}
       title={status === 'ok' ? msg : status === 'error' ? msg : 'Sincronizar com Tiny'}
-      className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors disabled:opacity-50
-        bg-brand-surface-2 hover:bg-brand-accent/20 border border-brand-border/30 text-brand-muted hover:text-brand-text"
+      className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-brand-muted transition-colors
+        border border-brand-border bg-brand-surface-2 hover:bg-brand-accent-soft hover:text-brand-text disabled:opacity-50"
     >
       {loading ? (
         <RefreshCw size={11} className="animate-spin" />
       ) : status === 'ok' ? (
-        <CheckCircle2 size={11} className="text-green-400" />
+        <CheckCircle2 size={11} className="text-brand-success" />
       ) : status === 'error' ? (
-        <AlertCircle size={11} className="text-red-400" />
+        <AlertCircle size={11} className="text-brand-danger" />
       ) : (
         <RefreshCw size={11} />
       )}

@@ -1,12 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/Button'
+import { Loader2 } from 'lucide-react'
+import { Botao, Card, CardHeader } from '@/components/admin/ui/primitives'
+import { Campo, GrupoOpcoes, Textarea, AcoesFormulario } from '@/components/admin/ui/form'
 import { formatPrice, formatDate } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 
-const FUNIS = ['LEAD', 'ORCAMENTO', 'FECHADO', 'RECORRENTE']
+const FUNIS = [
+  { valor: 'LEAD',       label: 'Lead' },
+  { valor: 'ORCAMENTO',  label: 'Orçamento' },
+  { valor: 'FECHADO',    label: 'Fechado' },
+  { valor: 'RECORRENTE', label: 'Recorrente' },
+]
 
 interface CRM {
   totalPedidos?: number
@@ -41,58 +48,44 @@ export function ClienteCRMForm({ userId, crm }: { userId: string; crm: CRM | nul
   }
 
   return (
-    <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-6 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
-      <h2 className="font-barlow font-bold text-xl text-brand-text">CRM</h2>
+    <Card>
+      <CardHeader titulo="CRM" />
+      <div className="space-y-5 p-5">
+        <dl className="space-y-3 border-b border-brand-hair pb-4 text-sm">
+          <div className="flex justify-between">
+            <dt className="text-[11px] font-semibold uppercase tracking-wider text-brand-dim">Total de pedidos</dt>
+            <dd className="font-bold text-brand-text">{crm?.totalPedidos ?? 0}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt className="text-[11px] font-semibold uppercase tracking-wider text-brand-dim">Total gasto</dt>
+            <dd className="font-bold text-brand-accent">{formatPrice(Number(crm?.totalGasto ?? 0))}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt className="text-[11px] font-semibold uppercase tracking-wider text-brand-dim">Última compra</dt>
+            <dd className="font-semibold text-brand-text">{crm?.ultimaCompra ? formatDate(crm.ultimaCompra) : '-'}</dd>
+          </div>
+        </dl>
 
-      <dl className="space-y-4 text-sm border-b border-brand-border/20 pb-4">
-        <div className="flex justify-between">
-          <dt className="text-brand-muted text-xs font-semibold uppercase tracking-wider">Total de pedidos</dt>
-          <dd className="text-brand-text font-bold">{crm?.totalPedidos ?? 0}</dd>
-        </div>
-        <div className="flex justify-between">
-          <dt className="text-brand-muted text-xs font-semibold uppercase tracking-wider">Total gasto</dt>
-          <dd className="text-brand-text font-bold text-brand-accent">{formatPrice(Number(crm?.totalGasto ?? 0))}</dd>
-        </div>
-        <div className="flex justify-between">
-          <dt className="text-brand-muted text-xs font-semibold uppercase tracking-wider">Última compra</dt>
-          <dd className="text-brand-text font-semibold">{crm?.ultimaCompra ? formatDate(crm.ultimaCompra) : '-'}</dd>
-        </div>
-      </dl>
+        <Campo label="Etapa do funil" dica="Onde este cliente está no funil de relacionamento.">
+          <GrupoOpcoes valor={etapa} opcoes={FUNIS} onChange={setEtapa} />
+        </Campo>
 
-      <div>
-        <label className="text-sm text-brand-muted font-medium block mb-3">Etapa do funil</label>
-        <div className="grid grid-cols-2 gap-2.5">
-          {FUNIS.map((f) => (
-            <button
-              key={f}
-              type="button"
-              onClick={() => setEtapa(f)}
-              className={`text-xs py-2.5 rounded-xl border font-bold tracking-wider transition-all duration-200 ${
-                etapa === f
-                  ? 'border-brand-accent bg-brand-accent/15 text-brand-accent shadow-md shadow-brand-accent/10'
-                  : 'border-white/10 text-brand-muted hover:border-white/20 hover:bg-white/5'
-              }`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
+        <Campo label="Notas" dica="Observações internas sobre o cliente.">
+          <Textarea
+            value={notas}
+            onChange={(e) => setNotas(e.target.value)}
+            rows={4}
+            placeholder="Observações sobre o cliente..."
+          />
+        </Campo>
+
+        <AcoesFormulario>
+          <Botao onClick={salvar} disabled={loading} className="w-full">
+            {loading && <Loader2 size={14} className="animate-spin" />}
+            {loading ? 'Salvando…' : 'Salvar CRM'}
+          </Botao>
+        </AcoesFormulario>
       </div>
-
-      <div>
-        <label className="text-sm text-brand-muted font-medium block mb-2">Notas</label>
-        <textarea
-          value={notas}
-          onChange={(e) => setNotas(e.target.value)}
-          rows={4}
-          className="w-full bg-white/5 border border-white/10 hover:border-white/20 rounded-xl px-4 py-3 text-brand-text text-sm focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent/20 resize-none transition-all duration-200 placeholder:text-brand-muted/50"
-          placeholder="Observações sobre o cliente..."
-        />
-      </div>
-
-      <Button onClick={salvar} loading={loading} className="w-full font-bold uppercase tracking-wider text-xs rounded-xl py-3.5" size="sm">
-        Salvar CRM
-      </Button>
-    </div>
+    </Card>
   )
 }

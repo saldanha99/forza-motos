@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ArrowLeft, FileSpreadsheet } from 'lucide-react'
 import { ImportarCSVForm } from '@/components/glossario/ImportarCSVForm'
+import { Card, PageHeader } from '@/components/admin/ui/primitives'
 
 export const metadata = { title: 'Importar CSV — Forza Admin' }
 
@@ -14,20 +15,13 @@ export default function ImportarPage() {
         <ArrowLeft size={14} /> Voltar ao glossário
       </Link>
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">
-            Importar CSV
-          </h1>
-          <p className="text-brand-muted text-sm mt-1">
-            Suba um arquivo CSV com lista de termos. Cada linha vira um job na
-            fila — geração via IA acontece automaticamente (1 por hora pelo cron).
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        titulo="Importar CSV"
+        descricao="Suba um arquivo CSV com a lista de termos — cada linha vira um job na fila, gerado via IA pelo cron (1 por hora)."
+      />
 
       {/* Card de instruções de formato */}
-      <div className="admin-glass !bg-black/15 border border-brand-border/30 rounded-2xl p-5 mb-6 shadow-lg">
+      <Card className="p-5 mb-6">
         <div className="flex items-start gap-3">
           <FileSpreadsheet
             size={20}
@@ -41,7 +35,7 @@ export default function ImportarPage() {
               Header obrigatório. Apenas <code>titulo</code> é obrigatório — as outras
               colunas são opcionais.
             </p>
-            <pre className="text-[11px] bg-black/40 border border-brand-border/30 rounded-lg p-3 overflow-x-auto text-brand-muted">
+            <pre className="text-[11px] bg-brand-elevated border border-brand-border rounded-lg p-3 overflow-x-auto text-brand-muted">
 {`titulo,letra,categoria
 "Pneu Radial",P,Pneus
 "Pneu Diagonal",P,Pneus
@@ -50,11 +44,11 @@ export default function ImportarPage() {
             </pre>
           </div>
         </div>
-      </div>
+      </Card>
 
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 lg:p-8 shadow-xl">
+      <Card className="p-6 lg:p-8">
         <ImportarCSVForm />
-      </div>
+      </Card>
     </div>
   )
 }

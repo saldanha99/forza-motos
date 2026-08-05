@@ -1,5 +1,8 @@
-import { LucideIcon, TrendingDown, TrendingUp } from 'lucide-react'
+import Link from 'next/link'
+import { ArrowUpRight, LucideIcon, TrendingDown, TrendingUp } from 'lucide-react'
 import { AnimatedNumber } from './AnimatedNumber'
+import { TOM_FUNDO, TOM_TEXTO } from './ui/primitives'
+import type { TomStatus } from '@/lib/admin/status'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -9,54 +12,97 @@ interface Props {
   prefix?: string
   suffix?: string
   decimals?: number
+  /** Cor do ícone — usa o mesmo vocabulário de tons do resto do painel. */
+  tom?: TomStatus
+  /** Linha de contexto abaixo do número ("vs. 12 ontem", "meta 40"). */
+  detalhe?: string
   trend?: { value: number; label?: string }
+  /** Se informado, o card inteiro vira link para o detalhamento. */
+  href?: string
   className?: string
 }
 
-export function KpiCard({ label, value, icon: Icon, prefix, suffix, decimals, trend, className }: Props) {
-  return (
-    <div
-      className={cn(
-        'group relative overflow-hidden admin-glass !bg-black/20 border border-brand-border/30 hover:border-brand-accent/40 rounded-2xl p-5 transition-all duration-300 card-lift shadow-lg shadow-black/20 hover:shadow-brand-accent/5',
-        className,
-      )}
-    >
-      {/* Top accent line */}
-      <span className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-brand-accent to-brand-accent-hover rounded-t-2xl opacity-80" />
-
-      {/* Radial glow on hover */}
-      <div className="admin-kpi-glow absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+export function KpiCard({
+  label,
+  value,
+  icon: Icon,
+  prefix,
+  suffix,
+  decimals,
+  tom = 'accent',
+  detalhe,
+  trend,
+  href,
+  className,
+}: Props) {
+  const conteudo = (
+    <>
+      {/* Brilho radial no hover */}
+      <div className="admin-kpi-glow pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
       <div className="relative">
-        {/* Header row */}
-        <div className="flex items-start justify-between mb-4">
-          <p className="text-xs text-brand-muted uppercase tracking-widest font-medium">{label}</p>
-          <div className="bg-brand-accent/10 text-brand-accent rounded-xl p-2 shrink-0">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-dim">
+            {label}
+          </p>
+          <span
+            className={cn(
+              'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl',
+              TOM_FUNDO[tom],
+              TOM_TEXTO[tom],
+            )}
+          >
             <Icon size={16} />
-          </div>
+          </span>
         </div>
 
-        {/* Value */}
-        <p className="font-barlow font-bold text-3xl text-brand-text">
+        <p className="font-barlow text-3xl font-bold tabular-nums text-brand-text">
           <AnimatedNumber value={value} prefix={prefix} suffix={suffix} decimals={decimals} />
         </p>
 
-        {/* Trend badge */}
-        {trend !== undefined && (
-          <div className={cn(
-            'inline-flex items-center gap-1 mt-2 text-xs font-semibold px-2 py-0.5 rounded-full',
-            trend.value >= 0
-              ? 'text-emerald-400 bg-emerald-400/10'
-              : 'text-red-400 bg-red-400/10',
-          )}>
-            {trend.value >= 0
-              ? <TrendingUp size={11} />
-              : <TrendingDown size={11} />}
-            {trend.value >= 0 ? '+' : ''}{trend.value}%
-            {trend.label && <span className="text-brand-muted font-normal ml-1">{trend.label}</span>}
-          </div>
-        )}
+        <div className="mt-2 flex items-center gap-2">
+          {trend !== undefined && (
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums',
+                trend.value >= 0
+                  ? 'bg-brand-success-soft text-brand-success'
+                  : 'bg-brand-danger-soft text-brand-danger',
+              )}
+            >
+              {trend.value >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+              {trend.value >= 0 ? '+' : ''}
+              {trend.value}%
+            </span>
+          )}
+          {(detalhe || trend?.label) && (
+            <span className="truncate text-xs text-brand-muted">{detalhe ?? trend?.label}</span>
+          )}
+          {href && (
+            <ArrowUpRight
+              size={14}
+              className="ml-auto shrink-0 text-brand-dim transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-brand-accent"
+            />
+          )}
+        </div>
       </div>
-    </div>
+    </>
   )
+
+  const classe = cn(
+    'group relative block overflow-hidden rounded-2xl border border-brand-border bg-brand-surface p-5',
+    'shadow-card transition-all duration-300 hover:border-brand-accent',
+    href && 'hover:-translate-y-0.5 hover:shadow-pop',
+    className,
+  )
+
+  if (href) {
+    return (
+      <Link href={href} className={classe}>
+        {conteudo}
+      </Link>
+    )
+  }
+
+  return <div className={classe}>{conteudo}</div>
 }

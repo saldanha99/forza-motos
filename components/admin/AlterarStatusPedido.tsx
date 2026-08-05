@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/Button'
-import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
+import { Card, CardHeader, Botao } from '@/components/admin/ui/primitives'
 
 const STATUS_TRANSICOES: Record<string, string[]> = {
   AGUARDANDO_PAGAMENTO: ['CONFIRMADO', 'CANCELADO'],
@@ -36,7 +36,7 @@ export function AlterarStatusPedido({
         body: JSON.stringify({ status: novoStatus }),
       })
       if (!res.ok) throw new Error()
-      
+
       const textoStatus = novoStatus === 'ENVIADO' && freteServico === 'retirada'
         ? 'PRONTO PARA RETIRADA'
         : novoStatus === 'ENTREGUE' && freteServico === 'retirada'
@@ -55,26 +55,26 @@ export function AlterarStatusPedido({
   if (proximos.length === 0) return null
 
   return (
-    <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
-      <h2 className="font-barlow font-bold text-xl text-brand-text mb-4">Alterar Status</h2>
-      <div className="space-y-2.5">
+    <Card>
+      <CardHeader titulo="Alterar Status" />
+      <div className="space-y-2.5 p-5">
         {proximos.map((s) => (
-          <Button
+          <Botao
             key={s}
-            variant={s === 'CANCELADO' ? 'danger' : 'primary'}
-            size="sm"
-            loading={loading}
+            variante={s === 'CANCELADO' ? 'perigo' : 'primario'}
+            tamanho="lg"
+            disabled={loading}
             onClick={() => alterarStatus(s)}
-            className="w-full font-bold uppercase tracking-wider text-xs rounded-xl py-3 font-sans"
+            className="w-full font-bold uppercase tracking-wider text-xs"
           >
             {s === 'ENVIADO' && freteServico === 'retirada'
               ? 'Pronto para retirada'
               : s === 'ENTREGUE' && freteServico === 'retirada'
               ? 'Retirado (Entregue)'
               : s.replace(/_/g, ' ')}
-          </Button>
+          </Botao>
         ))}
       </div>
-    </div>
+    </Card>
   )
 }

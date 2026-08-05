@@ -1,27 +1,24 @@
-import { prisma } from '@/lib/prisma'
-import { MessageCircle, Users, CheckCircle2, Clock, AlertCircle, TrendingUp } from 'lucide-react'
-import { WhatsAppConnect } from '@/components/admin/WhatsAppConnect'
-
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'CRM WhatsApp — Admin Forza' }
 
-const ETAPA_LABEL: Record<string, { label: string; color: string }> = {
-  NOVO:        { label: 'Novo',       color: '#3b82f6' },
-  CONTATADO:   { label: 'Contatado',  color: '#f59e0b' },
-  RESPONDEU:   { label: 'Respondeu',  color: '#10b981' },
-  CONVERTIDO:  { label: 'Convertido', color: '#8b5cf6' },
-  PERDIDO:     { label: 'Perdido',    color: '#6b7280' },
-}
+import Link from 'next/link'
+import type { LucideIcon } from 'lucide-react'
+import {
+  KanbanSquare, Rows3, Users, MessageCircle, CheckCircle2, Clock, AlertCircle, TrendingUp,
+} from 'lucide-react'
+import { prisma } from '@/lib/prisma'
+import { cn } from '@/lib/utils'
+import { WhatsAppConnect } from '@/components/admin/WhatsAppConnect'
+import { LeadsKanban, type LeadKanban } from '@/components/admin/kanban/LeadsKanban'
+import {
+  PageHeader, StatusPill, EmptyState, Card, TOM_FUNDO, TOM_TEXTO,
+} from '@/components/admin/ui/primitives'
+import type { TomStatus } from '@/lib/admin/status'
 
-const STATUS_LABEL: Record<string, { label: string; color: string }> = {
-  PENDENTE:  { label: 'Pendente',  color: '#f59e0b' },
-  ENVIANDO:  { label: 'Enviando',  color: '#3b82f6' },
-  ENVIADA:   { label: 'Enviada',   color: '#10b981' },
-  ENTREGUE:  { label: 'Entregue',  color: '#10b981' },
-  LIDA:      { label: 'Lida',      color: '#8b5cf6' },
-  FALHA:     { label: 'Falha',     color: '#ef4444' },
-  CANCELADA: { label: 'Cancelada', color: '#6b7280' },
-}
+export const metadata = { title: 'Funil de leads — Forza Admin' }
+
+/** Só entram no funil leads com movimento nos últimos 90 dias. */
+const JANELA_FUNIL_DIAS = 90
+const POR_LISTA = 50
 
 const TIPO_LABEL: Record<string, string> = {
   BOAS_VINDAS:         '👋 Boas-vindas',
@@ -34,141 +31,220 @@ const TIPO_LABEL: Record<string, string> = {
   MANUAL:              '✍️ Manual',
 }
 
-export default async function CrmPage() {
-  const [leads, mensagens, stats] = await Promise.all([
-    prisma.crmLead.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-      include: { mensagens: { select: { status: true }, orderBy: { createdAt: 'desc' }, take: 1 } },
-    }),
-    prisma.crmMensagem.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    }),
-    Promise.all([
-      prisma.crmLead.count(),
-      prisma.crmLead.count({ where: { etapa: 'RESPONDEU' } }),
-      prisma.crmLead.count({ where: { etapa: 'CONVERTIDO' } }),
-      prisma.crmMensagem.count({ where: { status: 'PENDENTE' } }),
-      prisma.crmMensagem.count({ where: { status: 'FALHA' } }),
-      prisma.crmMensagem.count({ where: { status: { in: ['ENVIADA', 'ENTREGUE', 'LIDA'] } } }),
-    ]),
-  ])
-
-  const [totalLeads, responderam, convertidos, pendentes, falhas, enviadas] = stats
+function AlternadorVista({ vista }: { vista: 'funil' | 'lista' }) {
+  const opcoes = [
+    { id: 'funil', label: 'Funil', icone: KanbanSquare },
+    { id: 'lista', label: 'Lista', icone: Rows3 },
+  ] as const
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-brand-text flex items-center gap-2">
-          <MessageCircle size={24} className="text-green-400" />
-          CRM WhatsApp
-        </h1>
-        <p className="text-brand-muted text-sm mt-1">
-          Leads capturados e automações via Evolution API
-        </p>
-      </div>
+    <div className="flex items-center gap-0.5 rounded-xl border border-brand-border bg-brand-surface-2 p-0.5">
+      {opcoes.map((o) => (
+        <Link
+          key={o.id}
+          href={`/admin/crm?vista=${o.id}`}
+          aria-current={vista === o.id ? 'page' : undefined}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all',
+            vista === o.id
+              ? 'bg-brand-accent text-brand-on-accent shadow-cta'
+              : 'text-brand-muted hover:text-brand-text',
+          )}
+        >
+          <o.icone size={13} />
+          {o.label}
+        </Link>
+      ))}
+    </div>
+  )
+}
 
-      {/* WhatsApp Connection */}
+function CardEstatistica({
+  label, valor, icone: Icone, tom,
+}: {
+  label: string
+  valor: number
+  icone: LucideIcon
+  tom: TomStatus
+}) {
+  return (
+    <Card className="p-4">
+      <span
+        className={cn(
+          'mb-2 flex h-8 w-8 items-center justify-center rounded-full',
+          TOM_FUNDO[tom],
+          TOM_TEXTO[tom],
+        )}
+      >
+        <Icone size={16} />
+      </span>
+      <p className="font-barlow text-2xl font-bold tabular-nums text-brand-text">{valor}</p>
+      <p className="text-xs text-brand-muted">{label}</p>
+    </Card>
+  )
+}
+
+export default async function CrmPage({
+  searchParams,
+}: {
+  searchParams: { vista?: string }
+}) {
+  const vista = searchParams.vista === 'lista' ? 'lista' : 'funil'
+
+  const [totalLeads, responderam, convertidos, pendentes, falhas, enviadas] = await Promise.all([
+    prisma.crmLead.count(),
+    prisma.crmLead.count({ where: { etapa: 'RESPONDEU' } }),
+    prisma.crmLead.count({ where: { etapa: 'CONVERTIDO' } }),
+    prisma.crmMensagem.count({ where: { status: 'PENDENTE' } }),
+    prisma.crmMensagem.count({ where: { status: 'FALHA' } }),
+    prisma.crmMensagem.count({ where: { status: { in: ['ENVIADA', 'ENTREGUE', 'LIDA'] } } }),
+  ])
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        titulo="Funil de leads"
+        descricao="Arraste o card pela alça para mover o lead de etapa — ou use “Mover para…” no celular. O selo vermelho mostra quem está parado sem contato."
+        acoes={<AlternadorVista vista={vista} />}
+      />
+
       <WhatsAppConnect />
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {[
-          { label: 'Total Leads', value: totalLeads, icon: Users, color: '#3b82f6' },
-          { label: 'Responderam', value: responderam, icon: MessageCircle, color: '#10b981' },
-          { label: 'Convertidos', value: convertidos, icon: TrendingUp, color: '#8b5cf6' },
-          { label: 'Msgs Enviadas', value: enviadas, icon: CheckCircle2, color: '#10b981' },
-          { label: 'Na Fila', value: pendentes, icon: Clock, color: '#f59e0b' },
-          { label: 'Falhas', value: falhas, icon: AlertCircle, color: '#ef4444' },
-        ].map((s) => (
-          <div key={s.label} className="admin-glass rounded-xl p-4 border border-brand-border/20">
-            <s.icon size={18} style={{ color: s.color }} className="mb-2" />
-            <p className="text-2xl font-bold text-brand-text">{s.value}</p>
-            <p className="text-xs text-brand-muted">{s.label}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+        <CardEstatistica label="Total de leads" valor={totalLeads} icone={Users} tom="info" />
+        <CardEstatistica label="Responderam" valor={responderam} icone={MessageCircle} tom="info" />
+        <CardEstatistica label="Convertidos" valor={convertidos} icone={TrendingUp} tom="success" />
+        <CardEstatistica label="Msgs enviadas" valor={enviadas} icone={CheckCircle2} tom="success" />
+        <CardEstatistica label="Na fila" valor={pendentes} icone={Clock} tom="warning" />
+        <CardEstatistica label="Falhas" valor={falhas} icone={AlertCircle} tom="danger" />
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Leads */}
-        <div className="admin-glass rounded-xl border border-brand-border/20 overflow-hidden">
-          <div className="px-5 py-4 border-b border-brand-border/20">
-            <h2 className="font-bold text-brand-text flex items-center gap-2">
-              <Users size={16} className="text-brand-accent" />
-              Leads Capturados
-            </h2>
-          </div>
-          <div className="divide-y divide-brand-border/10 max-h-[500px] overflow-y-auto">
-            {leads.length === 0 ? (
-              <p className="text-brand-muted text-sm p-5">Nenhum lead ainda.</p>
-            ) : leads.map((lead) => {
-              const etapa = ETAPA_LABEL[lead.etapa] ?? { label: lead.etapa, color: '#888' }
-              return (
-                <div key={lead.id} className="px-5 py-3 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-medium text-sm text-brand-text truncate">{lead.nome}</p>
-                    <p className="text-xs text-brand-muted">{lead.whatsapp} · {lead.origem}</p>
-                    <p className="text-[10px] text-brand-muted/60">
-                      {new Date(lead.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+      {vista === 'funil' ? <VistaFunil /> : <VistaLista />}
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Vista funil — o Kanban
+   ═══════════════════════════════════════════════════════════════════ */
+
+async function VistaFunil() {
+  const desde = new Date(Date.now() - JANELA_FUNIL_DIAS * 24 * 60 * 60 * 1000)
+
+  const leads = await prisma.crmLead.findMany({
+    where: { updatedAt: { gte: desde } },
+    orderBy: { updatedAt: 'desc' },
+    take: 300,
+  })
+
+  if (leads.length === 0) {
+    return (
+      <EmptyState
+        titulo="Nenhum lead nos últimos 90 dias"
+        descricao="Quando alguém preencher o pop-up, clicar no botão de WhatsApp de um produto, abandonar o carrinho ou agendar um serviço, o lead aparece aqui."
+      />
+    )
+  }
+
+  const agora = Date.now()
+  const itens: LeadKanban[] = leads.map((l) => ({
+    id: l.id,
+    coluna: l.etapa,
+    rotulo: `Lead ${l.nome}`,
+    nome: l.nome,
+    whatsapp: l.whatsapp,
+    origem: l.origem,
+    produtoSlug: l.produtoSlug,
+    diasParado: Math.floor((agora - l.updatedAt.getTime()) / (24 * 60 * 60 * 1000)),
+  }))
+
+  return <LeadsKanban leads={itens} />
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Vista lista — leads capturados + fila de mensagens (funcionalidade
+   original da tela, só reconstruída com os primitives)
+   ═══════════════════════════════════════════════════════════════════ */
+
+async function VistaLista() {
+  const [leads, mensagens] = await Promise.all([
+    prisma.crmLead.findMany({ orderBy: { createdAt: 'desc' }, take: POR_LISTA }),
+    prisma.crmMensagem.findMany({ orderBy: { createdAt: 'desc' }, take: POR_LISTA }),
+  ])
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      <Card className="overflow-hidden">
+        <div className="border-b border-brand-hair px-5 py-3.5">
+          <h2 className="flex items-center gap-2 font-barlow text-lg font-bold text-brand-text">
+            <Users size={16} className="text-brand-accent" />
+            Leads capturados
+          </h2>
+        </div>
+        <div className="admin-scroll max-h-[560px] divide-y divide-brand-hair overflow-y-auto">
+          {leads.length === 0 ? (
+            <EmptyState
+              compacto
+              titulo="Nenhum lead ainda"
+              descricao="Assim que alguém preencher o pop-up ou clicar em WhatsApp, aparece aqui."
+              className="border-0"
+            />
+          ) : (
+            leads.map((lead) => (
+              <div key={lead.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-brand-text">{lead.nome}</p>
+                  <p className="text-xs text-brand-muted">{lead.whatsapp} · {lead.origem}</p>
+                  <p className="text-[10px] text-brand-dim">
+                    {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(lead.createdAt)}
+                  </p>
+                </div>
+                <StatusPill status={lead.etapa} className="shrink-0" />
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
+
+      <Card className="overflow-hidden">
+        <div className="border-b border-brand-hair px-5 py-3.5">
+          <h2 className="flex items-center gap-2 font-barlow text-lg font-bold text-brand-text">
+            <MessageCircle size={16} className="text-brand-accent" />
+            Mensagens recentes
+          </h2>
+        </div>
+        <div className="admin-scroll max-h-[560px] divide-y divide-brand-hair overflow-y-auto">
+          {mensagens.length === 0 ? (
+            <EmptyState
+              compacto
+              titulo="Nenhuma mensagem ainda"
+              descricao="As mensagens automáticas e manuais enviadas por WhatsApp aparecem aqui."
+              className="border-0"
+            />
+          ) : (
+            mensagens.map((msg) => (
+              <div key={msg.id} className="px-5 py-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-0.5 flex items-center gap-2">
+                      <p className="truncate text-xs font-medium text-brand-text">{msg.nome}</p>
+                      <span className="text-[10px] text-brand-muted">{msg.whatsapp}</span>
+                    </div>
+                    <p className="text-[10px] text-brand-dim">{TIPO_LABEL[msg.tipo] ?? msg.tipo}</p>
+                    <p className="mt-1 line-clamp-1 text-xs text-brand-muted opacity-70">{msg.conteudo}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <StatusPill status={msg.status} />
+                    <p className="mt-1 text-[10px] text-brand-dim">
+                      {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(msg.createdAt)}
                     </p>
                   </div>
-                  <span
-                    className="px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap shrink-0"
-                    style={{ background: etapa.color + '22', color: etapa.color, border: `1px solid ${etapa.color}33` }}
-                  >
-                    {etapa.label}
-                  </span>
                 </div>
-              )
-            })}
-          </div>
+              </div>
+            ))
+          )}
         </div>
-
-        {/* Mensagens */}
-        <div className="admin-glass rounded-xl border border-brand-border/20 overflow-hidden">
-          <div className="px-5 py-4 border-b border-brand-border/20">
-            <h2 className="font-bold text-brand-text flex items-center gap-2">
-              <MessageCircle size={16} className="text-brand-accent" />
-              Mensagens Recentes
-            </h2>
-          </div>
-          <div className="divide-y divide-brand-border/10 max-h-[500px] overflow-y-auto">
-            {mensagens.length === 0 ? (
-              <p className="text-brand-muted text-sm p-5">Nenhuma mensagem ainda.</p>
-            ) : mensagens.map((msg) => {
-              const status = STATUS_LABEL[msg.status] ?? { label: msg.status, color: '#888' }
-              return (
-                <div key={msg.id} className="px-5 py-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="font-medium text-xs text-brand-text truncate">{msg.nome}</p>
-                        <span className="text-[10px] text-brand-muted">{msg.whatsapp}</span>
-                      </div>
-                      <p className="text-[10px] text-brand-muted/70">{TIPO_LABEL[msg.tipo] ?? msg.tipo}</p>
-                      <p className="text-xs text-brand-muted mt-1 line-clamp-1 opacity-60">{msg.conteudo}</p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <span
-                        className="px-2 py-0.5 rounded-full text-[10px] font-bold"
-                        style={{ background: status.color + '22', color: status.color, border: `1px solid ${status.color}33` }}
-                      >
-                        {status.label}
-                      </span>
-                      <p className="text-[10px] text-brand-muted/50 mt-1">
-                        {new Date(msg.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-
+      </Card>
     </div>
   )
 }

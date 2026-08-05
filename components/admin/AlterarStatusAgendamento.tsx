@@ -3,8 +3,13 @@
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
+import { GrupoOpcoes } from '@/components/admin/ui/form'
+import { STATUS_AGENDAMENTO } from '@/lib/admin/status'
 
-const STATUS_OPTIONS = ['pendente', 'confirmado', 'concluido', 'cancelado']
+const OPCOES = Object.entries(STATUS_AGENDAMENTO).map(([valor, def]) => ({
+  valor,
+  label: def.label,
+}))
 
 export function AlterarStatusAgendamento({
   agendamentoId,
@@ -35,15 +40,11 @@ export function AlterarStatusAgendamento({
   }
 
   return (
-    <select
-      value={statusAtual}
-      onChange={(e) => alterar(e.target.value)}
+    <GrupoOpcoes
+      valor={statusAtual}
+      opcoes={OPCOES}
+      onChange={alterar}
       disabled={loading}
-      className="bg-brand-surface-2 border border-brand-border text-brand-text text-xs rounded-xl px-2 py-2 focus:outline-none focus:border-brand-accent transition-colors"
-    >
-      {STATUS_OPTIONS.map((s) => (
-        <option key={s} value={s}>{s}</option>
-      ))}
-    </select>
+    />
   )
 }

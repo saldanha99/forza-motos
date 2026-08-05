@@ -1,32 +1,63 @@
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { AdminSidebar } from '@/components/admin/AdminSidebar'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { lerTemaAdmin } from '@/lib/admin/tema'
+import { AdminThemeProvider } from '@/components/admin/ui/AdminTheme'
+import { AdminSidebar, type BadgesNav } from '@/components/admin/AdminSidebar'
+import { AdminTopbar } from '@/components/admin/AdminTopbar'
 import { CommandPalette } from '@/components/admin/CommandPalette'
+
+export const dynamic = 'force-dynamic'
+
+/**
+ * Contadores do menu. A sidebar em si já é um painel de status: dá para ver
+ * o que está pendente sem abrir a seção.
+ */
+async function contarPendencias(): Promise<BadgesNav> {
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+
+  try {
+    const [pedidos, agendamentos, leads, curadoria] = await Promise.all([
+      prisma.order.count({ where: { status: { in: ['CONFIRMADO', 'SEPARANDO'] } } }),
+      prisma.appointment.count({ where: { status: 'pendente', dataPreferida: { gte: hoje } } }),
+      prisma.crmLead.count({ where: { etapa: { in: ['NOVO', 'RESPONDEU'] } } }),
+      prisma.product.count({
+        where: { tinyId: { not: null }, ehPai: false, ativo: false, ocultoManual: false, temImagem: true, estoque: { gt: 0 } },
+      }),
+    ])
+    return { pedidos, agendamentos, leads, curadoria }
+  } catch {
+    // Contador é enfeite: se o banco tossir, o menu continua funcionando
+    return {}
+  }
+}
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') redirect('/login')
 
+  const [tema, badges] = await Promise.all([
+    Promise.resolve(lerTemaAdmin()),
+    contarPendencias(),
+  ])
+
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-[#050505] via-[#0a0a0a] to-[#120505] relative overflow-hidden text-brand-text">
-      {/* Premium ambient glows */}
-      <div className="absolute top-[-200px] left-[-200px] w-[600px] h-[600px] rounded-full bg-brand-accent/5 blur-[120px] pointer-events-none z-0" />
-      <div className="absolute bottom-[-200px] right-[-200px] w-[700px] h-[700px] rounded-full bg-brand-accent/3 blur-[150px] pointer-events-none z-0" />
-      <div className="absolute top-[30%] left-[50%] -translate-x-1/2 w-[400px] h-[400px] rounded-full bg-brand-accent/[0.02] blur-[100px] pointer-events-none z-0" />
+    <AdminThemeProvider temaInicial={tema}>
+      <div className="flex min-h-screen bg-brand-bg text-brand-text">
+        <AdminSidebar user={session.user} badges={badges} />
 
-      {/* Sidebar */}
-      <AdminSidebar user={session.user} />
+        {/* Busca global ⌘K */}
+        <CommandPalette />
 
-      {/* Busca global ⌘K */}
-      <CommandPalette />
-
-      {/* Main Content */}
-      <main className="flex-1 min-w-0 p-6 lg:p-8 overflow-auto pb-24 lg:pb-8 relative z-10">
-        <div className="max-w-7xl mx-auto w-full">
-          {children}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <AdminTopbar user={session.user} />
+          <main className="admin-scroll flex-1 p-4 pb-24 sm:p-6 lg:p-8 lg:pb-8">
+            <div className="mx-auto w-full max-w-7xl">{children}</div>
+          </main>
         </div>
-      </main>
-    </div>
+      </div>
+    </AdminThemeProvider>
   )
 }

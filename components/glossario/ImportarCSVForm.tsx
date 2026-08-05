@@ -1,7 +1,10 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { AlertTriangle, CheckCircle2, Upload } from 'lucide-react'
 import { ModeloSelector } from './ModeloSelector'
+import { Card, SectionTitle, Botao } from '@/components/admin/ui/primitives'
+import { Campo, Input, Textarea, Select, AcoesFormulario } from '@/components/admin/ui/form'
 
 /**
  * Formulário de importação CSV em massa — réplica modernizada do
@@ -89,172 +92,157 @@ export function ImportarCSVForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl">
+    <form onSubmit={handleSubmit} className="max-w-4xl space-y-6">
       {/* Upload CSV */}
-      <div>
-        <label className="block text-sm font-medium mb-1.5">
-          Arquivo CSV <span className="text-red-500">*</span>
-        </label>
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".csv"
-          onChange={handleArquivo}
-          className="w-full text-sm"
-          required
-        />
-        <p className="mt-1 text-xs text-muted-foreground">
-          Formato esperado: <code className="font-mono">titulo,letra,categoria</code>{' '}
-          (header obrigatório).{' '}
-          {linhasCSV > 0 && (
-            <span className="text-foreground font-medium">
-              {linhasCSV} termos detectados.
-            </span>
-          )}
-        </p>
-      </div>
+      <Card className="space-y-5 p-6">
+        <SectionTitle>Arquivo</SectionTitle>
+        <Campo
+          label="Arquivo CSV"
+          obrigatorio
+          htmlFor="csv-arquivo"
+          dica={
+            linhasCSV > 0
+              ? `Formato esperado: titulo,letra,categoria (header obrigatório). ${linhasCSV} termos detectados.`
+              : 'Formato esperado: titulo,letra,categoria (header obrigatório).'
+          }
+        >
+          <label
+            htmlFor="csv-arquivo"
+            className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-brand-border bg-brand-surface-2 px-4 py-3 text-sm text-brand-muted transition-colors hover:border-brand-accent"
+          >
+            <Upload size={16} className="shrink-0 text-brand-dim" />
+            {arquivo ? arquivo.name : 'Selecione um arquivo .csv'}
+          </label>
+          <input
+            ref={inputRef}
+            id="csv-arquivo"
+            type="file"
+            accept=".csv"
+            onChange={handleArquivo}
+            className="hidden"
+            required
+          />
+        </Campo>
+      </Card>
 
       {/* Modelo */}
-      <div>
-        <label className="block text-sm font-medium mb-1.5">Modelo de IA</label>
-        <ModeloSelector
-          value={modeloId}
-          onChange={setModeloId}
-          quantidadeTermos={linhasCSV}
-        />
+      <Card className="space-y-5 p-6">
+        <SectionTitle>Modelo de IA</SectionTitle>
+        <Campo label="Modelo de IA">
+          <ModeloSelector
+            value={modeloId}
+            onChange={setModeloId}
+            quantidadeTermos={linhasCSV}
+          />
+        </Campo>
         {linhasCSV > 100 && (
-          <p className="mt-2 text-xs text-amber-600">
-            ⚠️ Você está enfileirando {linhasCSV} termos. Confira a estimativa de
-            custo antes de prosseguir, especialmente em modelos premium.
+          <p className="flex items-center gap-2 text-xs font-medium text-brand-warning">
+            <AlertTriangle size={14} />
+            Você está enfileirando {linhasCSV} termos. Confira a estimativa de custo
+            antes de prosseguir, especialmente em modelos premium.
           </p>
         )}
-      </div>
+      </Card>
 
       {/* Resto dos campos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="Nicho / Segmento" required>
-          <input
-            type="text"
-            value={nicho}
-            onChange={(e) => setNicho(e.target.value)}
-            required
-            className="w-full px-3 py-2 border rounded-md"
-          />
-        </Field>
+      <Card className="space-y-5 p-6">
+        <SectionTitle>Configuração do texto</SectionTitle>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Campo label="Nicho / Segmento" obrigatorio htmlFor="csv-nicho">
+            <Input
+              id="csv-nicho"
+              type="text"
+              value={nicho}
+              onChange={(e) => setNicho(e.target.value)}
+              required
+            />
+          </Campo>
 
-        <Field label="Idioma">
-          <select
-            value={idioma}
-            onChange={(e) => setIdioma(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md"
-          >
-            <option value="pt-BR">Português (Brasil)</option>
-            <option value="en-US">Inglês (EUA)</option>
-            <option value="es-ES">Espanhol</option>
-          </select>
-        </Field>
+          <Campo label="Idioma" htmlFor="csv-idioma">
+            <Select id="csv-idioma" value={idioma} onChange={(e) => setIdioma(e.target.value)}>
+              <option value="pt-BR">Português (Brasil)</option>
+              <option value="en-US">Inglês (EUA)</option>
+              <option value="es-ES">Espanhol</option>
+            </Select>
+          </Campo>
 
-        <Field label="Estilo / Tom">
-          <select
-            value={estilo}
-            onChange={(e) => setEstilo(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md"
-          >
-            <option value="informativo, técnico e acessível">
-              Informativo, técnico e acessível
-            </option>
-            <option value="profissional e formal">Profissional e formal</option>
-            <option value="educativo, didático">Educativo, didático</option>
-          </select>
-        </Field>
+          <Campo label="Estilo / Tom" htmlFor="csv-estilo">
+            <Select id="csv-estilo" value={estilo} onChange={(e) => setEstilo(e.target.value)}>
+              <option value="informativo, técnico e acessível">
+                Informativo, técnico e acessível
+              </option>
+              <option value="profissional e formal">Profissional e formal</option>
+              <option value="educativo, didático">Educativo, didático</option>
+            </Select>
+          </Campo>
 
-        <Field label="Tokens máximos por termo">
-          <input
-            type="number"
-            value={maxTokens}
-            onChange={(e) => setMaxTokens(Number(e.target.value))}
-            min={500}
-            max={8000}
-            step={250}
-            className="w-full px-3 py-2 border rounded-md"
-          />
-        </Field>
-      </div>
+          <Campo label="Tokens máximos por termo" htmlFor="csv-tokens">
+            <Input
+              id="csv-tokens"
+              type="number"
+              value={maxTokens}
+              onChange={(e) => setMaxTokens(Number(e.target.value))}
+              min={500}
+              max={8000}
+              step={250}
+            />
+          </Campo>
+        </div>
 
-      <Field
-        label="Agendamento de publicação"
-        hint="Espalha as publicações no tempo (mais natural aos olhos do Google)"
-      >
-        <select
-          value={agendamento}
-          onChange={(e) =>
-            setAgendamento(e.target.value as 'imediato' | 'diario' | 'semanal')
-          }
-          className="w-full px-3 py-2 border rounded-md"
+        <Campo
+          label="Agendamento de publicação"
+          htmlFor="csv-agendamento"
+          dica="Espalha as publicações no tempo (mais natural aos olhos do Google)"
         >
-          <option value="imediato">Imediato (no próximo tick do cron)</option>
-          <option value="diario">1 por dia</option>
-          <option value="semanal">1 por semana</option>
-        </select>
-      </Field>
+          <Select
+            id="csv-agendamento"
+            value={agendamento}
+            onChange={(e) =>
+              setAgendamento(e.target.value as 'imediato' | 'diario' | 'semanal')
+            }
+          >
+            <option value="imediato">Imediato (no próximo tick do cron)</option>
+            <option value="diario">1 por dia</option>
+            <option value="semanal">1 por semana</option>
+          </Select>
+        </Campo>
 
-      <Field
-        label="Prompt extra (opcional)"
-        hint="Instruções adicionais aplicadas a TODOS os termos do lote"
-      >
-        <textarea
-          value={promptExtra}
-          onChange={(e) => setPromptExtra(e.target.value)}
-          rows={3}
-          className="w-full px-3 py-2 border rounded-md resize-y"
-        />
-      </Field>
-
-      <div className="flex items-center gap-3 pt-4 border-t">
-        <button
-          type="submit"
-          disabled={enviando || !arquivo}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium disabled:opacity-50"
+        <Campo
+          label="Prompt extra (opcional)"
+          htmlFor="csv-prompt-extra"
+          dica="Instruções adicionais aplicadas a TODOS os termos do lote"
         >
-          {enviando ? 'Enviando...' : `📤 Enfileirar ${linhasCSV || ''} termos`}
-        </button>
-        {erro && <span className="text-sm text-red-600">{erro}</span>}
-      </div>
+          <Textarea
+            id="csv-prompt-extra"
+            value={promptExtra}
+            onChange={(e) => setPromptExtra(e.target.value)}
+            rows={3}
+          />
+        </Campo>
+      </Card>
 
       {resultado && (
-        <div className="p-4 border-2 border-green-500 bg-green-50 dark:bg-green-950 rounded-md">
-          <p className="text-green-900 dark:text-green-100">
-            ✅ <strong>{resultado.enfileirados} termos enfileirados.</strong> O cron
-            de geração processa até 5 por hora — acompanhe o progresso em{' '}
-            <a href="/admin/glossario/jobs" className="underline">
+        <Card className="space-y-2 border-brand-success bg-brand-success-soft p-5">
+          <p className="flex items-center gap-2 text-sm font-semibold text-brand-success">
+            <CheckCircle2 size={16} />
+            {resultado.enfileirados} termos enfileirados.
+          </p>
+          <p className="text-sm text-brand-text">
+            O cron de geração processa até 5 por hora — acompanhe o progresso em{' '}
+            <a href="/admin/glossario/jobs" className="text-brand-accent underline">
               /admin/glossario/jobs
             </a>
             .
           </p>
-        </div>
+        </Card>
       )}
-    </form>
-  )
-}
 
-function Field({
-  label,
-  hint,
-  required,
-  children,
-}: {
-  label: string
-  hint?: string
-  required?: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <div>
-      <label className="block text-sm font-medium mb-1.5">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      {children}
-      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
-    </div>
+      <AcoesFormulario>
+        {erro && <span className="mr-auto text-sm font-medium text-brand-danger">{erro}</span>}
+        <Botao type="submit" tamanho="lg" disabled={enviando || !arquivo}>
+          {enviando ? 'Enviando…' : `📤 Enfileirar ${linhasCSV || ''} termos`}
+        </Botao>
+      </AcoesFormulario>
+    </form>
   )
 }

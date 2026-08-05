@@ -4,6 +4,9 @@ import { useEffect, useState, useCallback } from 'react'
 import { RefreshCw, Wifi, WifiOff, Smartphone, LogOut, Plus, Check, ChevronDown, ChevronUp } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Image from 'next/image'
+import { Badge, Botao, TOM_TEXTO, TOM_PONTO } from '@/components/admin/ui/primitives'
+import { Input } from '@/components/admin/ui/form'
+import type { TomStatus } from '@/lib/admin/status'
 
 interface Instancia {
   name: string
@@ -17,6 +20,13 @@ interface WaStatus {
   instance: string
   instancias: Instancia[]
   error?: string
+}
+
+/** Tom de cor por estado de instância — mesma leitura usada no card de conexão principal. */
+function tomEstado(state: string): TomStatus {
+  if (state === 'open') return 'success'
+  if (state === 'connecting') return 'warning'
+  return 'danger'
 }
 
 export function WhatsAppQRCard() {
@@ -112,37 +122,24 @@ export function WhatsAppQRCard() {
     ? data.qr.startsWith('data:') ? data.qr : `data:image/png;base64,${data.qr}`
     : null
 
-  function stateColor(state: string) {
-    if (state === 'open') return 'text-green-400'
-    if (state === 'connecting') return 'text-yellow-400'
-    return 'text-red-400'
-  }
-  function stateDot(state: string) {
-    if (state === 'open') return 'bg-green-400'
-    if (state === 'connecting') return 'bg-yellow-400 animate-pulse'
-    return 'bg-red-400'
-  }
+  const tomAtual: TomStatus = isConnected ? 'success' : isConnecting ? 'warning' : 'danger'
 
   return (
-    <div className="bg-white/5 border border-brand-border/30 rounded-2xl p-5 space-y-5">
+    <div className="space-y-5">
 
       {/* ── Header ─────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Smartphone size={16} className="text-brand-muted" />
-          <span className="text-brand-text font-semibold text-sm">WhatsApp — Evolution API</span>
+          <span className="text-sm font-semibold text-brand-text">WhatsApp — Evolution API</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
-            isConnected ? 'bg-green-500/20 text-green-400'
-            : isConnecting ? 'bg-yellow-500/20 text-yellow-400'
-            : 'bg-red-500/20 text-red-400'
-          }`}>
+          <Badge tom={tomAtual}>
             {isConnected ? <Wifi size={11} /> : <WifiOff size={11} />}
             {loading ? 'Verificando...' : isConnected ? 'Conectado' : isConnecting ? 'Conectando...' : 'Desconectado'}
-          </span>
+          </Badge>
           <button onClick={fetchStatus} disabled={loading} title="Atualizar"
-            className="p-1.5 rounded-lg hover:bg-white/10 text-brand-muted hover:text-brand-text transition-all disabled:opacity-40">
+            className="rounded-lg p-1.5 text-brand-muted transition-all hover:bg-brand-tint-2 hover:text-brand-text disabled:opacity-40">
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
@@ -150,21 +147,21 @@ export function WhatsAppQRCard() {
 
       {/* ── Instância ativa ────────────────────────────────────── */}
       {data?.instance && (
-        <p className="text-xs text-brand-muted -mt-2">
-          Instância ativa: <code className="text-indigo-400">{data.instance}</code>
+        <p className="-mt-2 text-xs text-brand-muted">
+          Instância ativa: <code className="text-brand-accent">{data.instance}</code>
         </p>
       )}
 
       {/* ── Estado: CONECTADO ──────────────────────────────────── */}
       {isConnected && (
-        <div className="text-center py-3">
-          <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
-            <Wifi size={22} className="text-green-400" />
+        <div className="py-3 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-brand-success-soft">
+            <Wifi size={22} className="text-brand-success" />
           </div>
-          <p className="text-green-400 font-semibold text-sm">WhatsApp conectado</p>
-          <p className="text-brand-muted text-xs mt-1">Mensagens automáticas ativas</p>
+          <p className="text-sm font-semibold text-brand-success">WhatsApp conectado</p>
+          <p className="mt-1 text-xs text-brand-muted">Mensagens automáticas ativas</p>
           <button onClick={desconectar}
-            className="mt-4 flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 mx-auto transition-colors">
+            className="mx-auto mt-4 flex items-center gap-1.5 text-xs text-brand-danger transition-colors hover:brightness-90">
             <LogOut size={12} /> Desconectar
           </button>
         </div>
@@ -173,15 +170,17 @@ export function WhatsAppQRCard() {
       {/* ── Estado: QR CODE ────────────────────────────────────── */}
       {!isConnected && qrSrc && (
         <div className="flex flex-col items-center gap-3">
-          <p className="text-brand-muted text-xs text-center">
+          <p className="text-center text-xs text-brand-muted">
             Abra o WhatsApp → <strong className="text-brand-text">Dispositivos Conectados</strong> → <strong className="text-brand-text">Conectar dispositivo</strong>
           </p>
-          <div className="bg-white p-3 rounded-xl">
+          {/* Fundo branco fixo nos dois temas: a câmera do celular precisa de alto
+              contraste preto-sobre-branco pra ler o código — isso não muda com o tema. */}
+          <div className="rounded-xl bg-white p-3">
             <Image src={qrSrc} alt="QR Code WhatsApp" width={220} height={220} unoptimized className="rounded-lg" />
           </div>
-          <p className="text-brand-muted text-[11px]">Atualiza automaticamente a cada 8 s</p>
+          <p className="text-[11px] text-brand-muted">Atualiza automaticamente a cada 8 s</p>
           <button onClick={() => reiniciar()} disabled={restarting}
-            className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors disabled:opacity-40">
+            className="flex items-center gap-1.5 text-xs text-brand-accent transition-colors hover:text-brand-accent-hover disabled:opacity-40">
             <RefreshCw size={12} className={restarting ? 'animate-spin' : ''} />
             {restarting ? 'Reiniciando...' : 'Reiniciar instância'}
           </button>
@@ -190,15 +189,14 @@ export function WhatsAppQRCard() {
 
       {/* ── Estado: sem QR ─────────────────────────────────────── */}
       {!isConnected && !qrSrc && !loading && (
-        <div className="text-center py-3">
-          <p className="text-brand-muted text-sm mb-3">
+        <div className="py-3 text-center">
+          <p className="mb-3 text-sm text-brand-muted">
             {data?.error ?? (isConnecting ? 'Aguardando QR Code...' : 'Instância desconectada')}
           </p>
-          <button onClick={() => reiniciar()} disabled={restarting}
-            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">
+          <Botao variante="primario" tamanho="md" onClick={() => reiniciar()} disabled={restarting}>
             <RefreshCw size={14} className={restarting ? 'animate-spin' : ''} />
             {restarting ? 'Reiniciando...' : 'Gerar QR Code'}
-          </button>
+          </Botao>
         </div>
       )}
 
@@ -209,67 +207,73 @@ export function WhatsAppQRCard() {
       )}
 
       {/* ── Criar nova instância ────────────────────────────────── */}
-      <div className="border-t border-brand-border/20 pt-4">
-        <p className="text-brand-text text-xs font-semibold mb-2 flex items-center gap-1.5">
+      <div className="border-t border-brand-hair pt-4">
+        <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-brand-text">
           <Plus size={12} /> Nova instância
         </p>
         <div className="flex gap-2">
-          <input
+          <Input
             type="text"
             value={novaInstancia}
             onChange={e => setNovaInstancia(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && criar()}
             placeholder="ex: forza-motos"
-            className="flex-1 bg-black/30 border border-brand-border/40 rounded-xl px-3 py-2 text-sm text-brand-text placeholder:text-brand-muted/40 focus:outline-none focus:border-indigo-500/60"
+            className="flex-1"
           />
-          <button onClick={criar} disabled={criando || !novaInstancia.trim()}
-            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap">
+          <Botao
+            variante="primario"
+            tamanho="md"
+            onClick={criar}
+            disabled={criando || !novaInstancia.trim()}
+            className="whitespace-nowrap"
+          >
             {criando ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
             {criando ? 'Criando...' : 'Criar'}
-          </button>
+          </Botao>
         </div>
-        <p className="text-brand-muted text-[11px] mt-1.5">
+        <p className="mt-1.5 text-[11px] text-brand-muted">
           Cria a instância na Evolution API e já a seleciona como ativa.
         </p>
       </div>
 
       {/* ── Lista de instâncias existentes ─────────────────────── */}
       {(data?.instancias?.length ?? 0) > 0 && (
-        <div className="border-t border-brand-border/20 pt-4">
+        <div className="border-t border-brand-hair pt-4">
           <button
             onClick={() => setShowInstancias(v => !v)}
-            className="flex items-center justify-between w-full text-xs font-semibold text-brand-text mb-2"
+            className="flex w-full items-center justify-between text-xs font-semibold text-brand-text"
           >
             <span>Instâncias existentes ({data!.instancias.length})</span>
             {showInstancias ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
           </button>
 
           {showInstancias && (
-            <div className="space-y-1.5 mt-2">
+            <div className="mt-2 space-y-1.5">
               {data!.instancias.map(inst => {
                 const isActive = inst.name === data?.instance
+                const tomInst = tomEstado(inst.state)
                 return (
                   <div key={inst.name}
-                    className={`flex items-center justify-between px-3 py-2 rounded-xl border transition-all ${
+                    className={`flex items-center justify-between rounded-xl border px-3 py-2 transition-all ${
                       isActive
-                        ? 'border-indigo-500/40 bg-indigo-500/10'
-                        : 'border-brand-border/20 bg-black/20'
+                        ? 'border-brand-accent bg-brand-accent-soft'
+                        : 'border-brand-border bg-brand-surface-2'
                     }`}>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className={`w-2 h-2 rounded-full shrink-0 ${stateDot(inst.state)}`} />
-                      <span className="text-brand-text text-xs font-medium truncate">{inst.name}</span>
-                      <span className={`text-[10px] ${stateColor(inst.state)}`}>{inst.state}</span>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${TOM_PONTO[tomInst]} ${inst.state === 'connecting' ? 'animate-pulse' : ''}`} />
+                      <span className="truncate text-xs font-medium text-brand-text">{inst.name}</span>
+                      <span className={`text-[10px] ${TOM_TEXTO[tomInst]}`}>{inst.state}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                    <div className="ml-2 flex shrink-0 items-center gap-1.5">
                       {isActive ? (
-                        <span className="flex items-center gap-1 text-[10px] text-indigo-400">
+                        <span className="flex items-center gap-1 text-[10px] text-brand-accent">
                           <Check size={10} /> ativa
                         </span>
                       ) : (
                         <button
                           onClick={() => selecionar(inst.name)}
                           disabled={selecionando === inst.name}
-                          className="text-[10px] text-indigo-400 hover:text-indigo-300 disabled:opacity-40 transition-colors"
+                          className="text-[10px] text-brand-accent transition-colors hover:text-brand-accent-hover disabled:opacity-40"
                         >
                           {selecionando === inst.name ? 'Selecionando...' : 'Usar esta'}
                         </button>
@@ -277,7 +281,7 @@ export function WhatsAppQRCard() {
                       {inst.state !== 'open' && (
                         <button
                           onClick={() => reiniciar(inst.name)}
-                          className="text-[10px] text-brand-muted hover:text-brand-text transition-colors"
+                          className="text-[10px] text-brand-muted transition-colors hover:text-brand-text"
                           title="Reiniciar"
                         >
                           <RefreshCw size={10} />

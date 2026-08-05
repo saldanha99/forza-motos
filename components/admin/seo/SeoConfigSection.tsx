@@ -1,10 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Settings, Save, RefreshCw, CheckCircle2, Key, Globe, Search } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { CheckCircle2, ChevronDown, Globe, Key, RefreshCw, Save, Search, Settings } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { cn } from '@/lib/utils'
+import { Botao, Card } from '@/components/admin/ui/primitives'
+import { Campo, Input } from '@/components/admin/ui/form'
 
-interface Campo {
+interface CampoConfig {
   key: string
   label: string
   placeholder: string
@@ -13,7 +16,7 @@ interface Campo {
   tipo?: 'text' | 'password'
 }
 
-const CAMPOS: Campo[] = [
+const CAMPOS: CampoConfig[] = [
   {
     key: 'google_site_verification',
     label: 'Google Site Verification',
@@ -85,31 +88,34 @@ export function SeoConfigSection() {
   }
 
   return (
-    <div className="admin-glass border border-brand-border/30 rounded-2xl overflow-hidden">
+    <Card className="overflow-hidden">
       {/* Header — clicável para expandir */}
       <button
+        type="button"
         onClick={() => setAberto((o) => !o)}
-        className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors"
+        className="flex w-full items-center justify-between px-5 py-4 transition-colors hover:bg-brand-tint-1"
       >
         <div className="flex items-center gap-3">
           <Settings size={16} className="text-brand-accent" />
-          <span className="font-semibold text-brand-text text-sm">Configurações SEO</span>
-          <span className="text-xs text-brand-muted bg-white/5 px-2 py-0.5 rounded-full border border-brand-border/30">
+          <span className="text-sm font-semibold text-brand-text">Configurações SEO</span>
+          <span className="rounded-full border border-brand-border bg-brand-surface-2 px-2 py-0.5 text-xs text-brand-muted">
             token GSC · URL · IndexNow
           </span>
         </div>
-        <span className="text-brand-muted text-xs">{aberto ? '▲ fechar' : '▼ abrir'}</span>
+        <ChevronDown
+          size={16}
+          className={cn('text-brand-dim transition-transform', aberto && 'rotate-180')}
+        />
       </button>
 
       {aberto && (
-        <div className="px-5 pb-5 border-t border-brand-border/20">
-
+        <div className="border-t border-brand-hair px-5 pb-5">
           {/* Instrução GSC destacada */}
-          <div className="mt-4 mb-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4">
-            <p className="text-indigo-300 font-semibold text-xs mb-2 flex items-center gap-2">
+          <div className="mb-4 mt-4 rounded-xl border border-brand-border bg-brand-info-soft p-4">
+            <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-brand-info">
               <Search size={12} /> Como verificar no Google Search Console
             </p>
-            <ol className="text-brand-muted text-xs space-y-1 list-decimal list-inside">
+            <ol className="list-inside list-decimal space-y-1 text-xs text-brand-muted">
               <li>Acesse <strong className="text-brand-text">search.google.com/search-console</strong></li>
               <li>Adicionar propriedade → <strong className="text-brand-text">URL Prefix</strong></li>
               <li>Verificação por <strong className="text-brand-text">Tag HTML</strong></li>
@@ -123,40 +129,47 @@ export function SeoConfigSection() {
           {/* Campos */}
           <div className="space-y-3">
             {CAMPOS.map((c) => (
-              <div key={c.key} className="bg-black/20 border border-brand-border/20 rounded-xl p-4">
-                <label className="flex items-center gap-2 text-brand-text font-semibold text-xs mb-1">
-                  {c.icon} {c.label}
-                  {salvos.has(c.key) && (
-                    <span className="ml-auto flex items-center gap-1 text-emerald-400 text-xs">
-                      <CheckCircle2 size={11} /> salvo
-                    </span>
-                  )}
-                </label>
-                <p className="text-brand-muted text-xs mb-2">{c.help}</p>
-                <div className="flex gap-2">
-                  <input
-                    type={c.tipo ?? 'text'}
-                    value={valores[c.key] ?? ''}
-                    onChange={(e) => setValores((v) => ({ ...v, [c.key]: e.target.value }))}
-                    placeholder={c.placeholder}
-                    className="flex-1 bg-black/40 border border-brand-border/30 rounded-xl px-3 py-2 text-sm text-brand-text placeholder:text-brand-muted/40 focus:outline-none focus:border-indigo-500/50 font-mono"
-                  />
-                  <button
-                    onClick={() => salvar(c.key)}
-                    disabled={salvando === c.key}
-                    className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-3 py-2 rounded-xl text-xs font-semibold transition-all"
-                  >
-                    {salvando === c.key
-                      ? <RefreshCw size={12} className="animate-spin" />
-                      : <Save size={12} />}
-                    Salvar
-                  </button>
-                </div>
+              <div key={c.key} className="rounded-xl border border-brand-border bg-brand-surface-2 p-4">
+                <Campo
+                  label={c.label}
+                  dica={c.help}
+                  htmlFor={`seo-config-${c.key}`}
+                >
+                  <div className="flex gap-2">
+                    <Input
+                      id={`seo-config-${c.key}`}
+                      type={c.tipo ?? 'text'}
+                      value={valores[c.key] ?? ''}
+                      onChange={(e) => setValores((v) => ({ ...v, [c.key]: e.target.value }))}
+                      placeholder={c.placeholder}
+                      className="font-mono"
+                    />
+                    <Botao
+                      type="button"
+                      tamanho="sm"
+                      onClick={() => salvar(c.key)}
+                      disabled={salvando === c.key}
+                      className="shrink-0"
+                    >
+                      {salvando === c.key ? (
+                        <RefreshCw size={12} className="animate-spin" />
+                      ) : (
+                        <Save size={12} />
+                      )}
+                      Salvar
+                    </Botao>
+                  </div>
+                </Campo>
+                {salvos.has(c.key) && (
+                  <p className="mt-2 flex items-center gap-1 text-xs text-brand-success">
+                    <CheckCircle2 size={11} /> salvo
+                  </p>
+                )}
               </div>
             ))}
           </div>
         </div>
       )}
-    </div>
+    </Card>
   )
 }

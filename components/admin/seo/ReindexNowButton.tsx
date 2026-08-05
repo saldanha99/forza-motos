@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { CheckCircle2, RefreshCw, XCircle } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Botao } from '@/components/admin/ui/primitives'
 
 /**
  * Botão "Reindexar agora" — dispara o retry de URLs que falharam nas
@@ -10,7 +12,7 @@ import { RefreshCw } from 'lucide-react'
  */
 export function ReindexNowButton() {
   const [carregando, setCarregando] = useState(false)
-  const [resultado, setResultado] = useState<string | null>(null)
+  const [resultado, setResultado] = useState<{ texto: string; erro: boolean } | null>(null)
 
   async function handleClick() {
     setCarregando(true)
@@ -19,10 +21,13 @@ export function ReindexNowButton() {
       const res = await fetch('/api/seo/retry', { method: 'POST' })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Erro')
-      setResultado(`✅ ${json.reenviadas} URLs reenviadas (${json.falhas || 0} falhas)`)
+      setResultado({
+        texto: `${json.reenviadas} URLs reenviadas (${json.falhas || 0} falhas)`,
+        erro: false,
+      })
       setTimeout(() => setResultado(null), 5000)
     } catch (e: any) {
-      setResultado(`❌ ${e.message}`)
+      setResultado({ texto: e.message, erro: true })
       setTimeout(() => setResultado(null), 5000)
     } finally {
       setCarregando(false)
@@ -31,17 +36,19 @@ export function ReindexNowButton() {
 
   return (
     <div className="relative">
-      <button
-        onClick={handleClick}
-        disabled={carregando}
-        className="inline-flex items-center gap-2 bg-gradient-to-r from-brand-accent to-brand-accent-hover hover:opacity-90 disabled:opacity-50 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-md shadow-brand-accent/20"
-      >
+      <Botao onClick={handleClick} disabled={carregando}>
         <RefreshCw size={14} className={carregando ? 'animate-spin' : ''} />
         {carregando ? 'Reenviando...' : 'Reenviar falhas'}
-      </button>
+      </Botao>
       {resultado && (
-        <div className="absolute top-full right-0 mt-2 px-3 py-2 bg-black/80 border border-brand-border/40 rounded-lg text-xs whitespace-nowrap shadow-xl z-10">
-          {resultado}
+        <div
+          className={cn(
+            'absolute right-0 top-full z-10 mt-2 flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-brand-border bg-brand-elevated px-3 py-2 text-xs shadow-pop',
+            resultado.erro ? 'text-brand-danger' : 'text-brand-success',
+          )}
+        >
+          {resultado.erro ? <XCircle size={13} /> : <CheckCircle2 size={13} />}
+          {resultado.texto}
         </div>
       )}
     </div>

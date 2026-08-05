@@ -1,7 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { ChevronDown, CheckCircle2, AlertCircle, Loader2, Play, StopCircle, Tag } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Loader2, Play, StopCircle, Tag } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Botao, Card, CardHeader, EmptyState, TOM_FUNDO, TOM_TEXTO } from '@/components/admin/ui/primitives'
+import { Select } from '@/components/admin/ui/form'
 
 interface CatInfo {
   categoria: string
@@ -109,140 +112,140 @@ export function SyncCategoriaClient() {
     <div className="space-y-6">
 
       {/* ── Seletor de categoria ── */}
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-4 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
-        <h2 className="text-brand-text font-semibold text-sm flex items-center gap-2">
-          <Tag size={14} className="text-brand-accent" />
-          Selecionar categoria
-        </h2>
-
-        {loadingCats ? (
-          <div className="flex items-center gap-2 text-brand-muted text-sm">
-            <Loader2 size={14} className="animate-spin text-brand-accent" /> Carregando categorias…
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="relative">
-              <select
+      <Card>
+        <CardHeader
+          titulo={
+            <span className="inline-flex items-center gap-2">
+              <Tag size={14} className="text-brand-accent" />
+              Selecionar categoria
+            </span>
+          }
+        />
+        <div className="space-y-4 p-5">
+          {loadingCats ? (
+            <div className="flex items-center gap-2 text-sm text-brand-muted">
+              <Loader2 size={14} className="animate-spin text-brand-accent" /> Carregando categorias…
+            </div>
+          ) : categorias.length === 0 ? (
+            <EmptyState
+              compacto
+              icone={Tag}
+              titulo="Nenhuma categoria encontrada"
+              descricao="Categorias aparecem aqui assim que houver produtos com categoria cadastrada no Tiny."
+            />
+          ) : (
+            <div className="space-y-3">
+              <Select
                 value={selected}
                 onChange={e => { setSelected(e.target.value); setDone(false); setLog([]); setError('') }}
                 disabled={running}
-                className="w-full bg-brand-surface-2 border border-brand-border text-brand-text rounded-xl px-4 py-3 text-sm appearance-none focus:outline-none focus:border-brand-accent/50 disabled:opacity-50 transition-all duration-200"
               >
-                <option value="" className="bg-brand-bg text-brand-text">— Escolha uma categoria —</option>
+                <option value="">— Escolha uma categoria —</option>
                 {categorias.map(c => (
-                  <option key={c.categoria} value={c.categoria} className="bg-brand-bg text-brand-text">
+                  <option key={c.categoria} value={c.categoria}>
                     {c.categoria} ({c.total} produtos{c.semImagem > 0 ? ` · ${c.semImagem} sem foto` : ''})
                   </option>
                 ))}
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-muted pointer-events-none" />
-            </div>
+              </Select>
 
-            {catSelecionada && (
-              <div className="flex gap-3">
-                <div className="bg-brand-surface-2 border border-brand-border/30 rounded-xl px-3 py-2 text-center flex-1">
-                  <div className="text-brand-text font-bold text-lg">{catSelecionada.total}</div>
-                  <div className="text-brand-muted text-[10px]">Total</div>
+              {catSelecionada && (
+                <div className="flex gap-3">
+                  <div className="flex-1 rounded-xl border border-brand-border bg-brand-surface-2 px-3 py-2 text-center">
+                    <div className="text-lg font-bold text-brand-text">{catSelecionada.total}</div>
+                    <div className="text-[10px] text-brand-muted">Total</div>
+                  </div>
+                  <div className={cn('flex-1 rounded-xl px-3 py-2 text-center', TOM_FUNDO.warning)}>
+                    <div className={cn('text-lg font-bold', TOM_TEXTO.warning)}>{catSelecionada.semImagem}</div>
+                    <div className="text-[10px] text-brand-muted">Sem imagem</div>
+                  </div>
+                  <div className={cn('flex-1 rounded-xl px-3 py-2 text-center', TOM_FUNDO.success)}>
+                    <div className={cn('text-lg font-bold', TOM_TEXTO.success)}>{catSelecionada.total - catSelecionada.semImagem}</div>
+                    <div className="text-[10px] text-brand-muted">Com imagem</div>
+                  </div>
                 </div>
-                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl px-3 py-2 text-center flex-1">
-                  <div className="text-amber-400 font-bold text-lg">{catSelecionada.semImagem}</div>
-                  <div className="text-brand-muted text-[10px]">Sem imagem</div>
-                </div>
-                <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl px-3 py-2 text-center flex-1">
-                  <div className="text-emerald-400 font-bold text-lg">{catSelecionada.total - catSelecionada.semImagem}</div>
-                  <div className="text-brand-muted text-[10px]">Com imagem</div>
-                </div>
-              </div>
+              )}
+            </div>
+          )}
+
+          {/* Botão iniciar/parar */}
+          <div className="pt-2">
+            {!running ? (
+              <Botao onClick={handleStart} disabled={!selected || loadingCats} tamanho="lg" className="w-full">
+                <Play size={14} />
+                Sincronizar categoria completa
+              </Botao>
+            ) : (
+              <Botao variante="secundario" tamanho="lg" onClick={() => { cancelRef.current = true }} className="w-full">
+                <StopCircle size={14} />
+                Parar sync
+              </Botao>
             )}
           </div>
-        )}
-
-        {/* Botão iniciar/parar */}
-        <div className="pt-2">
-          {!running ? (
-            <button
-              onClick={handleStart}
-              disabled={!selected || loadingCats}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-brand-accent to-brand-accent-hover hover:opacity-90 disabled:opacity-40 text-brand-text font-semibold rounded-xl transition-all duration-200 shadow-md shadow-brand-accent/20"
-            >
-              <Play size={14} />
-              Sincronizar categoria completa
-            </button>
-          ) : (
-            <button
-              onClick={() => { cancelRef.current = true }}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-brand-surface-2 hover:bg-brand-accent/20 border border-brand-border/30 text-brand-text font-semibold rounded-xl transition-all duration-200"
-            >
-              <StopCircle size={14} />
-              Parar sync
-            </button>
-          )}
         </div>
-      </div>
+      </Card>
 
       {/* ── Progresso ── */}
       {(running || done || error) && (
-        <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-4 shadow-xl">
+        <Card className="space-y-4 p-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-brand-text font-semibold text-sm flex items-center gap-2">
+            <p className="flex items-center gap-2 text-sm font-semibold text-brand-text">
               {running
                 ? <><Loader2 size={13} className="animate-spin text-brand-accent" /> Processando…</>
                 : done
-                ? <><CheckCircle2 size={13} className="text-emerald-400" /> Concluído</>
-                : <><AlertCircle size={13} className="text-rose-400" /> Erro</>
+                ? <><CheckCircle2 size={13} className="text-brand-success" /> Concluído</>
+                : <><AlertCircle size={13} className="text-brand-danger" /> Erro</>
               }
-            </h2>
-            <span className="text-brand-muted text-sm font-mono">
+            </p>
+            <span className="font-mono text-sm text-brand-muted">
               {progress.processados}/{progress.total} · {pct}%
             </span>
           </div>
 
           {/* Barra de progresso */}
-          <div className="w-full bg-brand-surface-2 border border-brand-border/20 rounded-full h-2">
+          <div className="h-2 w-full overflow-hidden rounded-full border border-brand-border bg-brand-surface-2">
             <div
-              className="h-2 rounded-full transition-all duration-500"
-              style={{
-                width: `${pct}%`,
-                background: done ? '#10b981' : error ? '#f43f5e' : '#eb2a24',
-              }}
+              className={cn(
+                'h-full rounded-full transition-all duration-500',
+                done ? 'bg-brand-success' : error ? 'bg-brand-danger' : 'bg-brand-accent',
+              )}
+              style={{ width: `${pct}%` }}
             />
           </div>
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="bg-brand-surface-2 border border-brand-border/30 rounded-xl p-2">
-              <div className="text-brand-text font-bold">{progress.processados}</div>
-              <div className="text-brand-muted text-[10px]">Processados</div>
+            <div className="rounded-xl border border-brand-border bg-brand-surface-2 p-2">
+              <div className="font-bold text-brand-text">{progress.processados}</div>
+              <div className="text-[10px] text-brand-muted">Processados</div>
             </div>
-            <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl p-2">
-              <div className="text-emerald-400 font-bold">{progress.atualizados}</div>
-              <div className="text-brand-muted text-[10px]">Atualizados</div>
+            <div className={cn('rounded-xl p-2', TOM_FUNDO.success)}>
+              <div className={cn('font-bold', TOM_TEXTO.success)}>{progress.atualizados}</div>
+              <div className="text-[10px] text-brand-muted">Atualizados</div>
             </div>
-            <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl p-2">
-              <div className="text-rose-400 font-bold">{progress.erros}</div>
-              <div className="text-brand-muted text-[10px]">Erros</div>
+            <div className={cn('rounded-xl p-2', TOM_FUNDO.danger)}>
+              <div className={cn('font-bold', TOM_TEXTO.danger)}>{progress.erros}</div>
+              <div className="text-[10px] text-brand-muted">Erros</div>
             </div>
           </div>
 
           {/* Log */}
           <div
             ref={logRef}
-            className="bg-brand-bg/50 border border-brand-border/20 rounded-xl p-3 h-48 overflow-y-auto font-mono text-[11px] space-y-0.5"
+            className="admin-scroll h-48 space-y-0.5 overflow-y-auto rounded-xl border border-brand-border bg-brand-surface-2 p-3 font-mono text-[11px]"
           >
             {log.map((line, i) => (
               <div key={i} className={
-                line.startsWith('✅') ? 'text-emerald-400' :
-                line.startsWith('❌') ? 'text-rose-400' :
-                line.startsWith('⏹') ? 'text-amber-400' :
-                line.startsWith('✓') ? 'text-sky-300' :
-                line.startsWith('○') ? 'text-brand-muted' :
+                line.startsWith('✅') ? 'text-brand-success' :
+                line.startsWith('❌') ? 'text-brand-danger' :
+                line.startsWith('⏹') ? 'text-brand-warning' :
+                line.startsWith('✓') ? 'text-brand-info' :
                 'text-brand-muted'
               }>
                 {line}
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
     </div>
   )

@@ -8,6 +8,14 @@
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { ImagePlus, RotateCcw, Loader2, ExternalLink } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import {
+  Card, Badge, Botao, BOTAO_BASE, BOTAO_VARIANTE, BOTAO_TAMANHO,
+} from '@/components/admin/ui/primitives'
+
+// O disparador do upload precisa ser um <label> (para abrir o file input), e
+// <Botao> é sempre um <button> — daí reaproveitarmos só as classes.
+const BASE_BOTAO_LABEL = BOTAO_BASE
 
 interface Slot {
   chave: string
@@ -71,48 +79,50 @@ export function MarketingBanners({ slots: slotsIniciais }: { slots: Slot[] }) {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
       {slots.map((slot) => {
         const urlAtual = slot.imagemUrl ?? slot.fallback
         const customizado = Boolean(slot.imagemUrl)
         const ocupado = salvando === slot.chave
         return (
-          <div
-            key={slot.chave}
-            className="bg-brand-card border border-brand-line rounded-xl overflow-hidden"
-          >
-            {/* Preview */}
-            <div className="relative bg-black" style={{ aspectRatio: '21/9' }}>
+          <Card key={slot.chave} className="overflow-hidden">
+            {/* Preview — fundo fixo escuro: o banner é uma peça gráfica publicada
+                sobre o hero do site, então o preview usa sempre o mesmo fundo
+                (não um token que troca de tema) para representar fielmente
+                como a arte aparece na loja. */}
+            <div className="relative bg-brand-sidebar" style={{ aspectRatio: '21/9' }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- URL dinâmica do storage próprio */}
               <img
                 src={urlAtual}
                 alt={slot.nome}
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 h-full w-full object-cover"
               />
               {customizado && (
-                <span className="absolute top-2 left-2 bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">
+                <Badge tom="success" className="absolute left-2 top-2">
                   Personalizado
-                </span>
+                </Badge>
               )}
               {ocupado && (
-                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                  <Loader2 size={26} className="text-white animate-spin" />
+                <div className="absolute inset-0 flex items-center justify-center bg-[color:var(--brand-overlay)]">
+                  <Loader2 size={26} className="animate-spin text-brand-on-accent" />
                 </div>
               )}
             </div>
 
             {/* Infos + ações */}
             <div className="p-4">
-              <p className="font-barlow font-bold text-brand-text text-[15px] leading-tight">{slot.nome}</p>
-              <p className="text-brand-muted text-xs mt-1">{slot.dica}</p>
+              <p className="font-barlow text-[15px] font-bold leading-tight text-brand-text">{slot.nome}</p>
+              <p className="mt-1 text-xs text-brand-muted">{slot.dica}</p>
 
-              <div className="flex flex-wrap items-center gap-2 mt-3">
+              <div className="mt-3 flex flex-wrap items-center gap-2">
                 <label
-                  className={`inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3.5 py-2 rounded-lg cursor-pointer transition-colors ${
-                    ocupado
-                      ? 'bg-brand-line text-brand-muted cursor-wait'
-                      : 'bg-[#d42b2b] hover:bg-red-700 text-white'
-                  }`}
+                  className={cn(
+                    BASE_BOTAO_LABEL,
+                    BOTAO_VARIANTE.primario,
+                    BOTAO_TAMANHO.sm,
+                    'cursor-pointer',
+                    ocupado && 'pointer-events-none opacity-50',
+                  )}
                 >
                   <ImagePlus size={13} />
                   Trocar imagem
@@ -130,27 +140,29 @@ export function MarketingBanners({ slots: slotsIniciais }: { slots: Slot[] }) {
                 </label>
 
                 {customizado && (
-                  <button
+                  <Botao
+                    type="button"
+                    variante="secundario"
+                    tamanho="sm"
                     onClick={() => handleRestaurar(slot.chave)}
                     disabled={ocupado}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3.5 py-2 rounded-lg border border-brand-line text-brand-muted hover:text-brand-text transition-colors"
                   >
                     <RotateCcw size={13} />
                     Restaurar padrão
-                  </button>
+                  </Botao>
                 )}
 
                 <a
                   href={urlAtual}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-brand-muted hover:text-brand-text ml-auto"
+                  className="ml-auto inline-flex items-center gap-1 text-xs text-brand-muted hover:text-brand-text"
                 >
                   <ExternalLink size={12} /> ver imagem
                 </a>
               </div>
             </div>
-          </div>
+          </Card>
         )
       })}
     </div>

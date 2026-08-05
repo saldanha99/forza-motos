@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { gerarSlug } from '@/lib/utils'
-import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
 import { Plus, X, Upload, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react'
+import { gerarSlug } from '@/lib/utils'
+import { Card, SectionTitle, Botao } from '@/components/admin/ui/primitives'
+import { Campo, Input, Textarea, Switch, AcoesFormulario } from '@/components/admin/ui/form'
 
 interface Produto {
   id?: string
@@ -131,118 +131,120 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
 
       {/* ── Sync Tiny (só aparece em produtos existentes com tinyId) ── */}
       {produto?.id && (
-        <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-5 flex items-center justify-between gap-4 shadow-xl">
+        <Card className="flex items-center justify-between gap-4 p-5">
           <div>
-            <p className="text-brand-text font-semibold text-sm flex items-center gap-2">
-              <RefreshCw size={14} className="text-blue-400 animate-pulse" />
+            <p className="flex items-center gap-2 text-sm font-semibold text-brand-text">
+              <RefreshCw size={14} className="text-brand-info" />
               Sincronizar com Tiny
             </p>
-            <p className="text-xs text-brand-muted mt-1">
+            <p className="mt-1 text-xs text-brand-muted">
               Atualiza nome, preço, estoque, imagens, descrição, categoria e marca
             </p>
             {syncResult && !syncResult.error && (
-              <p className="text-xs text-emerald-400 mt-1.5 flex items-center gap-1.5 font-medium">
+              <p className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-brand-success">
                 <CheckCircle2 size={12} />
                 {syncResult.aviso || `${syncResult.campos?.imagens ?? 0} imagens · preço R$${syncResult.campos?.preco?.toFixed(2)} · estoque ${syncResult.campos?.estoque}`}
               </p>
             )}
             {syncResult?.error && (
-              <p className="text-xs text-rose-400 mt-1.5 flex items-center gap-1.5 font-medium">
+              <p className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-brand-danger">
                 <AlertCircle size={12} /> {syncResult.error}
               </p>
             )}
           </div>
-          <button
-            type="button"
-            onClick={handleSyncTiny}
-            disabled={syncLoading}
-            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-200 shadow-lg shadow-blue-500/20 active:scale-95 shrink-0"
-          >
+          <Botao type="button" onClick={handleSyncTiny} disabled={syncLoading} className="shrink-0">
             <RefreshCw size={14} className={syncLoading ? 'animate-spin' : ''} />
             {syncLoading ? 'Sincronizando…' : 'Sync agora'}
-          </button>
-        </div>
+          </Botao>
+        </Card>
       )}
 
-      {/* Informações Básicas */}
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-5 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
-        <h2 className="font-barlow font-bold text-xl text-brand-text mb-4">Informações básicas</h2>
-        <Input label="Nome *" value={form.nome} onChange={(e) => update('nome', e.target.value)} required />
+      {/* Informações básicas */}
+      <Card className="space-y-5 p-6">
+        <SectionTitle>Informações básicas</SectionTitle>
+        <Campo label="Nome" obrigatorio htmlFor="produto-nome">
+          <Input id="produto-nome" value={form.nome} onChange={(e) => update('nome', e.target.value)} required />
+        </Campo>
         <div className="grid grid-cols-2 gap-4">
-          <Input label="SKU *" value={form.sku} onChange={(e) => update('sku', e.target.value)} required />
-          <Input label="Slug" value={form.slug} onChange={(e) => update('slug', e.target.value)} />
+          <Campo label="SKU" obrigatorio htmlFor="produto-sku">
+            <Input id="produto-sku" value={form.sku} onChange={(e) => update('sku', e.target.value)} required />
+          </Campo>
+          <Campo label="Slug" htmlFor="produto-slug">
+            <Input id="produto-slug" value={form.slug} onChange={(e) => update('slug', e.target.value)} />
+          </Campo>
         </div>
-        <div>
-          <label className="text-sm text-brand-muted font-medium block mb-1.5">Descrição *</label>
-          <textarea
+        <Campo label="Descrição" obrigatorio htmlFor="produto-descricao">
+          <Textarea
+            id="produto-descricao"
             value={form.descricao}
             onChange={(e) => update('descricao', e.target.value)}
             rows={4}
             required
-            className="w-full bg-brand-surface-2 border border-brand-border rounded-xl px-4 py-3 text-brand-text text-sm focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent/20 resize-none transition-all duration-200"
           />
-        </div>
+        </Campo>
         <div className="grid grid-cols-2 gap-4">
-          <Input label="Categoria" value={form.categoria} onChange={(e) => update('categoria', e.target.value)} placeholder="pneus, oleos, freios..." />
-          <Input label="Marca" value={form.marca} onChange={(e) => update('marca', e.target.value)} placeholder="Pirelli, Michelin..." />
+          <Campo label="Categoria" htmlFor="produto-categoria">
+            <Input id="produto-categoria" value={form.categoria} onChange={(e) => update('categoria', e.target.value)} placeholder="pneus, oleos, freios..." />
+          </Campo>
+          <Campo label="Marca" htmlFor="produto-marca">
+            <Input id="produto-marca" value={form.marca} onChange={(e) => update('marca', e.target.value)} placeholder="Pirelli, Michelin..." />
+          </Campo>
         </div>
-      </div>
+      </Card>
 
       {/* Preços e estoque */}
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-5 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
-        <h2 className="font-barlow font-bold text-xl text-brand-text mb-4">Preços e estoque</h2>
+      <Card className="space-y-5 p-6">
+        <SectionTitle>Preços e estoque</SectionTitle>
         <div className="grid grid-cols-3 gap-4">
-          <Input label="Preço *" type="number" step="0.01" value={form.preco} onChange={(e) => update('preco', Number(e.target.value))} required />
-          <Input label="Preço Promocional" type="number" step="0.01" value={form.precoPromocional} onChange={(e) => update('precoPromocional', e.target.value)} />
-          <Input label="Estoque" type="number" value={form.estoque} onChange={(e) => update('estoque', Number(e.target.value))} />
+          <Campo label="Preço" obrigatorio htmlFor="produto-preco">
+            <Input id="produto-preco" type="number" step="0.01" value={form.preco} onChange={(e) => update('preco', Number(e.target.value))} required />
+          </Campo>
+          <Campo label="Preço promocional" htmlFor="produto-preco-promo">
+            <Input id="produto-preco-promo" type="number" step="0.01" value={form.precoPromocional} onChange={(e) => update('precoPromocional', e.target.value)} />
+          </Campo>
+          <Campo label="Estoque" htmlFor="produto-estoque">
+            <Input id="produto-estoque" type="number" value={form.estoque} onChange={(e) => update('estoque', Number(e.target.value))} />
+          </Campo>
         </div>
-        <div className="flex gap-6 pt-2">
-          <label className="flex items-center gap-2.5 cursor-pointer select-none group">
-            <input type="checkbox" checked={form.ativo} onChange={(e) => update('ativo', e.target.checked)} className="w-4 h-4 rounded accent-brand-accent border-brand-border bg-brand-surface-2" />
-            <span className="text-sm text-brand-muted group-hover:text-brand-text transition-colors">Produto ativo</span>
-          </label>
-          <label className="flex items-center gap-2.5 cursor-pointer select-none group">
-            <input type="checkbox" checked={form.destaque} onChange={(e) => update('destaque', e.target.checked)} className="w-4 h-4 rounded accent-brand-accent border-brand-border bg-brand-surface-2" />
-            <span className="text-sm text-brand-muted group-hover:text-brand-text transition-colors">Produto em destaque</span>
-          </label>
-          <label className="flex items-center gap-2.5 cursor-pointer select-none group">
-            <input type="checkbox" checked={form.preVenda} onChange={(e) => update('preVenda', e.target.checked)} className="w-4 h-4 rounded accent-brand-accent border-brand-border bg-brand-surface-2" />
-            <span className="text-sm text-brand-muted group-hover:text-brand-text transition-colors">Pré-venda (vende sem estoque)</span>
-          </label>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <Switch checked={form.ativo} onChange={(v) => update('ativo', v)} label="Produto ativo" />
+          <Switch checked={form.destaque} onChange={(v) => update('destaque', v)} label="Produto em destaque" />
+          <Switch checked={form.preVenda} onChange={(v) => update('preVenda', v)} label="Pré-venda" descricao="Vende sem estoque" />
         </div>
         {form.preVenda && (
-          <div className="pt-1">
+          <Campo
+            label="Prazo de postagem (dias úteis)"
+            htmlFor="produto-prazo"
+            dica="Produto de pré-venda pode ser comprado mesmo com estoque 0 e aparece em /sorocaba. O estoque não é debitado na compra."
+          >
             <Input
-              label="Prazo de postagem (dias úteis)"
+              id="produto-prazo"
               type="number"
               value={form.prazoEntregaDias}
               onChange={(e) => update('prazoEntregaDias', e.target.value)}
               placeholder="Ex.: 15"
             />
-            <p className="text-xs text-brand-muted mt-1">
-              Produto de pré-venda pode ser comprado mesmo com estoque 0 e aparece em <strong>/sorocaba</strong>. O estoque não é debitado na compra.
-            </p>
-          </div>
+          </Campo>
         )}
-      </div>
+      </Card>
 
       {/* Imagens */}
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-5 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
-        <h2 className="font-barlow font-bold text-xl text-brand-text mb-4">Imagens</h2>
+      <Card className="space-y-5 p-6">
+        <SectionTitle>Imagens</SectionTitle>
         <div className="flex flex-wrap gap-4">
           {imagens.map((img, i) => (
-            <div key={i} className="relative w-24 h-24 bg-brand-surface-2 border border-brand-border rounded-xl overflow-hidden group/img transition-all duration-200 hover:border-brand-accent">
-              <img src={img} alt="" className="w-full h-full object-cover" />
+            <div key={i} className="group/img relative h-24 w-24 overflow-hidden rounded-xl border border-brand-border bg-brand-surface-2">
+              <img src={img} alt="" className="h-full w-full object-cover" />
               <button
                 type="button"
                 onClick={() => setImagens((imgs) => imgs.filter((_, j) => j !== i))}
-                className="absolute top-1.5 right-1.5 bg-black/80 hover:bg-brand-accent p-1.5 rounded-lg text-white transition-colors opacity-0 group-hover/img:opacity-100 duration-200"
+                className="absolute right-1.5 top-1.5 rounded-lg bg-brand-surface p-1.5 text-brand-muted opacity-0 transition-colors hover:bg-brand-accent hover:text-brand-on-accent group-hover/img:opacity-100"
               >
                 <X size={12} />
               </button>
             </div>
           ))}
-          <label className="w-24 h-24 bg-brand-surface-2 border border-dashed border-brand-border hover:border-brand-accent rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-brand-surface-2/80 transition-all duration-200 group">
+          <label className="group flex h-24 w-24 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-brand-border bg-brand-surface-2 transition-all hover:border-brand-accent">
             <input
               type="file"
               accept="image/*"
@@ -250,22 +252,22 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
               onChange={(e) => e.target.files?.[0] && uploadImagem(e.target.files[0])}
             />
             {uploadLoading ? (
-              <span className="text-xs text-brand-muted animate-pulse">Enviando...</span>
+              <span className="animate-pulse text-xs text-brand-muted">Enviando...</span>
             ) : (
               <>
-                <Upload size={20} className="text-brand-muted group-hover:text-brand-accent transition-colors mb-1" />
-                <span className="text-[10px] text-brand-muted group-hover:text-brand-text transition-colors font-medium">Upload</span>
+                <Upload size={20} className="mb-1 text-brand-muted transition-colors group-hover:text-brand-accent" />
+                <span className="text-[10px] font-medium text-brand-muted transition-colors group-hover:text-brand-text">Upload</span>
               </>
             )}
           </label>
         </div>
-      </div>
+      </Card>
 
       {/* Compatibilidade */}
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-5 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
-        <h2 className="font-barlow font-bold text-xl text-brand-text mb-4">Compatibilidade com motos</h2>
+      <Card className="space-y-5 p-6">
+        <SectionTitle>Compatibilidade com motos</SectionTitle>
         <div className="flex gap-3">
-          <input
+          <Input
             value={novaCompat}
             onChange={(e) => setNovaCompat(e.target.value)}
             onKeyDown={(e) => {
@@ -278,45 +280,45 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
               }
             }}
             placeholder="Ex: Honda CB 300R 2020-2024"
-            className="flex-1 bg-brand-surface-2 border border-brand-border rounded-xl px-4 py-2.5 text-brand-text text-sm placeholder:text-brand-muted focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent/20 transition-all duration-200"
+            className="flex-1"
           />
-          <button
+          <Botao
             type="button"
+            variante="secundario"
             onClick={() => {
               if (novaCompat.trim()) {
                 setCompatibilidade((c) => [...c, novaCompat.trim()])
                 setNovaCompat('')
               }
             }}
-            className="bg-brand-surface-2 hover:bg-brand-surface-3 border border-brand-border hover:border-brand-border-highlight text-brand-text px-4 rounded-xl transition-all duration-200"
           >
             <Plus size={18} />
-          </button>
+          </Botao>
         </div>
         <div className="flex flex-wrap gap-2.5 pt-2">
           {compatibilidade.length === 0 ? (
-            <p className="text-xs text-brand-muted/70">Nenhuma compatibilidade listada.</p>
+            <p className="text-xs text-brand-dim">Nenhuma compatibilidade listada.</p>
           ) : (
             compatibilidade.map((m, i) => (
-              <span key={i} className="inline-flex items-center gap-1.5 bg-brand-surface-2 text-brand-text border border-brand-border text-xs px-3.5 py-1.5 rounded-full hover:border-brand-accent/50 transition-colors">
+              <span key={i} className="inline-flex items-center gap-1.5 rounded-full border border-brand-border bg-brand-surface-2 px-3.5 py-1.5 text-xs text-brand-text transition-colors hover:border-brand-accent">
                 {m}
-                <button type="button" onClick={() => setCompatibilidade((c) => c.filter((_, j) => j !== i))} className="hover:text-brand-accent transition-colors">
+                <button type="button" onClick={() => setCompatibilidade((c) => c.filter((_, j) => j !== i))} className="text-brand-dim transition-colors hover:text-brand-accent">
                   <X size={12} />
                 </button>
               </span>
             ))
           )}
         </div>
-      </div>
+      </Card>
 
-      <div className="flex gap-4">
-        <Button type="submit" loading={loading} size="lg" className="flex-1 font-bold uppercase tracking-wider text-sm rounded-xl py-4">
-          {produto?.id ? 'Salvar alterações' : 'Criar produto'}
-        </Button>
-        <Button type="button" variant="ghost" size="lg" onClick={() => router.back()} className="font-bold uppercase tracking-wider text-sm rounded-xl py-4 text-brand-muted hover:text-brand-text hover:bg-brand-surface-2 transition-colors">
+      <AcoesFormulario>
+        <Botao type="button" variante="secundario" tamanho="lg" onClick={() => router.back()}>
           Cancelar
-        </Button>
-      </div>
+        </Botao>
+        <Botao type="submit" tamanho="lg" disabled={loading}>
+          {loading ? 'Salvando…' : produto?.id ? 'Salvar alterações' : 'Criar produto'}
+        </Botao>
+      </AcoesFormulario>
     </form>
   )
 }
