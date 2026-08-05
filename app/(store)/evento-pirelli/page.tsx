@@ -7,5 +7,5 @@ export const metadata: Metadata = { title: 'Evento Pirelli + Forza Motos', descr
 
 export default async function EventoPirelliPage({ searchParams }: { searchParams: { acao?: string } }) {
   const evento = await obterEventoPirelli()
-  return <EventoPirelliLanding evento={{ titulo: evento.titulo, descricao: evento.descricao, local: evento.local, dataInicio: evento.dataInicio?.toISOString() ?? null, logoForzaUrl: evento.logoForzaUrl, logoPirelliUrl: evento.logoPirelliUrl, logoCampneusUrl: evento.logoCampneusUrl, limiteNomeGravacao: evento.limiteNomeGravacao, ativo: evento.ativo, publicado: evento.publicado }} acao={searchParams.acao} />
+  return <EventoPirelliLanding evento={{ titulo: evento.titulo, descricao: evento.descricao, local: evento.local, dataInicio: evento.dataInicio?.toISOString() ?? null, logoForzaUrl: evento.logoForzaUrl, logoPirelliUrl: evento.logoPirelliUrl, logoCampneusUrl: evento.logoCampneusUrl, limiteNomeGravacao: evento.limiteNomeGravacao, valorMinimoPneus: Number(evento.valorMinimoPneus), ativo: evento.ativo, publicado: evento.publicado }} acao={searchParams.acao} />
 }
