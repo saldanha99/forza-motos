@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 import toast from 'react-hot-toast'
-import { Bike, Plus, Trash2, Link2, X, Search, Check } from 'lucide-react'
+import { Bike, Trash2, Link2, X, Search, Check } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Card, SectionTitle, Botao, Badge, EmptyState } from '@/components/admin/ui/primitives'
+import { Campo, Input, Modal } from '@/components/admin/ui/form'
 
 interface Moto {
   id: string
@@ -82,78 +85,91 @@ export function MotosManager({ motosIniciais }: { motosIniciais: Moto[] }) {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[340px_1fr]">
       {/* Form criar moto */}
-      <form onSubmit={criar} className="bg-brand-card border border-brand-line rounded-xl p-5 space-y-4 h-fit">
-        <h2 className="font-barlow font-bold text-lg text-brand-text flex items-center gap-2">
-          <Plus size={18} /> Nova moto
-        </h2>
-        <div>
-          <label className="block text-xs font-semibold text-brand-muted uppercase tracking-wider mb-1.5">Marca *</label>
-          <input value={form.marca} onChange={(e) => setForm((f) => ({ ...f, marca: e.target.value }))} required
-            placeholder="Honda, BMW, Yamaha…"
-            className="w-full bg-brand-bg border border-brand-line rounded-lg px-3 py-2 text-sm text-brand-text outline-none focus:border-[#d42b2b]" />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-brand-muted uppercase tracking-wider mb-1.5">Modelo *</label>
-          <input value={form.modelo} onChange={(e) => setForm((f) => ({ ...f, modelo: e.target.value }))} required
-            placeholder="CG 160, R 1200 GS…"
-            className="w-full bg-brand-bg border border-brand-line rounded-lg px-3 py-2 text-sm text-brand-text outline-none focus:border-[#d42b2b]" />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-brand-muted uppercase tracking-wider mb-1.5">Ano de *</label>
-            <input type="number" value={form.anoDe} onChange={(e) => setForm((f) => ({ ...f, anoDe: e.target.value }))} required
-              placeholder="2016"
-              className="w-full bg-brand-bg border border-brand-line rounded-lg px-3 py-2 text-sm text-brand-text outline-none focus:border-[#d42b2b]" />
+      <Card className="h-fit space-y-4 p-5">
+        <SectionTitle>Nova moto</SectionTitle>
+        <form onSubmit={criar} className="space-y-4">
+          <Campo label="Marca" obrigatorio htmlFor="moto-marca">
+            <Input
+              id="moto-marca"
+              value={form.marca}
+              onChange={(e) => setForm((f) => ({ ...f, marca: e.target.value }))}
+              required
+              placeholder="Honda, BMW, Yamaha…"
+            />
+          </Campo>
+          <Campo label="Modelo" obrigatorio htmlFor="moto-modelo">
+            <Input
+              id="moto-modelo"
+              value={form.modelo}
+              onChange={(e) => setForm((f) => ({ ...f, modelo: e.target.value }))}
+              required
+              placeholder="CG 160, R 1200 GS…"
+            />
+          </Campo>
+          <div className="grid grid-cols-2 gap-3">
+            <Campo label="Ano de" obrigatorio htmlFor="moto-anode">
+              <Input
+                id="moto-anode"
+                type="number"
+                value={form.anoDe}
+                onChange={(e) => setForm((f) => ({ ...f, anoDe: e.target.value }))}
+                required
+                placeholder="2016"
+              />
+            </Campo>
+            <Campo label="Ano até" htmlFor="moto-anoate">
+              <Input
+                id="moto-anoate"
+                type="number"
+                value={form.anoAte}
+                onChange={(e) => setForm((f) => ({ ...f, anoAte: e.target.value }))}
+                placeholder="em diante"
+              />
+            </Campo>
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-brand-muted uppercase tracking-wider mb-1.5">Ano até</label>
-            <input type="number" value={form.anoAte} onChange={(e) => setForm((f) => ({ ...f, anoAte: e.target.value }))}
-              placeholder="em diante"
-              className="w-full bg-brand-bg border border-brand-line rounded-lg px-3 py-2 text-sm text-brand-text outline-none focus:border-[#d42b2b]" />
-          </div>
-        </div>
-        <p className="text-xs text-brand-muted">
-          Cada faixa de ano é um registro (ex.: GS 1200 <strong>até 2012</strong>, <strong>2013–2018</strong>, <strong>2019+</strong>).
-        </p>
-        <button type="submit" disabled={salvando}
-          className="w-full bg-[#d42b2b] hover:bg-red-700 disabled:opacity-60 text-white font-barlow font-bold uppercase text-sm tracking-wider py-2.5 rounded-lg transition-colors">
-          {salvando ? 'Cadastrando…' : 'Cadastrar moto'}
-        </button>
-      </form>
+          <p className="text-xs text-brand-muted">
+            Cada faixa de ano é um registro (ex.: GS 1200 <strong>até 2012</strong>, <strong>2013–2018</strong>, <strong>2019+</strong>).
+          </p>
+          <Botao type="submit" tamanho="lg" disabled={salvando} className="w-full">
+            {salvando ? 'Cadastrando…' : 'Cadastrar moto'}
+          </Botao>
+        </form>
+      </Card>
 
       {/* Lista */}
       <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" />
-            <input
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-dim" />
+            <Input
               value={filtro}
               onChange={(e) => setFiltro(e.target.value)}
               placeholder="Filtrar por marca ou modelo…"
-              className="w-full bg-brand-card border border-brand-line rounded-lg pl-9 pr-3 py-2 text-sm text-brand-text outline-none focus:border-[#d42b2b]"
+              className="pl-9"
             />
           </div>
-          <label className="flex items-center gap-2 text-sm text-brand-muted whitespace-nowrap cursor-pointer">
+          <label className="flex cursor-pointer items-center gap-2 whitespace-nowrap text-sm text-brand-muted">
             <input
               type="checkbox"
               checked={soAConferir}
               onChange={(e) => setSoAConferir(e.target.checked)}
-              className="accent-[#d42b2b] w-4 h-4"
+              className="h-4 w-4 rounded border-brand-border accent-brand-accent"
             />
             Só as que faltam conferir
           </label>
-          <span className="text-xs text-brand-muted whitespace-nowrap">
+          <span className="whitespace-nowrap text-xs text-brand-muted">
             {visiveis.length} de {motos.length}
           </span>
         </div>
 
         {motos.length === 0 && (
-          <div className="bg-brand-card border border-brand-line rounded-xl p-8 text-center text-brand-muted text-sm">
-            <Bike size={28} className="mx-auto mb-2 opacity-50" />
-            Nenhuma moto cadastrada. Comece cadastrando ao lado.
-          </div>
+          <EmptyState
+            icone={Bike}
+            titulo="Nenhuma moto cadastrada"
+            descricao="Uma moto aparece aqui assim que for cadastrada ao lado — com faixa de ano, medidas de pneu e produtos vinculados."
+          />
         )}
         {visiveis.map((m) => (
           <LinhaMoto
@@ -225,86 +241,87 @@ function LinhaMoto({
   }
 
   return (
-    <div className="bg-brand-card border border-brand-line rounded-xl p-4">
+    <Card className="p-4">
       <div className="flex items-center gap-4">
-        <div className="flex-1 min-w-0">
-          <p className="font-barlow font-bold text-brand-text flex items-center gap-2 flex-wrap">
+        <div className="min-w-0 flex-1">
+          <p className="flex flex-wrap items-center gap-2 font-barlow font-bold text-brand-text">
             {moto.marca} {moto.modelo}
-            <span className="text-brand-muted font-normal">· {faixa(moto.anoDe, moto.anoAte)}</span>
+            <span className="font-normal text-brand-muted">· {faixa(moto.anoDe, moto.anoAte)}</span>
             {moto.medidasConferidas ? (
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500">
+              <Badge tom="success">
                 <Check size={11} /> Conferida
-              </span>
+              </Badge>
             ) : moto.medidaDianteira ? (
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500">
-                A conferir{moto.fonteMedidas ? ` · ${moto.fonteMedidas}` : ''}
-              </span>
+              <Badge tom="info">A conferir{moto.fonteMedidas ? ` · ${moto.fonteMedidas}` : ''}</Badge>
             ) : (
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand-line text-brand-muted">
-                Sem medida
-              </span>
+              // Sem medida de fábrica quebra a busca por placa — precisa saltar aos olhos.
+              <Badge tom="warning">Sem medida</Badge>
             )}
           </p>
-          <p className="text-xs text-brand-muted mt-0.5">
+          <p className="mt-0.5 text-xs text-brand-muted">
             {moto.produtos} produto{moto.produtos === 1 ? '' : 's'} vinculado{moto.produtos === 1 ? '' : 's'} ·{' '}
-            <span className="opacity-70">/moto/{moto.slug}</span>
+            <span className="text-brand-dim">/moto/{moto.slug}</span>
           </p>
         </div>
-        <button onClick={onVincular}
-          className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3 py-2 rounded-lg bg-[#d42b2b]/10 text-[#d42b2b] hover:bg-[#d42b2b] hover:text-white transition-colors">
+        <Botao type="button" variante="secundario" tamanho="sm" onClick={onVincular}>
           <Link2 size={14} /> Vincular produtos
-        </button>
-        <button onClick={onRemover} title="Excluir"
-          className="p-2 rounded-lg text-brand-muted hover:text-red-500 hover:bg-red-500/10 transition-colors">
+        </Botao>
+        <Botao
+          type="button"
+          variante="fantasma"
+          tamanho="sm"
+          onClick={onRemover}
+          title="Excluir"
+          className="text-brand-danger hover:bg-brand-danger-soft hover:text-brand-danger"
+        >
           <Trash2 size={16} />
-        </button>
+        </Botao>
       </div>
 
       {/* Medidas de fábrica — só os números; a moto aceita radial e diagonal */}
-      <div className="flex flex-wrap items-end gap-3 mt-3 pt-3 border-t border-brand-line">
-        <div>
-          <label className="block text-[10px] font-semibold text-brand-muted uppercase tracking-wider mb-1">
-            Pneu dianteiro
-          </label>
-          <input
+      <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-brand-hair pt-3">
+        <Campo label="Pneu dianteiro" htmlFor={`dianteira-${moto.id}`} className="w-[130px]">
+          <Input
+            id={`dianteira-${moto.id}`}
             value={dianteira}
             onChange={(e) => setDianteira(e.target.value)}
             placeholder="120/70-19"
-            className="w-[130px] bg-brand-bg border border-brand-line rounded-lg px-3 py-2 text-sm font-mono text-brand-text outline-none focus:border-[#d42b2b]"
+            className="font-mono"
           />
-        </div>
-        <div>
-          <label className="block text-[10px] font-semibold text-brand-muted uppercase tracking-wider mb-1">
-            Pneu traseiro
-          </label>
-          <input
+        </Campo>
+        <Campo label="Pneu traseiro" htmlFor={`traseira-${moto.id}`} className="w-[130px]">
+          <Input
+            id={`traseira-${moto.id}`}
             value={traseira}
             onChange={(e) => setTraseira(e.target.value)}
             placeholder="170/60-17"
-            className="w-[130px] bg-brand-bg border border-brand-line rounded-lg px-3 py-2 text-sm font-mono text-brand-text outline-none focus:border-[#d42b2b]"
+            className="font-mono"
           />
-        </div>
+        </Campo>
 
         {sujo && (
-          <button
+          <Botao
+            type="button"
+            variante="secundario"
             onClick={() => patch({ medidaDianteira: dianteira, medidaTraseira: traseira }, 'Medidas salvas')}
             disabled={salvando}
-            className="h-[38px] px-4 rounded-lg bg-brand-line hover:bg-brand-muted/30 text-brand-text text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-60"
           >
             Salvar
-          </button>
+          </Botao>
         )}
 
         {moto.medidasConferidas ? (
-          <button
+          <Botao
+            type="button"
+            variante="secundario"
             onClick={() => patch({ medidasConferidas: false }, 'Voltou para conferência')}
             disabled={salvando}
-            className="h-[38px] px-4 rounded-lg border border-brand-line text-brand-muted hover:text-brand-text text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-60"
           >
             Desfazer conferência
-          </button>
+          </Botao>
         ) : (
-          <button
+          <Botao
+            type="button"
             onClick={() =>
               patch(
                 { medidaDianteira: dianteira, medidaTraseira: traseira, medidasConferidas: true },
@@ -313,13 +330,13 @@ function LinhaMoto({
             }
             title="Só os números da medida — quem escolhe radial ou diagonal é o cliente"
             disabled={salvando || !dianteira || !traseira}
-            className="h-[38px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center gap-1.5"
+            className="bg-brand-success text-brand-on-accent hover:brightness-95"
           >
             <Check size={14} /> Conferir
-          </button>
+          </Botao>
         )}
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -391,24 +408,34 @@ function VincularModal({ moto, onClose, onSaved }: {
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !salvando && onClose()} />
-      <div className="relative z-10 w-full max-w-2xl bg-brand-card border border-brand-line rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-brand-line">
-          <div>
-            <p className="font-barlow font-bold text-brand-text">{moto.marca} {moto.modelo} · {faixa(moto.anoDe, moto.anoAte)}</p>
-            <p className="text-xs text-brand-muted">{selecionados.size} produto(s) selecionado(s)</p>
-          </div>
-          <button onClick={onClose} className="text-brand-muted hover:text-brand-text"><X size={20} /></button>
-        </div>
-
-        {/* Selecionados */}
+    <Modal
+      aberto
+      aoFechar={onClose}
+      titulo={`${moto.marca} ${moto.modelo} · ${faixa(moto.anoDe, moto.anoAte)}`}
+      descricao={`${selecionados.size} produto(s) selecionado(s)`}
+      largura="max-w-2xl"
+      rodape={
+        <>
+          <Botao type="button" variante="secundario" onClick={onClose}>
+            Cancelar
+          </Botao>
+          <Botao type="button" onClick={salvar} disabled={salvando}>
+            {salvando ? 'Salvando…' : 'Salvar vínculos'}
+          </Botao>
+        </>
+      }
+    >
+      <div className="space-y-4">
         {selecionados.size > 0 && (
-          <div className="px-6 py-3 border-b border-brand-line flex flex-wrap gap-2 max-h-28 overflow-y-auto">
+          <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto">
             {Array.from(selecionados.values()).map((p) => (
-              <button key={p.id} onClick={() => toggle(p)}
-                className="inline-flex items-center gap-1.5 text-xs bg-[#d42b2b]/10 text-[#d42b2b] rounded-full pl-3 pr-2 py-1 hover:bg-[#d42b2b]/20">
-                <span className="truncate max-w-[220px]">{p.nome}</span>
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => toggle(p)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-brand-accent-soft py-1 pl-3 pr-2 text-xs text-brand-accent hover:brightness-95"
+              >
+                <span className="max-w-[220px] truncate">{p.nome}</span>
                 <X size={12} />
               </button>
             ))}
@@ -416,46 +443,51 @@ function VincularModal({ moto, onClose, onSaved }: {
         )}
 
         {/* Busca */}
-        <div className="px-6 py-3 border-b border-brand-line">
-          <div className="relative">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" />
-            <input value={busca} onChange={(e) => setBusca(e.target.value)} autoFocus
-              placeholder="Buscar produto por nome, SKU ou categoria…"
-              className="w-full bg-brand-bg border border-brand-line rounded-lg pl-9 pr-3 py-2 text-sm text-brand-text outline-none focus:border-[#d42b2b]" />
-          </div>
+        <div className="relative">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-dim" />
+          <Input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            autoFocus
+            placeholder="Buscar produto por nome, SKU ou categoria…"
+            className="pl-9"
+          />
         </div>
 
         {/* Resultados */}
-        <div className="flex-1 overflow-y-auto px-6 py-2 min-h-[120px]">
-          {carregando && <p className="text-sm text-brand-muted py-4 text-center">Buscando…</p>}
+        <div className="min-h-[120px]">
+          {carregando && <p className="py-4 text-center text-sm text-brand-muted">Buscando…</p>}
           {!carregando && busca.trim().length >= 2 && resultados.length === 0 && (
-            <p className="text-sm text-brand-muted py-4 text-center">Nenhum produto encontrado.</p>
+            <p className="py-4 text-center text-sm text-brand-muted">Nenhum produto encontrado.</p>
           )}
           {resultados.map((p) => {
             const marcado = selecionados.has(p.id)
             return (
-              <button key={p.id} onClick={() => toggle(p)}
-                className="w-full flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-brand-bg text-left">
-                <span className={`w-5 h-5 rounded flex items-center justify-center shrink-0 border ${marcado ? 'bg-[#d42b2b] border-[#d42b2b] text-white' : 'border-brand-line'}`}>
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => toggle(p)}
+                className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-brand-tint-2"
+              >
+                <span
+                  className={cn(
+                    'flex h-5 w-5 shrink-0 items-center justify-center rounded border',
+                    marcado
+                      ? 'border-brand-accent bg-brand-accent text-brand-on-accent'
+                      : 'border-brand-border',
+                  )}
+                >
                   {marcado && <Check size={13} />}
                 </span>
-                <span className="flex-1 min-w-0">
-                  <span className="block text-sm text-brand-text truncate">{p.nome}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm text-brand-text">{p.nome}</span>
                   <span className="block text-xs text-brand-muted">{p.sku} · {p.categoria}</span>
                 </span>
               </button>
             )
           })}
         </div>
-
-        <div className="px-6 py-4 border-t border-brand-line flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-brand-muted hover:text-brand-text">Cancelar</button>
-          <button onClick={salvar} disabled={salvando}
-            className="px-5 py-2 rounded-lg bg-[#d42b2b] hover:bg-red-700 disabled:opacity-60 text-white font-bold text-sm uppercase tracking-wider">
-            {salvando ? 'Salvando…' : 'Salvar vínculos'}
-          </button>
-        </div>
       </div>
-    </div>
+    </Modal>
   )
 }

@@ -1,9 +1,10 @@
 export const dynamic = 'force-dynamic'
 
-import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { Upload, Clock, BookOpen, AlertCircle } from 'lucide-react'
 import { GlossarioAdminClient } from '@/components/admin/GlossarioAdminClient'
+import { KpiCard } from '@/components/admin/KpiCard'
+import { BotaoLink, PageHeader } from '@/components/admin/ui/primitives'
 
 export const metadata = { title: 'Glossário — Forza Admin' }
 
@@ -25,51 +26,31 @@ export default async function GlossarioAdminPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div>
-          <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">Glossário</h1>
-          <p className="text-brand-muted text-sm mt-1">
-            Gerador Ninja via IA · Multi-provider · SEO automático · Indexação Google/Bing
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/admin/glossario/importar"
-            className="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-brand-border/40 text-brand-text px-4 py-2 rounded-xl text-sm font-semibold transition-all">
-            <Upload size={15} /> Importar CSV
-          </Link>
-          <Link href="/admin/glossario/jobs"
-            className="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-brand-border/40 text-brand-text px-4 py-2 rounded-xl text-sm font-semibold transition-all relative">
-            <Clock size={15} /> Jobs
-            {jobsPendentes > 0 && (
-              <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-brand-accent text-white text-[10px] font-bold">
-                {jobsPendentes}
-              </span>
-            )}
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        titulo="Glossário"
+        descricao="Termos gerados por IA viram páginas indexadas no site — cada verbete publicado soma para o SEO da loja."
+        acoes={
+          <>
+            <BotaoLink href="/admin/glossario/importar" variante="secundario">
+              <Upload size={15} /> Importar CSV
+            </BotaoLink>
+            <BotaoLink href="/admin/glossario/jobs" variante="secundario">
+              <Clock size={15} /> Jobs
+              {jobsPendentes > 0 && (
+                <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-brand-accent text-brand-on-accent text-[10px] font-bold">
+                  {jobsPendentes}
+                </span>
+              )}
+            </BotaoLink>
+          </>
+        }
+      />
 
       {/* KPIs */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="admin-glass !bg-black/20 border border-emerald-500/20 rounded-2xl p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-500/0">
-          <p className="text-brand-muted text-[10px] uppercase tracking-widest mb-1 flex items-center gap-1.5">
-            <BookOpen size={11} /> Publicados
-          </p>
-          <p className="text-3xl font-bold text-brand-text">{totalPublicados}</p>
-        </div>
-        <div className="admin-glass !bg-black/20 border border-amber-500/20 rounded-2xl p-4 bg-gradient-to-br from-amber-500/10 to-amber-500/0">
-          <p className="text-brand-muted text-[10px] uppercase tracking-widest mb-1 flex items-center gap-1.5">
-            <AlertCircle size={11} /> Pendentes
-          </p>
-          <p className="text-3xl font-bold text-brand-text">{totalPendentes}</p>
-        </div>
-        <div className="admin-glass !bg-black/20 border border-sky-500/20 rounded-2xl p-4 bg-gradient-to-br from-sky-500/10 to-sky-500/0">
-          <p className="text-brand-muted text-[10px] uppercase tracking-widest mb-1 flex items-center gap-1.5">
-            <Clock size={11} /> Fila
-          </p>
-          <p className="text-3xl font-bold text-brand-text">{jobsPendentes}</p>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <KpiCard label="Publicados" value={totalPublicados} icon={BookOpen} tom="success" />
+        <KpiCard label="Pendentes" value={totalPendentes} icon={AlertCircle} tom="warning" />
+        <KpiCard label="Fila de geração" value={jobsPendentes} icon={Clock} tom="info" href="/admin/glossario/jobs" />
       </div>
 
       {/* Client interativo */}

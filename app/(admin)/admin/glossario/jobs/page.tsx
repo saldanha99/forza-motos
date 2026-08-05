@@ -2,10 +2,29 @@ export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
-import { formatDate } from '@/lib/utils'
+import { cn, formatDate } from '@/lib/utils'
 import { ArrowLeft, Clock, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
+import { KpiCard } from '@/components/admin/KpiCard'
+import type { TomStatus } from '@/lib/admin/status'
+import {
+  Badge, EmptyState, PageHeader, Tabela, THEAD_TH, TD_CELULA,
+} from '@/components/admin/ui/primitives'
 
 export const metadata = { title: 'Fila de jobs — Forza Admin' }
+
+const JOB_STATUS_TOM: Record<string, TomStatus> = {
+  PENDENTE: 'warning',
+  PROCESSANDO: 'info',
+  CONCLUIDO: 'success',
+  ERRO: 'danger',
+}
+
+const JOB_STATUS_LABEL: Record<string, string> = {
+  PENDENTE: 'Pendente',
+  PROCESSANDO: 'Processando',
+  CONCLUIDO: 'Concluído',
+  ERRO: 'Erro',
+}
 
 export default async function JobsPage() {
   const [jobs, counts] = await Promise.all([
@@ -30,150 +49,74 @@ export default async function JobsPage() {
         <ArrowLeft size={14} /> Voltar ao glossário
       </Link>
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">
-            Fila de geração
-          </h1>
-          <p className="text-brand-muted text-sm mt-1">
-            O cron processa até 5 jobs por hora. Falhas tentam 3x antes de virar
-            erro permanente.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        titulo="Fila de geração"
+        descricao="O cron processa até 5 jobs por hora — falhas tentam 3x antes de virar erro permanente."
+      />
 
       {/* Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatusCard
-          icon={<Clock size={20} />}
-          label="Pendentes"
-          value={totais['PENDENTE'] || 0}
-          cor="amber"
-        />
-        <StatusCard
-          icon={<Loader2 size={20} className="animate-spin" />}
-          label="Processando"
-          value={totais['PROCESSANDO'] || 0}
-          cor="sky"
-        />
-        <StatusCard
-          icon={<CheckCircle2 size={20} />}
-          label="Concluídos"
-          value={totais['CONCLUIDO'] || 0}
-          cor="emerald"
-        />
-        <StatusCard
-          icon={<XCircle size={20} />}
-          label="Com erro"
-          value={totais['ERRO'] || 0}
-          cor="rose"
-        />
+        <KpiCard icon={Clock} label="Pendentes" value={totais['PENDENTE'] || 0} tom="warning" />
+        <KpiCard icon={Loader2} label="Processando" value={totais['PROCESSANDO'] || 0} tom="info" />
+        <KpiCard icon={CheckCircle2} label="Concluídos" value={totais['CONCLUIDO'] || 0} tom="success" />
+        <KpiCard icon={XCircle} label="Com erro" value={totais['ERRO'] || 0} tom="danger" />
       </div>
 
       {/* Tabela */}
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl overflow-hidden shadow-xl">
-        <table className="w-full text-sm">
-          <thead className="border-b border-brand-border/20 bg-white/[0.01]">
-            <tr className="text-xs text-brand-muted uppercase tracking-widest">
-              <th className="text-left px-6 py-3 font-medium">Termo</th>
-              <th className="text-left px-4 py-3 font-medium">Modelo</th>
-              <th className="text-left px-4 py-3 font-medium">Tentativas</th>
-              <th className="text-left px-4 py-3 font-medium">Agendado</th>
-              <th className="text-left px-4 py-3 font-medium">Status</th>
-              <th className="text-left px-4 py-3 font-medium">Erro</th>
-              <th className="text-left px-4 py-3 font-medium">Criado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {jobs.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-6 py-16 text-center text-brand-muted">
-                  Nenhum job na fila. Importe um CSV em{' '}
+      <Tabela
+        cabecalho={
+          <>
+            <th className={THEAD_TH}>Termo</th>
+            <th className={THEAD_TH}>Modelo</th>
+            <th className={THEAD_TH}>Tentativas</th>
+            <th className={THEAD_TH}>Agendado</th>
+            <th className={THEAD_TH}>Status</th>
+            <th className={THEAD_TH}>Erro</th>
+            <th className={THEAD_TH}>Criado</th>
+          </>
+        }
+      >
+        {jobs.length === 0 && (
+          <tr>
+            <td colSpan={7}>
+              <EmptyState
+                compacto
+                icone={Clock}
+                titulo="Nenhum job na fila"
+                descricao="Importe um CSV ou gere um termo via IA — cada envio vira um job aqui até ser processado pelo cron."
+                className="border-0"
+                acao={
                   <Link
                     href="/admin/glossario/importar"
-                    className="text-brand-accent hover:underline"
+                    className="text-xs font-semibold text-brand-accent hover:underline"
                   >
-                    Importar CSV
+                    Importar CSV →
                   </Link>
-                </td>
-              </tr>
-            )}
-            {jobs.map((j) => (
-              <tr
-                key={j.id}
-                className="border-b border-brand-border/10 hover:bg-white/[0.02]"
-              >
-                <td className="px-6 py-3 font-medium text-brand-text">{j.titulo}</td>
-                <td className="px-4 py-3 text-brand-muted text-xs font-mono">
-                  {j.modelo}
-                </td>
-                <td className="px-4 py-3 text-brand-muted">{j.tentativas}/3</td>
-                <td className="px-4 py-3 text-brand-muted text-xs">
-                  {j.agendadoPara ? formatDate(j.agendadoPara) : 'imediato'}
-                </td>
-                <td className="px-4 py-3">
-                  <JobStatusBadge status={j.status} />
-                </td>
-                <td className="px-4 py-3 text-rose-400 text-xs max-w-xs truncate">
-                  {j.erro || '—'}
-                </td>
-                <td className="px-4 py-3 text-brand-muted text-xs">
-                  {formatDate(j.createdAt)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                }
+              />
+            </td>
+          </tr>
+        )}
+        {jobs.map((j) => (
+          <tr key={j.id} className="border-b border-brand-hair last:border-0 transition-colors hover:bg-brand-tint-1">
+            <td className={cn(TD_CELULA, 'font-medium text-brand-text')}>{j.titulo}</td>
+            <td className={cn(TD_CELULA, 'text-brand-muted text-xs font-mono')}>{j.modelo}</td>
+            <td className={cn(TD_CELULA, 'text-brand-muted')}>{j.tentativas}/3</td>
+            <td className={cn(TD_CELULA, 'text-brand-muted text-xs')}>
+              {j.agendadoPara ? formatDate(j.agendadoPara) : 'imediato'}
+            </td>
+            <td className={TD_CELULA}>
+              <Badge tom={JOB_STATUS_TOM[j.status] ?? 'neutro'}>
+                {JOB_STATUS_LABEL[j.status] ?? j.status}
+              </Badge>
+            </td>
+            <td className={cn(TD_CELULA, 'text-brand-danger text-xs max-w-xs truncate')}>
+              {j.erro || '—'}
+            </td>
+            <td className={cn(TD_CELULA, 'text-brand-muted text-xs')}>{formatDate(j.createdAt)}</td>
+          </tr>
+        ))}
+      </Tabela>
     </div>
-  )
-}
-
-function StatusCard({
-  icon,
-  label,
-  value,
-  cor,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: number
-  cor: 'amber' | 'sky' | 'emerald' | 'rose'
-}) {
-  const map = {
-    amber: 'text-amber-400 border-amber-500/20 from-amber-500/10',
-    sky: 'text-sky-400 border-sky-500/20 from-sky-500/10',
-    emerald: 'text-emerald-400 border-emerald-500/20 from-emerald-500/10',
-    rose: 'text-rose-400 border-rose-500/20 from-rose-500/10',
-  }
-  return (
-    <div
-      className={`admin-glass !bg-black/20 border rounded-2xl p-4 bg-gradient-to-br to-transparent ${map[cor]}`}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-brand-muted text-[11px] uppercase tracking-widest font-medium">
-          {label}
-        </span>
-        <span className="opacity-70">{icon}</span>
-      </div>
-      <div className="text-2xl font-bold text-brand-text">{value}</div>
-    </div>
-  )
-}
-
-function JobStatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; classe: string }> = {
-    PENDENTE: { label: 'Pendente', classe: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-    PROCESSANDO: { label: 'Processando', classe: 'bg-sky-500/10 text-sky-400 border-sky-500/20' },
-    CONCLUIDO: { label: 'Concluído', classe: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
-    ERRO: { label: 'Erro', classe: 'bg-rose-500/10 text-rose-400 border-rose-500/20' },
-  }
-  const cfg = map[status] || map.PENDENTE
-  return (
-    <span
-      className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-medium border ${cfg.classe}`}
-    >
-      {cfg.label}
-    </span>
   )
 }

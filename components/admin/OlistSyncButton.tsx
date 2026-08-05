@@ -3,9 +3,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   RefreshCw, CheckCircle2, AlertCircle, Loader2,
-  Package, Image as ImageIcon, Warehouse, Trash2,
-  RotateCcw, ArrowUpRight, Activity, Ghost, StopCircle, Play,
+  Warehouse, Trash2,
+  RotateCcw, Activity, Ghost, StopCircle, Play,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Botao, TOM_FUNDO, TOM_TEXTO } from '@/components/admin/ui/primitives'
+import type { TomStatus } from '@/lib/admin/status'
 
 // ── Diagnóstico ───────────────────────────────────────────────────────────────
 interface Diag {
@@ -21,21 +24,78 @@ interface Diag {
   pctEmEstoque: number
 }
 
-function StatBadge({ label, value, color = 'zinc' }: { label: string; value: number | string; color?: string }) {
-  const colors: Record<string, string> = {
-    zinc:   'bg-brand-surface-2 border-brand-border/30 text-brand-muted hover:border-brand-accent/30',
-    green:  'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:border-emerald-500/30',
-    red:    'bg-red-500/10 border-red-500/20 text-red-400 hover:border-red-500/30',
-    yellow: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400 hover:border-yellow-500/30',
-    blue:   'bg-brand-accent/10 border-brand-accent/20 text-brand-text hover:border-brand-accent/40',
-  }
+function StatBadge({ label, value, tom = 'neutro' }: { label: string; value: number | string; tom?: TomStatus }) {
   return (
-    <div className={`rounded-xl px-3 py-2.5 border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${colors[color] ?? colors.zinc}`}>
-      <div className="text-[18px] font-black leading-none tracking-tight">{value}</div>
-      <div className="text-[10px] mt-1 font-semibold uppercase tracking-wider opacity-80">{label}</div>
+    <div
+      className={cn(
+        'rounded-xl border border-brand-border px-3 py-2.5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-pop',
+        TOM_FUNDO[tom],
+      )}
+    >
+      <div className={cn('text-[18px] font-black leading-none tracking-tight', TOM_TEXTO[tom])}>{value}</div>
+      <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-brand-muted">{label}</div>
     </div>
   )
 }
+
+/** Barra de progresso — mesma receita nos três fluxos que precisam dela. */
+function ProgressBar({ pct }: { pct: number }) {
+  return (
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-brand-surface-2">
+      <div className="h-full rounded-full bg-brand-accent transition-all duration-300" style={{ width: `${pct}%` }} />
+    </div>
+  )
+}
+
+/** Círculo numerado do wizard — pulsa em accent enquanto o passo roda. */
+function StepBadge({ ativo, numero }: { ativo: boolean; numero: number }) {
+  return (
+    <div
+      className={cn(
+        'z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-sm font-bold transition-colors duration-250',
+        ativo
+          ? 'animate-pulse border-brand-accent bg-brand-accent text-brand-on-accent'
+          : 'border-brand-border bg-brand-surface-2 text-brand-text',
+      )}
+    >
+      {ativo ? <Loader2 size={16} className="animate-spin" /> : numero}
+    </div>
+  )
+}
+
+/** Aviso de sucesso/erro ao final de uma ação — legível pela cor. */
+function ResultBanner({
+  erro,
+  tom = 'success',
+  children,
+  className,
+}: {
+  erro?: string
+  tom?: 'success' | 'neutro'
+  children: React.ReactNode
+  className?: string
+}) {
+  const efetivo: TomStatus = erro ? 'danger' : tom
+  return (
+    <div
+      className={cn(
+        'flex items-start gap-2 rounded-xl border border-brand-border px-4 py-2.5 text-xs',
+        TOM_FUNDO[efetivo],
+        TOM_TEXTO[efetivo],
+        className,
+      )}
+    >
+      {erro ? <AlertCircle size={13} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={13} className="mt-0.5 shrink-0" />}
+      <span>{erro || children}</span>
+    </div>
+  )
+}
+
+const TABS: { id: 'diag' | 'sync' | 'clean'; label: string; icon: typeof Activity }[] = [
+  { id: 'diag', label: 'Diagnóstico', icon: Activity },
+  { id: 'sync', label: 'Sincronização', icon: RefreshCw },
+  { id: 'clean', label: 'Limpeza', icon: Trash2 },
+]
 
 export function OlistSyncButton() {
   const [activeTab, setActiveTab] = useState<'diag' | 'sync' | 'clean'>('diag')
@@ -345,54 +405,48 @@ export function OlistSyncButton() {
   const isAnyRunning = loadingSync || loadingImagens || loadingEstoque || loadingFantasmas || loadingCleanup || loadingSemImagem || loadingDelta || loadingRecon || loadingResetImgs
 
   return (
-    <div className="admin-glass !bg-black/40 border border-brand-border/40 rounded-3xl p-6 md:p-8 space-y-6 shadow-2xl transition-all duration-300 relative overflow-hidden">
-      
+    <div className="relative space-y-6 overflow-hidden rounded-3xl border border-brand-border bg-brand-surface p-6 shadow-pop transition-all duration-300 md:p-8">
+
       {/* Glow decorativo de fundo */}
-      <div className="absolute top-0 right-0 w-80 h-80 bg-brand-accent/5 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="pointer-events-none absolute right-0 top-0 h-80 w-80 rounded-full bg-brand-accent-soft blur-[100px]" />
+      <div className="pointer-events-none absolute bottom-0 left-0 h-80 w-80 rounded-full bg-brand-tint-3 blur-[100px]" />
 
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-brand-border/20">
+      <div className="flex flex-col gap-4 border-b border-brand-hair pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="font-barlow font-black text-2xl text-brand-text tracking-tight uppercase flex items-center gap-2">
-            <RefreshCw size={20} className={`text-brand-accent ${isAnyRunning ? 'animate-spin' : ''}`} />
+          <h3 className="flex items-center gap-2 font-barlow text-2xl font-black uppercase tracking-tight text-brand-text">
+            <RefreshCw size={20} className={cn('text-brand-accent', isAnyRunning && 'animate-spin')} />
             Sincronizador OLIST / Tiny
           </h3>
-          <p className="text-xs text-brand-muted mt-0.5">
+          <p className="mt-0.5 text-xs text-brand-muted">
             Gerencie catálogo, imagens e estoque físico do ERP integrado
           </p>
         </div>
-        
+
         {/* Tab Switcher */}
-        <div className="flex bg-brand-surface-2/80 p-1 rounded-2xl gap-1 border border-brand-border/20">
-          <button
-            onClick={() => setActiveTab('diag')}
-            className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl transition-all duration-200 ${activeTab === 'diag' ? 'bg-brand-accent text-white shadow-md' : 'text-brand-muted hover:text-brand-text'}`}
-          >
-            <Activity size={13} />
-            Diagnóstico
-          </button>
-          <button
-            onClick={() => setActiveTab('sync')}
-            className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl transition-all duration-200 ${activeTab === 'sync' ? 'bg-brand-accent text-white shadow-md' : 'text-brand-muted hover:text-brand-text'}`}
-          >
-            <RefreshCw size={13} />
-            Sincronização
-          </button>
-          <button
-            onClick={() => setActiveTab('clean')}
-            className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl transition-all duration-200 ${activeTab === 'clean' ? 'bg-brand-accent text-white shadow-md' : 'text-brand-muted hover:text-brand-text'}`}
-          >
-            <Trash2 size={13} />
-            Limpeza
-          </button>
+        <div className="flex gap-1 rounded-2xl border border-brand-border bg-brand-surface-2 p-1">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all duration-200',
+                activeTab === tab.id
+                  ? 'bg-brand-accent text-brand-on-accent shadow-cta'
+                  : 'text-brand-muted hover:text-brand-text',
+              )}
+            >
+              <tab.icon size={13} />
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* ── ALERTA DE EXECUÇÃO EM ANDAMENTO ── */}
       {isAnyRunning && (
-        <div className="flex items-center gap-3 px-4 py-3 bg-brand-accent/10 border border-brand-accent/30 rounded-2xl animate-pulse">
-          <Loader2 size={14} className="animate-spin text-brand-accent shrink-0" />
+        <div className="flex animate-pulse items-center gap-3 rounded-2xl border border-brand-accent bg-brand-accent-soft px-4 py-3">
+          <Loader2 size={14} className="shrink-0 animate-spin text-brand-accent" />
           <span className="text-xs font-semibold text-brand-text">
             Uma tarefa está em execução em segundo plano. Outras ações estão bloqueadas por segurança.
           </span>
@@ -401,61 +455,57 @@ export function OlistSyncButton() {
 
       {/* ── ABA 1: DIAGNÓSTICO E STATUS ── */}
       {activeTab === 'diag' && (
-        <div className="space-y-6 animate-fade-in-up">
+        <div className="animate-fade-in-up space-y-6">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-black text-brand-muted uppercase tracking-wider">
+            <p className="text-xs font-black uppercase tracking-wider text-brand-muted">
               Estado atual do catálogo local
             </p>
-            <button
-              onClick={fetchDiag}
-              disabled={loadingDiag || isAnyRunning}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-brand-surface-2 hover:bg-brand-accent/20 border border-brand-border/30 text-brand-text text-xs font-bold rounded-xl transition-all hover:-translate-y-0.5 disabled:opacity-50"
-            >
+            <Botao variante="secundario" tamanho="sm" onClick={fetchDiag} disabled={loadingDiag || isAnyRunning}>
               {loadingDiag ? <Loader2 size={12} className="animate-spin" /> : <Activity size={12} />}
               Atualizar Diagnóstico
-            </button>
+            </Botao>
           </div>
 
           {diag ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {/* Card principal */}
-              <div className="md:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <StatBadge label="Total no banco" value={diag.total} color="zinc" />
-                <StatBadge label="Storefront ativo" value={diag.ativos} color="green" />
-                <StatBadge label="Fantasmas inativos" value={diag.inativos} color={diag.inativos > 0 ? 'red' : 'zinc'} />
-                <StatBadge label="Com fotos" value={diag.ativosComImagem} color="green" />
-                <StatBadge label="Sem fotos (inativos)" value={diag.ativosSemImagem} color={diag.ativosSemImagem > 0 ? 'yellow' : 'zinc'} />
-                <StatBadge label="Não verificados" value={diag.naoVerificados} color={diag.naoVerificados > 0 ? 'blue' : 'zinc'} />
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:col-span-2">
+                <StatBadge label="Total no banco" value={diag.total} tom="neutro" />
+                <StatBadge label="Storefront ativo" value={diag.ativos} tom="success" />
+                <StatBadge label="Fantasmas inativos" value={diag.inativos} tom={diag.inativos > 0 ? 'danger' : 'neutro'} />
+                <StatBadge label="Com fotos" value={diag.ativosComImagem} tom="success" />
+                <StatBadge label="Sem fotos (inativos)" value={diag.ativosSemImagem} tom={diag.ativosSemImagem > 0 ? 'warning' : 'neutro'} />
+                <StatBadge label="Não verificados" value={diag.naoVerificados} tom={diag.naoVerificados > 0 ? 'info' : 'neutro'} />
               </div>
 
               {/* Saúde geral card */}
-              <div className="bg-brand-surface-2/65 border border-brand-border/20 rounded-2xl p-5 flex flex-col justify-between space-y-4">
+              <div className="flex flex-col justify-between space-y-4 rounded-2xl border border-brand-border bg-brand-surface-2 p-5">
                 <div>
-                  <h4 className="text-xs font-black text-brand-muted uppercase tracking-wider mb-2">Saúde do Catálogo</h4>
+                  <h4 className="mb-2 text-xs font-black uppercase tracking-wider text-brand-muted">Saúde do Catálogo</h4>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-black text-brand-text tracking-tight">{diag.pctComImagem}%</span>
+                    <span className="font-barlow text-3xl font-black tracking-tight text-brand-text">{diag.pctComImagem}%</span>
                     <span className="text-xs text-brand-muted">de cobertura de fotos</span>
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   {/* Cobertura barra */}
-                  <div className="w-full bg-brand-bg rounded-full h-2 overflow-hidden border border-brand-border/10">
+                  <div className="h-2 w-full overflow-hidden rounded-full border border-brand-hair bg-brand-bg">
                     <div
-                      className="h-full rounded-full transition-all duration-1000"
-                      style={{
-                        width: `${diag.pctComImagem}%`,
-                        backgroundColor: diag.pctComImagem >= 90 ? '#10b981' : diag.pctComImagem >= 70 ? '#f59e0b' : '#d42b2b'
-                      }}
+                      className={cn(
+                        'h-full rounded-full transition-all duration-1000',
+                        diag.pctComImagem >= 90 ? 'bg-brand-success' : diag.pctComImagem >= 70 ? 'bg-brand-warning' : 'bg-brand-danger',
+                      )}
+                      style={{ width: `${diag.pctComImagem}%` }}
                     />
                   </div>
-                  
+
                   {/* Detalhes de estoque */}
-                  <div className="flex justify-between items-center text-xs pt-2 border-t border-brand-border/10">
+                  <div className="flex items-center justify-between border-t border-brand-hair pt-2 text-xs">
                     <span className="text-brand-muted">Em estoque:</span>
-                    <span className="font-bold text-emerald-400">{diag.emEstoque} ({diag.pctEmEstoque}%)</span>
+                    <span className="font-bold text-brand-success">{diag.emEstoque} ({diag.pctEmEstoque}%)</span>
                   </div>
-                  <div className="flex justify-between items-center text-xs">
+                  <div className="flex items-center justify-between text-xs">
                     <span className="text-brand-muted">Fora de estoque (inativos):</span>
                     <span className="font-bold text-brand-text">{diag.semEstoque}</span>
                   </div>
@@ -463,18 +513,18 @@ export function OlistSyncButton() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-10 bg-brand-surface-2/30 rounded-2xl border border-dashed border-brand-border/30">
-              <Loader2 size={24} className="animate-spin text-brand-accent mb-2" />
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-brand-border py-10">
+              <Loader2 size={24} className="mb-2 animate-spin text-brand-accent" />
               <p className="text-xs text-brand-muted">Carregando diagnóstico do catálogo...</p>
             </div>
           )}
 
-          <div className="p-4 bg-brand-surface-2/40 border border-brand-border/20 rounded-2xl space-y-2">
-            <h4 className="text-xs font-bold text-brand-text flex items-center gap-1.5">
-              <CheckCircle2 size={13} className="text-emerald-400" />
+          <div className="space-y-2 rounded-2xl border border-brand-border bg-brand-surface-2 p-4">
+            <h4 className="flex items-center gap-1.5 text-xs font-bold text-brand-text">
+              <CheckCircle2 size={13} className="text-brand-success" />
               Entendendo as Regras de Ativação do E-commerce
             </h4>
-            <p className="text-xs text-brand-muted leading-relaxed">
+            <p className="text-xs leading-relaxed text-brand-muted">
               O Forza Motos protege a experiência do cliente através de regras rígidas de ativação. Um produto só fica visível para compra se estiver <strong>ativo no Tiny ERP</strong>, possuir <strong>pelo menos 1 imagem anexa</strong> e tiver <strong>estoque físico ativo (&gt; 0)</strong>. Caso contrário, ele é automaticamente mantido como inativo.
             </p>
           </div>
@@ -483,97 +533,82 @@ export function OlistSyncButton() {
 
       {/* ── ABA 2: ASSISTENTE DE SINCRONIZAÇÃO (WIZARD) ── */}
       {activeTab === 'sync' && (
-        <div className="space-y-8 animate-fade-in-up">
-          <p className="text-xs font-black text-brand-muted uppercase tracking-wider">
+        <div className="animate-fade-in-up space-y-8">
+          <p className="text-xs font-black uppercase tracking-wider text-brand-muted">
             Fluxo guiado de importação
           </p>
 
-          <div className="space-y-6 relative before:absolute before:left-6 before:top-4 before:bottom-4 before:w-0.5 before:bg-brand-border/20">
-            
+          <div className="relative space-y-6 before:absolute before:bottom-4 before:left-6 before:top-4 before:w-0.5 before:bg-brand-hair">
+
             {/* PASSO 1: Catálogo e Metadados */}
-            <div className="flex gap-4 relative">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border font-bold text-sm shrink-0 z-10 transition-colors duration-250 ${loadingSync ? 'bg-brand-accent border-brand-accent text-white animate-pulse' : 'bg-brand-surface-2 border-brand-border/40 text-brand-text'}`}>
-                {loadingSync ? <Loader2 size={16} className="animate-spin" /> : '1'}
-              </div>
-              <div className="space-y-2 flex-1 pt-1">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="relative flex gap-4">
+              <StepBadge ativo={loadingSync} numero={1} />
+              <div className="flex-1 space-y-2 pt-1">
+                <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
                   <div>
-                    <h4 className="text-sm font-bold text-brand-text flex items-center gap-1.5">
+                    <h4 className="flex items-center gap-1.5 text-sm font-bold text-brand-text">
                       Passo 1 — Importar Catálogo Completo
                     </h4>
                     <p className="text-xs text-brand-muted">
                       Importa códigos, nomes, marcas, categorias e situação ativa dos produtos
                     </p>
                   </div>
-                  <button
-                    onClick={handleSyncMetadados}
-                    disabled={isAnyRunning}
-                    className="self-start sm:self-auto flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-brand-accent to-brand-accent-hover hover:opacity-90 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-brand-accent/20"
-                  >
+                  <Botao onClick={handleSyncMetadados} disabled={isAnyRunning} tamanho="sm" className="self-start sm:self-auto">
                     <RefreshCw size={11} />
                     {loadingSync ? `Pag. ${syncPagina}/${syncTotal}` : 'Iniciar Importação'}
-                  </button>
+                  </Botao>
                 </div>
 
                 {loadingSync && syncTotal > 0 && (
-                  <div className="space-y-1.5 max-w-md bg-brand-bg/50 p-3 rounded-xl border border-brand-border/20">
-                    <div className="flex justify-between text-[10px] font-bold text-brand-muted uppercase tracking-wider">
+                  <div className="max-w-md space-y-1.5 rounded-xl border border-brand-border bg-brand-surface-2 p-3">
+                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-brand-muted">
                       <span>Importando dados do Tiny ERP...</span>
                       <span>{pctSync}% ({syncPagina}/{syncTotal})</span>
                     </div>
-                    <div className="w-full bg-brand-surface-2 rounded-full h-1.5 overflow-hidden">
-                      <div className="bg-brand-accent h-full rounded-full transition-all duration-300" style={{ width: `${pctSync}%` }} />
-                    </div>
+                    <ProgressBar pct={pctSync} />
                     <div className="flex gap-4 text-[10px] text-brand-muted">
-                      <span>Criados: <strong className="text-emerald-400 font-bold">{syncAcum.criados}</strong></span>
-                      <span>Atualizados: <strong className="text-blue-400 font-bold">{syncAcum.atualizados}</strong></span>
-                      <span>Falhas: <strong className="text-red-400 font-bold">{syncAcum.erros}</strong></span>
+                      <span>Criados: <strong className="font-bold text-brand-success">{syncAcum.criados}</strong></span>
+                      <span>Atualizados: <strong className="font-bold text-brand-info">{syncAcum.atualizados}</strong></span>
+                      <span>Falhas: <strong className="font-bold text-brand-danger">{syncAcum.erros}</strong></span>
                     </div>
                   </div>
                 )}
 
                 {!loadingSync && (syncDone || syncError) && (
-                  <div className={`flex items-start gap-2 text-xs px-4 py-2.5 rounded-xl border max-w-md ${syncError ? 'bg-red-950/20 border-red-900/30 text-red-400' : 'bg-emerald-950/20 border-emerald-900/30 text-emerald-400'}`}>
-                    {syncError ? <AlertCircle size={13} className="shrink-0 mt-0.5" /> : <CheckCircle2 size={13} className="shrink-0 mt-0.5" />}
-                    <span>{syncError || `Sucesso: ${syncAcum.criados} novos criados e ${syncAcum.atualizados} atualizados no banco local.`}</span>
-                  </div>
+                  <ResultBanner erro={syncError} className="max-w-md">
+                    {`Sucesso: ${syncAcum.criados} novos criados e ${syncAcum.atualizados} atualizados no banco local.`}
+                  </ResultBanner>
                 )}
 
                 {/* Sincronização Delta */}
-                <div className="pt-2 border-t border-brand-border/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 max-w-xl">
+                <div className="flex max-w-xl flex-col justify-between gap-2 border-t border-brand-hair pt-2 sm:flex-row sm:items-center">
                   <div>
-                    <h5 className="text-[11px] font-bold text-brand-text flex items-center gap-1">
-                      <Activity size={10} className="text-emerald-400" />
+                    <h5 className="flex items-center gap-1 text-[11px] font-bold text-brand-text">
+                      <Activity size={10} className="text-brand-success" />
                       Sincronização Rápida (Estoque & Preço Delta)
                     </h5>
                     <p className="text-[10px] text-brand-muted">
                       Verifica apenas produtos modificados nas últimas 48h
                     </p>
                   </div>
-                  <button
-                    onClick={handleSyncDelta}
-                    disabled={isAnyRunning}
-                    className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-emerald-950/20 hover:bg-emerald-950/40 disabled:opacity-50 text-emerald-400 border border-emerald-800/30 text-xs font-bold rounded-xl transition-all"
-                  >
-                    {loadingDelta ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
+                  <Botao variante="secundario" tamanho="sm" onClick={handleSyncDelta} disabled={isAnyRunning} className="self-start sm:self-auto">
+                    {loadingDelta ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} className="text-brand-success" />}
                     Sync Rápido
-                  </button>
+                  </Botao>
                 </div>
                 {!loadingDelta && deltaResult && (
-                  <div className={`text-xs px-4 py-2 rounded-xl border max-w-md ${deltaResult.error ? 'bg-red-950/20 border-red-900/30 text-red-400' : 'bg-emerald-950/20 border-emerald-900/30 text-emerald-400'}`}>
-                    <span>{deltaResult.error || `Sync Delta concluído: ${deltaResult.estoque?.atualizados ?? 0} estoques e ${deltaResult.produtos?.atualizados ?? 0} produtos sincronizados.`}</span>
-                  </div>
+                  <ResultBanner erro={deltaResult.error} className="max-w-md">
+                    {`Sync Delta concluído: ${deltaResult.estoque?.atualizados ?? 0} estoques e ${deltaResult.produtos?.atualizados ?? 0} produtos sincronizados.`}
+                  </ResultBanner>
                 )}
               </div>
             </div>
 
             {/* PASSO 2: Imagens e Fotos anexas */}
-            <div className="flex gap-4 relative">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border font-bold text-sm shrink-0 z-10 transition-colors duration-250 ${loadingImagens ? 'bg-brand-accent border-brand-accent text-white animate-pulse' : 'bg-brand-surface-2 border-brand-border/40 text-brand-text'}`}>
-                {loadingImagens ? <Loader2 size={16} className="animate-spin" /> : '2'}
-              </div>
-              <div className="space-y-3 flex-1 pt-1">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="relative flex gap-4">
+              <StepBadge ativo={loadingImagens} numero={2} />
+              <div className="flex-1 space-y-3 pt-1">
+                <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
                   <div>
                     <h4 className="text-sm font-bold text-brand-text">
                       Passo 2 — Importar Imagens & Anexos
@@ -583,38 +618,29 @@ export function OlistSyncButton() {
                     </p>
                   </div>
                   {!loadingImagens ? (
-                    <button
-                      onClick={handleBuscarImagens}
-                      disabled={isAnyRunning}
-                      className="self-start sm:self-auto flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-brand-accent to-brand-accent-hover hover:opacity-90 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-brand-accent/20"
-                    >
+                    <Botao onClick={handleBuscarImagens} disabled={isAnyRunning} tamanho="sm" className="self-start sm:self-auto">
                       <Play size={11} />
                       Importar Imagens
-                    </button>
+                    </Botao>
                   ) : (
-                    <button
-                      onClick={handlePararImagens}
-                      className="self-start sm:self-auto flex items-center gap-1.5 px-4 py-2 bg-brand-surface-2 hover:bg-brand-accent/20 border border-brand-border/30 text-brand-text text-xs font-bold rounded-xl transition-all"
-                    >
-                      <StopCircle size={11} className="text-brand-accent animate-pulse" />
+                    <Botao variante="secundario" tamanho="sm" onClick={handlePararImagens} className="self-start sm:self-auto">
+                      <StopCircle size={11} className="animate-pulse text-brand-accent" />
                       Parar Processo
-                    </button>
+                    </Botao>
                   )}
                 </div>
 
                 {loadingImagens && (
-                  <div className="space-y-1.5 max-w-md bg-brand-bg/50 p-3.5 rounded-xl border border-brand-border/20 animate-fade-in-up">
-                    <div className="flex justify-between text-[10px] font-bold text-brand-muted uppercase tracking-wider">
+                  <div className="animate-fade-in-up max-w-md space-y-1.5 rounded-xl border border-brand-border bg-brand-surface-2 p-3.5">
+                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-brand-muted">
                       <span className="flex items-center gap-1">
                         <Loader2 size={10} className="animate-spin text-brand-accent" />
                         Sincronizando anexos do ERP...
                       </span>
                       <span>{pctImagens}% ({imagensAcum}/{imagensTotal ?? '?'})</span>
                     </div>
-                    <div className="w-full bg-brand-surface-2 rounded-full h-1.5 overflow-hidden">
-                      <div className="bg-brand-accent h-full rounded-full transition-all duration-500" style={{ width: `${pctImagens}%` }} />
-                    </div>
-                    <div className="flex justify-between items-center text-[10px] text-brand-muted">
+                    <ProgressBar pct={pctImagens} />
+                    <div className="flex items-center justify-between text-[10px] text-brand-muted">
                       <span>Restantes no banco: <strong>{imagensRestantes ?? '?'}</strong></span>
                       {imagensETA && <span className="font-bold text-brand-accent">{imagensETA}</span>}
                     </div>
@@ -622,29 +648,30 @@ export function OlistSyncButton() {
                 )}
 
                 {!loadingImagens && (imagensDone || imagensError) && (
-                  <div className={`flex items-start gap-2 text-xs px-4 py-2.5 rounded-xl border max-w-md ${imagensError ? 'bg-red-950/20 border-red-900/30 text-red-400' : 'bg-emerald-950/20 border-emerald-900/30 text-emerald-400'}`}>
-                    {imagensError ? <AlertCircle size={13} className="shrink-0 mt-0.5" /> : <CheckCircle2 size={13} className="shrink-0 mt-0.5" />}
-                    <span>{imagensError || `Concluído: ${imagensAcum} produtos com fotos anexadas importados com sucesso.`}</span>
-                  </div>
+                  <ResultBanner erro={imagensError} className="max-w-md">
+                    {`Concluído: ${imagensAcum} produtos com fotos anexadas importados com sucesso.`}
+                  </ResultBanner>
                 )}
 
                 {/* Reset de verificação */}
-                <div className="pt-2 border-t border-brand-border/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 max-w-xl">
+                <div className="flex max-w-xl flex-col justify-between gap-2 border-t border-brand-hair pt-2 sm:flex-row sm:items-center">
                   <div>
-                    <h5 className="text-[11px] font-bold text-brand-text">Re-checar produtos marcados "Sem Foto"</h5>
+                    <h5 className="text-[11px] font-bold text-brand-text">Re-checar produtos marcados &quot;Sem Foto&quot;</h5>
                     <p className="text-[10px] text-brand-muted">Reseta a fila de verificação para tentar buscar fotos novamente</p>
                   </div>
-                  <button
+                  <Botao
+                    variante="secundario"
+                    tamanho="sm"
                     onClick={handleResetImagens}
                     disabled={isAnyRunning || loadingImagens}
-                    className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-brand-surface-2 hover:bg-brand-accent/20 border border-brand-border/30 disabled:opacity-50 text-brand-text text-xs font-bold rounded-xl transition-all"
+                    className="self-start sm:self-auto"
                   >
                     {loadingResetImgs ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />}
                     Resetar Fila
-                  </button>
+                  </Botao>
                 </div>
                 {!loadingResetImgs && resetImgsResult && (
-                  <div className="text-xs px-4 py-2 bg-brand-surface-2/40 border border-brand-border/20 rounded-xl text-brand-muted max-w-md">
+                  <div className="max-w-md rounded-xl border border-brand-border bg-brand-surface-2 px-4 py-2 text-xs text-brand-muted">
                     {resetImgsResult.error || resetImgsResult.info}
                   </div>
                 )}
@@ -652,12 +679,10 @@ export function OlistSyncButton() {
             </div>
 
             {/* PASSO 3: Estoque Físico */}
-            <div className="flex gap-4 relative">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border font-bold text-sm shrink-0 z-10 transition-colors duration-250 ${loadingEstoque ? 'bg-brand-accent border-brand-accent text-white animate-pulse' : 'bg-brand-surface-2 border-brand-border/40 text-brand-text'}`}>
-                {loadingEstoque ? <Loader2 size={16} className="animate-spin" /> : '3'}
-              </div>
-              <div className="space-y-2 flex-1 pt-1">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="relative flex gap-4">
+              <StepBadge ativo={loadingEstoque} numero={3} />
+              <div className="flex-1 space-y-2 pt-1">
+                <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
                   <div>
                     <h4 className="text-sm font-bold text-brand-text">
                       Passo 3 — Sincronizar Estoque Físico Real
@@ -666,27 +691,22 @@ export function OlistSyncButton() {
                       Consulta e salva o saldo de estoque físico detalhado por depósito
                     </p>
                   </div>
-                  <button
-                    onClick={handleSyncEstoque}
-                    disabled={isAnyRunning}
-                    className="self-start sm:self-auto flex items-center gap-1.5 px-4 py-2 bg-brand-surface-2 hover:bg-brand-accent/20 border border-brand-border/30 disabled:opacity-50 text-brand-text text-xs font-bold rounded-xl transition-all hover:-translate-y-0.5"
-                  >
+                  <Botao variante="secundario" tamanho="sm" onClick={handleSyncEstoque} disabled={isAnyRunning} className="self-start sm:self-auto">
                     {loadingEstoque ? <Loader2 size={11} className="animate-spin" /> : <Warehouse size={11} />}
                     Sincronizar Estoque
-                  </button>
+                  </Botao>
                 </div>
 
                 {loadingEstoque && (
-                  <div className="text-xs px-4 py-2 bg-brand-surface-2 border border-brand-border/20 rounded-xl text-brand-muted max-w-md">
+                  <div className="max-w-md rounded-xl border border-brand-border bg-brand-surface-2 px-4 py-2 text-xs text-brand-muted">
                     Consultando estoque físico... {estoqueAcum} produtos processados de {estoqueTotal ?? '?'}.
                   </div>
                 )}
 
                 {!loadingEstoque && (estoqueDone || estoqueError) && (
-                  <div className={`flex items-start gap-2 text-xs px-4 py-2.5 rounded-xl border max-w-md ${estoqueError ? 'bg-red-950/20 border-red-900/30 text-red-400' : 'bg-emerald-950/20 border-emerald-900/30 text-emerald-400'}`}>
-                    {estoqueError ? <AlertCircle size={13} /> : <CheckCircle2 size={13} />}
-                    <span>{estoqueError || `Estoque verificado com sucesso para ${estoqueAcum} produtos.`}</span>
-                  </div>
+                  <ResultBanner erro={estoqueError} className="max-w-md">
+                    {`Estoque verificado com sucesso para ${estoqueAcum} produtos.`}
+                  </ResultBanner>
                 )}
               </div>
             </div>
@@ -697,15 +717,15 @@ export function OlistSyncButton() {
 
       {/* ── ABA 3: LIMPEZA E AJUSTES AVANÇADOS ── */}
       {activeTab === 'clean' && (
-        <div className="space-y-6 animate-fade-in-up">
-          <p className="text-xs font-black text-brand-muted uppercase tracking-wider">
+        <div className="animate-fade-in-up space-y-6">
+          <p className="text-xs font-black uppercase tracking-wider text-brand-muted">
             Ferramentas avançadas de limpeza
           </p>
 
           {/* Passo 0: Limpar Fantasmas */}
-          <div className="p-5 bg-brand-surface-2/65 border border-brand-border/25 rounded-2xl space-y-4">
+          <div className="space-y-4 rounded-2xl border border-brand-border bg-brand-surface-2 p-5">
             <div className="flex items-center gap-2.5 text-brand-text">
-              <Ghost size={18} className="text-brand-accent animate-pulse" />
+              <Ghost size={18} className="animate-pulse text-brand-accent" />
               <div>
                 <h4 className="text-sm font-bold text-brand-text">Passo 0 — Limpar Fantasmas Automático</h4>
                 <p className="text-xs text-brand-muted">
@@ -714,10 +734,11 @@ export function OlistSyncButton() {
               </div>
             </div>
 
-            <button
+            <Botao
+              variante="perigo"
               onClick={handleLimparFantasmas}
               disabled={isAnyRunning}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-950/20 hover:bg-red-950/40 disabled:opacity-50 text-red-400 text-xs font-bold rounded-xl border border-red-800/30 transition-all shadow-md"
+              className="w-full"
             >
               {loadingFantasmas ? <Loader2 size={12} className="animate-spin" /> : <Ghost size={12} />}
               {loadingFantasmas
@@ -728,56 +749,47 @@ export function OlistSyncButton() {
                   : 'Limpando e deletando fantasmas…'
                 : 'Iniciar Limpeza de Fantasmas'
               }
-            </button>
+            </Botao>
 
             {loadingFantasmas && fantasmasProgresso.totalPaginas > 0 && (
               <div className="space-y-1">
-                <div className="flex justify-between text-[10px] text-brand-muted uppercase font-bold tracking-wider">
+                <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-brand-muted">
                   <span>Varrendo catálogo Tiny ERP...</span>
                   <span>{pctFantasmas}%</span>
                 </div>
-                <div className="w-full bg-brand-bg rounded-full h-1 overflow-hidden">
-                  <div className="bg-brand-accent h-full rounded-full transition-all" style={{ width: `${pctFantasmas}%` }} />
-                </div>
+                <ProgressBar pct={pctFantasmas} />
               </div>
             )}
 
             {!loadingFantasmas && (fantasmasResult || fantasmasError) && (
-              <div className={`flex items-start gap-2.5 text-xs px-4 py-3 rounded-xl border ${fantasmasError ? 'bg-red-950/20 border-red-900/30 text-red-400' : 'bg-emerald-950/20 border-emerald-900/30 text-emerald-400'}`}>
-                {fantasmasError ? <AlertCircle size={13} className="shrink-0 mt-0.5" /> : <CheckCircle2 size={13} className="shrink-0 mt-0.5" />}
-                <span>
-                  {fantasmasError || fantasmasResult?.msg || `Limpeza concluída com sucesso: ${fantasmasResult.deletados ?? 0} fantasmas excluídos definitivamente do banco e ${fantasmasResult.marcados ?? 0} marcados como inativos por possuírem pedidos.`}
-                </span>
-              </div>
+              <ResultBanner erro={fantasmasError}>
+                {fantasmasResult?.msg || `Limpeza concluída com sucesso: ${fantasmasResult?.deletados ?? 0} fantasmas excluídos definitivamente do banco e ${fantasmasResult?.marcados ?? 0} marcados como inativos por possuírem pedidos.`}
+              </ResultBanner>
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+
             {/* Remover R$0,00 */}
-            <div className="p-4 bg-brand-surface-2/30 border border-brand-border/20 rounded-2xl flex flex-col justify-between space-y-3">
+            <div className="flex flex-col justify-between space-y-3 rounded-2xl border border-brand-border bg-brand-surface-2 p-4">
               <div>
-                <h5 className="text-xs font-bold text-brand-text flex items-center gap-1.5">
-                  <Trash2 size={13} className="text-orange-400" />
+                <h5 className="flex items-center gap-1.5 text-xs font-bold text-brand-text">
+                  <Trash2 size={13} className="text-brand-warning" />
                   Preço Zerado (R$ 0,00)
                 </h5>
                 <p className="text-[11px] text-brand-muted">
                   Exclui produtos que foram importados com preço zerado.
                 </p>
               </div>
-              <button
-                onClick={() => handleCleanup('preco_zero')}
-                disabled={isAnyRunning}
-                className="w-full px-3 py-2 bg-orange-950/20 hover:bg-orange-950/40 text-orange-400 border border-orange-900/30 text-[11px] font-bold rounded-xl transition-all"
-              >
+              <Botao variante="perigo" tamanho="sm" onClick={() => handleCleanup('preco_zero')} disabled={isAnyRunning} className="w-full">
                 Remover Preço Zerado
-              </button>
+              </Botao>
             </div>
 
             {/* Duplicados */}
-            <div className="p-4 bg-brand-surface-2/30 border border-brand-border/20 rounded-2xl flex flex-col justify-between space-y-3">
+            <div className="flex flex-col justify-between space-y-3 rounded-2xl border border-brand-border bg-brand-surface-2 p-4">
               <div>
-                <h5 className="text-xs font-bold text-brand-text flex items-center gap-1.5">
+                <h5 className="flex items-center gap-1.5 text-xs font-bold text-brand-text">
                   <Trash2 size={13} className="text-brand-muted" />
                   Produtos Duplicados
                 </h5>
@@ -785,77 +797,65 @@ export function OlistSyncButton() {
                   Identifica produtos com o mesmo tinyId e mantém apenas a versão mais recente.
                 </p>
               </div>
-              <button
-                onClick={() => handleCleanup('duplicados')}
-                disabled={isAnyRunning}
-                className="w-full px-3 py-2 bg-brand-surface-2 hover:bg-brand-accent/20 border border-brand-border/30 text-brand-text text-[11px] font-bold rounded-xl transition-all"
-              >
+              <Botao variante="perigo" tamanho="sm" onClick={() => handleCleanup('duplicados')} disabled={isAnyRunning} className="w-full">
                 Corrigir Duplicados
-              </button>
+              </Botao>
             </div>
 
           </div>
 
           {!loadingCleanup && cleanupResult && (
-            <div className={`text-xs px-4 py-2.5 rounded-xl border ${cleanupResult.error ? 'bg-red-950/20 border-red-900/30 text-red-400' : 'bg-brand-surface-2 border-brand-border/30 text-brand-text'}`}>
-              <span>{cleanupResult.error || cleanupResult.msg || `${cleanupResult.removidos} produtos removidos com sucesso.`}</span>
-            </div>
+            <ResultBanner erro={cleanupResult.error} tom="neutro">
+              {cleanupResult.msg || `${cleanupResult.removidos} produtos removidos com sucesso.`}
+            </ResultBanner>
           )}
 
           {/* ── Excluir sem foto (Ação perigosa) ── */}
-          <div className="p-5 bg-brand-surface-2/45 border border-brand-border/20 rounded-2xl space-y-3">
-            <h5 className="text-xs font-bold text-brand-text flex items-center gap-1.5">
-              <AlertCircle size={14} className="text-amber-500" />
+          <div className="space-y-3 rounded-2xl border border-brand-border bg-brand-surface-2 p-5">
+            <h5 className="flex items-center gap-1.5 text-xs font-bold text-brand-text">
+              <AlertCircle size={14} className="text-brand-warning" />
               Excluir produtos sem nenhuma foto
             </h5>
             <p className="text-xs text-brand-muted">
-              Apaga permanentemente da base local os produtos que já foram varridos no Passo 2 e confirmados como "sem imagem" no Tiny ERP.
+              Apaga permanentemente da base local os produtos que já foram varridos no Passo 2 e confirmados como &quot;sem imagem&quot; no Tiny ERP.
             </p>
 
             {!semImagemConfirming ? (
-              <button
-                onClick={handleSemImagemCount}
-                disabled={isAnyRunning}
-                className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 bg-amber-950/20 hover:bg-amber-950/40 text-amber-500 border border-amber-900/30 text-xs font-bold rounded-xl transition-all"
-              >
+              <Botao variante="perigo" onClick={handleSemImagemCount} disabled={isAnyRunning} className="w-full">
                 <Trash2 size={12} />
                 Excluir produtos sem foto
-              </button>
+              </Botao>
             ) : (
-              <div className="space-y-3 p-4 bg-amber-950/10 border border-amber-800/20 rounded-xl">
-                <p className="text-xs text-amber-500 font-bold text-center">
+              <div className="space-y-3 rounded-xl border border-brand-warning bg-brand-warning-soft p-4">
+                <p className="text-center text-xs font-bold text-brand-warning">
                   ⚠️ {semImagemCount} produtos sem foto no banco local serão excluídos para sempre! Essa operação é irreversível.
                 </p>
                 <div className="grid grid-cols-2 gap-3">
-                  <button
+                  <Botao
+                    variante="secundario"
                     onClick={() => { setSemImagemConfirming(false); setSemImagemCount(null) }}
-                    className="px-4 py-2 bg-brand-surface-2 hover:bg-brand-surface-2/80 border border-brand-border/30 text-brand-muted hover:text-brand-text text-xs font-bold rounded-xl transition-all"
                   >
                     Cancelar
-                  </button>
-                  <button
-                    onClick={handleSemImagemConfirm}
-                    disabled={loadingSemImagem}
-                    className="flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:opacity-90 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-md"
-                  >
+                  </Botao>
+                  <Botao variante="perigo" onClick={handleSemImagemConfirm} disabled={loadingSemImagem}>
                     {loadingSemImagem ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
                     Confirmar Exclusão
-                  </button>
+                  </Botao>
                 </div>
               </div>
             )}
 
             {!loadingSemImagem && semImagemResult && (
-              <div className={`text-xs px-4 py-2.5 rounded-xl border ${semImagemResult.error ? 'bg-red-950/20 border-red-900/30 text-red-400' : 'bg-emerald-950/20 border-emerald-900/30 text-emerald-400'}`}>
-                <span>{semImagemResult.error || semImagemResult.msg || `${semImagemResult.removidos} produtos sem fotos excluídos com sucesso.`}</span>
-              </div>
+              <ResultBanner erro={semImagemResult.error}>
+                {semImagemResult.msg || `${semImagemResult.removidos} produtos sem fotos excluídos com sucesso.`}
+              </ResultBanner>
             )}
           </div>
         </div>
       )}
 
       {/* Footer / Nota */}
-      <div className="border-t border-brand-border/20 pt-4 flex flex-col sm:flex-row justify-between items-center gap-2 text-[10px] text-brand-muted uppercase font-bold tracking-wider">
+      <div className="flex flex-col items-center justify-between gap-2 border-t border-brand-hair pt-4 text-[10px] font-bold uppercase tracking-wider text-brand-muted sm:flex-row">
         <span>Canal integrado: Olist ERP (Tiny)</span>
         <span>Webhook e WebHooks delta integrados de forma segura</span>
       </div>

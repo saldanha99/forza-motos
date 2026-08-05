@@ -1,25 +1,30 @@
 export const dynamic = 'force-dynamic'
 import { prisma } from '@/lib/prisma'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, cn } from '@/lib/utils'
 import Link from 'next/link'
 import { KpiCard } from '@/components/admin/KpiCard'
 import { FadeIn } from '@/components/admin/FadeIn'
 import { ShoppingBag, Wrench, Users, TrendingUp } from 'lucide-react'
+import type { TomStatus } from '@/lib/admin/status'
+import {
+  PageHeader, FilterChip, Tabela, EmptyState, Badge,
+  THEAD_TH, TR_LINHA, TD_CELULA,
+} from '@/components/admin/ui/primitives'
 
 export const metadata = { title: 'CRM — Forza Admin' }
 
-const FUNIL_COR: Record<string, string> = {
-  LEAD:       'bg-brand-surface-2 border border-brand-border/30 text-brand-muted',
-  ORCAMENTO:  'bg-sky-500/10 border border-sky-500/20 text-sky-300',
-  FECHADO:    'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300',
-  RECORRENTE: 'bg-purple-500/10 border border-purple-500/20 text-purple-300',
+const FUNIL_TOM: Record<string, TomStatus> = {
+  LEAD:       'neutro',
+  ORCAMENTO:  'info',
+  FECHADO:    'success',
+  RECORRENTE: 'accent',
 }
 
-const ORIGEM_COR: Record<string, string> = {
-  ECOMMERCE:    'bg-sky-500/10 text-sky-300',
-  MERCADOLIVRE: 'bg-amber-500/10 text-amber-300',
-  AGENDAMENTO:  'bg-orange-500/10 text-orange-300',
-  MANUAL:       'bg-brand-surface-2 text-brand-muted',
+const ORIGEM_TOM: Record<string, TomStatus> = {
+  ECOMMERCE:    'info',
+  MERCADOLIVRE: 'warning',
+  AGENDAMENTO:  'accent',
+  MANUAL:       'neutro',
 }
 
 const ORIGEM_LABEL: Record<string, string> = {
@@ -65,12 +70,10 @@ export default async function ClientesAdminPage({
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">CRM Inteligente</h1>
-        <p className="text-brand-muted text-sm mt-1">
-          Clientes do e-commerce e agendamentos de serviço
-        </p>
-      </div>
+      <PageHeader
+        titulo="CRM Inteligente"
+        descricao="Clientes que compraram na loja ou agendaram um serviço — o cadastro do Mercado Livre não entra aqui."
+      />
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -89,91 +92,74 @@ export default async function ClientesAdminPage({
       </div>
 
       {/* Abas de filtro */}
-      <div className="flex gap-2 mb-6 flex-wrap">
+      <div className="mb-6 flex flex-wrap gap-2">
         {abas.map(a => (
-          <Link
+          <FilterChip
             key={a.key}
             href={`/admin/clientes?categoria=${a.key}`}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-              categoria === a.key
-                ? 'bg-gradient-to-r from-brand-accent to-brand-accent-hover text-white shadow-md shadow-brand-accent/20'
-                : 'bg-white/5 border border-white/10 text-brand-muted hover:text-brand-text hover:bg-white/10'
-            }`}
+            ativo={categoria === a.key}
+            contagem={a.count}
           >
             <a.icon size={14} />
             {a.label}
-            <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
-              categoria === a.key
-                ? 'bg-white/20 text-white'
-                : 'bg-white/5 text-brand-muted border border-white/10'
-            }`}>
-              {a.count}
-            </span>
-          </Link>
+          </FilterChip>
         ))}
       </div>
 
       {/* Tabela */}
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl overflow-hidden shadow-xl">
-        <div className="overflow-x-auto admin-scroll">
-          <table className="w-full text-sm">
-            <thead className="border-b border-brand-border/20 bg-white/[0.01]">
-              <tr className="text-xs text-brand-muted uppercase tracking-widest">
-                <th className="text-left px-6 py-3 font-medium">Cliente</th>
-                <th className="text-left px-6 py-3 font-medium">Origem</th>
-                <th className="text-left px-6 py-3 font-medium">Pedidos</th>
-                <th className="text-left px-6 py-3 font-medium">Total gasto</th>
-                <th className="text-left px-6 py-3 font-medium">Serviços</th>
-                <th className="text-left px-6 py-3 font-medium">Funil</th>
-                <th className="px-6 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {clientes.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-brand-muted text-sm">
-                    Nenhum cliente encontrado
-                  </td>
-                </tr>
-              )}
-              {clientes.map(c => (
-                <tr key={c.id} className="border-b border-brand-border/10 hover:bg-white/[0.04] transition-colors">
-                  <td className="px-6 py-3.5">
-                    <div className="font-medium text-brand-text">{c.nome ?? '—'}</div>
-                    <div className="text-xs text-brand-muted">{c.email}</div>
-                    {c.telefone && <div className="text-xs text-brand-muted">{c.telefone}</div>}
-                  </td>
-                  <td className="px-6 py-3.5">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium border ${ORIGEM_COR[c.origem]}`}>
-                      {ORIGEM_LABEL[c.origem]}
-                    </span>
-                  </td>
-                  <td className="px-6 py-3.5 text-brand-muted">{c.orders.length}</td>
-                  <td className="px-6 py-3.5 text-brand-text font-semibold">
-                    {formatPrice(Number(c.crm?.totalGasto ?? 0))}
-                  </td>
-                  <td className="px-6 py-3.5 text-brand-muted">
-                    {c.appointments.length > 0
-                      ? `${c.crm?.totalServicos ?? c.appointments.length}x`
-                      : <span className="text-brand-muted/30">—</span>
-                    }
-                  </td>
-                  <td className="px-6 py-3.5">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium border ${FUNIL_COR[c.crm?.etapaFunil ?? 'LEAD']}`}>
-                      {c.crm?.etapaFunil ?? 'LEAD'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-3.5">
-                    <Link href={`/admin/clientes/${c.id}`} className="text-xs text-brand-muted hover:text-brand-text transition-colors">
-                      Ver →
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {clientes.length === 0 ? (
+        <EmptyState
+          icone={Users}
+          titulo="Nenhum cliente encontrado"
+          descricao="Um cliente aparece aqui assim que compra algo na loja ou agenda um serviço no box — cadastros vindos só do Mercado Livre ficam fora do CRM."
+        />
+      ) : (
+        <Tabela
+          rodape={<span>{clientes.length} cliente(s)</span>}
+          cabecalho={
+            <>
+              <th className={THEAD_TH}>Cliente</th>
+              <th className={THEAD_TH}>Origem</th>
+              <th className={THEAD_TH}>Pedidos</th>
+              <th className={THEAD_TH}>Total gasto</th>
+              <th className={THEAD_TH}>Serviços</th>
+              <th className={THEAD_TH}>Funil</th>
+              <th className={THEAD_TH} />
+            </>
+          }
+        >
+          {clientes.map(c => (
+            <tr key={c.id} className={TR_LINHA}>
+              <td className={TD_CELULA}>
+                <div className="font-medium text-brand-text">{c.nome ?? '—'}</div>
+                <div className="text-xs text-brand-muted">{c.email}</div>
+                {c.telefone && <div className="text-xs text-brand-muted">{c.telefone}</div>}
+              </td>
+              <td className={TD_CELULA}>
+                <Badge tom={ORIGEM_TOM[c.origem]}>{ORIGEM_LABEL[c.origem]}</Badge>
+              </td>
+              <td className={cn(TD_CELULA, 'text-brand-muted')}>{c.orders.length}</td>
+              <td className={cn(TD_CELULA, 'font-semibold text-brand-text')}>
+                {formatPrice(Number(c.crm?.totalGasto ?? 0))}
+              </td>
+              <td className={cn(TD_CELULA, 'text-brand-muted')}>
+                {c.appointments.length > 0
+                  ? `${c.crm?.totalServicos ?? c.appointments.length}x`
+                  : <span className="text-brand-dim">—</span>
+                }
+              </td>
+              <td className={TD_CELULA}>
+                <Badge tom={FUNIL_TOM[c.crm?.etapaFunil ?? 'LEAD']}>{c.crm?.etapaFunil ?? 'LEAD'}</Badge>
+              </td>
+              <td className={TD_CELULA}>
+                <Link href={`/admin/clientes/${c.id}`} className="text-xs text-brand-dim transition-colors hover:text-brand-accent">
+                  Ver →
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </Tabela>
+      )}
     </div>
   )
 }

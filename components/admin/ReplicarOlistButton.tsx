@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CloudUpload, LoaderCircle } from 'lucide-react'
+import { Botao } from '@/components/admin/ui/primitives'
 
 export function ReplicarOlistButton({ pedidoId }: { pedidoId: string }) {
   const router = useRouter()
@@ -30,10 +31,12 @@ export function ReplicarOlistButton({ pedidoId }: { pedidoId: string }) {
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <button
+      <Botao
+        variante="perigo"
+        tamanho="sm"
         onClick={replicar}
         disabled={estado === 'enviando'}
-        className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider bg-red-500/90 hover:bg-red-500 text-white transition-colors disabled:opacity-60"
+        className="uppercase tracking-wider"
       >
         {estado === 'enviando' ? (
           <LoaderCircle size={14} className="animate-spin" />
@@ -41,8 +44,8 @@ export function ReplicarOlistButton({ pedidoId }: { pedidoId: string }) {
           <CloudUpload size={14} />
         )}
         {estado === 'enviando' ? 'Replicando…' : 'Replicar no Olist'}
-      </button>
-      {estado === 'erro' && <p className="text-[11px] text-red-400 max-w-[240px] text-right">{erro}</p>}
+      </Botao>
+      {estado === 'erro' && <p className="max-w-[240px] text-right text-[11px] text-brand-danger">{erro}</p>}
     </div>
   )
 }

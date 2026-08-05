@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { gerarSlug } from '@/lib/utils'
+import { Loader2, Upload, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
-import { Upload, X } from 'lucide-react'
+import { gerarSlug } from '@/lib/utils'
+import { Botao, Card } from '@/components/admin/ui/primitives'
+import { AcoesFormulario, Campo, Input, Switch, Textarea } from '@/components/admin/ui/form'
 
 interface Post {
   id?: string
@@ -75,67 +75,75 @@ export function BlogForm({ post }: { post?: Post }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-5 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
-        <Input label="Título *" value={form.titulo} onChange={(e) => update('titulo', e.target.value)} required />
+      <Card className="space-y-5 p-6">
+        <Campo label="Título" obrigatorio>
+          <Input value={form.titulo} onChange={(e) => update('titulo', e.target.value)} required />
+        </Campo>
+
         <div className="grid grid-cols-2 gap-4">
-          <Input label="Slug" value={form.slug} onChange={(e) => update('slug', e.target.value)} />
-          <Input label="Autor" value={form.autor} onChange={(e) => update('autor', e.target.value)} />
+          <Campo label="Slug" dica="Gerado a partir do título — pode editar à mão.">
+            <Input value={form.slug} onChange={(e) => update('slug', e.target.value)} />
+          </Campo>
+          <Campo label="Autor">
+            <Input value={form.autor} onChange={(e) => update('autor', e.target.value)} />
+          </Campo>
         </div>
 
         {/* Upload capa */}
-        <div>
-          <label className="text-sm text-brand-muted font-medium block mb-2">Imagem de capa</label>
+        <Campo label="Imagem de capa">
           {form.capaUrl && (
-            <div className="relative w-full max-h-48 rounded-xl overflow-hidden mb-3 border border-brand-border/30 group/capa">
-              <img src={form.capaUrl} alt="capa" className="w-full max-h-48 object-cover" />
+            <div className="relative mb-3 max-h-48 w-full overflow-hidden rounded-xl border border-brand-border">
+              <img src={form.capaUrl} alt="capa" className="max-h-48 w-full object-cover" />
               <button
                 type="button"
                 onClick={() => update('capaUrl', '')}
-                className="absolute top-2 right-2 bg-black/80 hover:bg-brand-accent p-1.5 rounded-lg text-white transition-colors duration-200"
+                className="absolute right-2 top-2 rounded-lg bg-brand-elevated p-1.5 text-brand-text transition-colors hover:bg-brand-accent hover:text-brand-on-accent"
               >
                 <X size={14} />
               </button>
             </div>
           )}
-          <label className="inline-flex items-center gap-2.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-brand-text text-sm px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 font-semibold select-none">
+          <label className="inline-flex cursor-pointer select-none items-center gap-2.5 rounded-xl border border-brand-border bg-brand-surface-2 px-4 py-2.5 text-sm font-semibold text-brand-text transition-all hover:border-brand-border-strong hover:bg-brand-elevated">
             <Upload size={16} />
             Enviar capa
-            <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadCapa(e.target.files[0])} />
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => e.target.files?.[0] && uploadCapa(e.target.files[0])}
+            />
           </label>
-        </div>
+        </Campo>
 
         {/* Conteúdo */}
-        <div>
-          <label className="text-sm text-brand-muted font-medium block mb-1.5">Conteúdo (HTML) *</label>
-          <textarea
+        <Campo label="Conteúdo (HTML)" obrigatorio dica="Aceita tags HTML — o post renderiza exatamente o que estiver aqui.">
+          <Textarea
             value={form.conteudo}
             onChange={(e) => update('conteudo', e.target.value)}
             rows={16}
             required
-            className="w-full bg-white/5 border border-white/10 hover:border-white/20 rounded-xl px-4 py-3 text-brand-text text-sm font-mono focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent/20 resize-y transition-all duration-200 placeholder:text-brand-muted/50"
+            className="font-mono"
             placeholder="<p>Seu conteúdo em HTML aqui...</p>"
           />
-        </div>
+        </Campo>
 
-        <label className="flex items-center gap-2.5 cursor-pointer select-none group pt-2">
-          <input
-            type="checkbox"
-            checked={form.publicado}
-            onChange={(e) => update('publicado', e.target.checked)}
-            className="w-4 h-4 rounded accent-brand-accent border-white/10 bg-white/5"
-          />
-          <span className="text-sm text-brand-muted group-hover:text-brand-text transition-colors">Publicar agora</span>
-        </label>
-      </div>
+        <Switch
+          checked={form.publicado}
+          onChange={(v) => update('publicado', v)}
+          label="Publicar agora"
+          descricao="Desligado, o post fica salvo como rascunho e não aparece no blog da loja."
+        />
+      </Card>
 
-      <div className="flex gap-4">
-        <Button type="submit" loading={loading} size="lg" className="flex-1 font-bold uppercase tracking-wider text-sm rounded-xl py-4">
-          {post?.id ? 'Salvar alterações' : 'Criar post'}
-        </Button>
-        <Button type="button" variant="ghost" size="lg" onClick={() => router.back()} className="font-bold uppercase tracking-wider text-sm rounded-xl py-4 text-brand-muted hover:text-brand-text hover:bg-brand-surface-2 transition-colors">
+      <AcoesFormulario>
+        <Botao type="button" variante="secundario" tamanho="lg" onClick={() => router.back()}>
           Cancelar
-        </Button>
-      </div>
+        </Botao>
+        <Botao type="submit" tamanho="lg" disabled={loading}>
+          {loading && <Loader2 size={16} className="animate-spin" />}
+          {post?.id ? 'Salvar alterações' : 'Criar post'}
+        </Botao>
+      </AcoesFormulario>
     </form>
   )
 }

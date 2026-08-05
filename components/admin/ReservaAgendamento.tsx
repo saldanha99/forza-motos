@@ -9,6 +9,8 @@
 import { useState, useEffect, useRef } from 'react'
 import toast from 'react-hot-toast'
 import { PackageSearch, Plus, X, AlertTriangle, Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { INPUT_BASE } from '@/components/admin/ui/form'
 
 interface ProdutoLite { id: string; nome: string; sku: string; categoria: string }
 interface Reserva {
@@ -64,21 +66,21 @@ export function ReservaAgendamento({ appointmentId }: { appointmentId: string })
   }
 
   return (
-    <div className="mt-2 pt-2 border-t border-brand-border/20">
+    <div className="mt-2 pt-2 border-t border-brand-hair">
       {reservas.length > 0 && (
         <div className="space-y-1 mb-2">
           {reservas.map((r) => {
             const conflito = r.reservadoTotal > r.produto.estoque
             return (
               <div key={r.id} className="flex items-center gap-2 text-xs">
-                <span className={`inline-flex items-center gap-1 ${conflito ? 'text-amber-600' : 'text-brand-muted'}`}>
+                <span className={cn('inline-flex items-center gap-1', conflito ? 'text-brand-warning' : 'text-brand-muted')}>
                   {conflito && <AlertTriangle size={12} />}
                   {r.produto.nome}
-                  <span className="opacity-60">
+                  <span className="text-brand-dim">
                     (estoque {r.produto.estoque} · reservado {r.reservadoTotal})
                   </span>
                 </span>
-                <button onClick={() => cancelar(r.id)} className="text-brand-muted hover:text-red-500 ml-auto" title="Cancelar reserva">
+                <button onClick={() => cancelar(r.id)} className="text-brand-muted hover:text-brand-danger ml-auto" title="Cancelar reserva">
                   <X size={12} />
                 </button>
               </div>
@@ -94,18 +96,18 @@ export function ReservaAgendamento({ appointmentId }: { appointmentId: string })
               <PackageSearch size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-brand-muted" />
               <input value={busca} onChange={(e) => setBusca(e.target.value)} autoFocus
                 placeholder="Buscar produto para reservar…"
-                className="w-full bg-brand-bg border border-brand-line rounded-lg pl-7 pr-2 py-1.5 text-xs text-brand-text outline-none focus:border-[#d42b2b]" />
+                className={cn(INPUT_BASE, 'pl-7 pr-2 py-1.5 text-xs')} />
             </div>
             <button onClick={() => { setAberto(false); setBusca('') }} className="text-brand-muted hover:text-brand-text"><X size={14} /></button>
           </div>
           {(carregando || resultados.length > 0) && (
-            <div className="mt-1 max-h-40 overflow-y-auto rounded-lg border border-brand-line bg-brand-card">
+            <div className="mt-1 max-h-40 overflow-y-auto rounded-lg border border-brand-border bg-brand-surface-2">
               {carregando && <div className="p-2 text-center text-brand-muted"><Loader2 size={14} className="animate-spin inline" /></div>}
               {resultados.map((p) => (
                 <button key={p.id} onClick={() => reservar(p)}
-                  className="w-full text-left px-2.5 py-1.5 hover:bg-brand-bg text-xs">
+                  className="w-full text-left px-2.5 py-1.5 hover:bg-brand-tint-2 text-xs">
                   <span className="block text-brand-text truncate">{p.nome}</span>
-                  <span className="block text-brand-muted text-[10px]">{p.sku} · {p.categoria}</span>
+                  <span className="block text-brand-dim text-[10px]">{p.sku} · {p.categoria}</span>
                 </button>
               ))}
             </div>
@@ -113,7 +115,7 @@ export function ReservaAgendamento({ appointmentId }: { appointmentId: string })
         </div>
       ) : (
         <button onClick={() => setAberto(true)}
-          className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#d42b2b] hover:underline">
+          className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-accent hover:underline">
           <Plus size={12} /> Reservar produto
         </button>
       )}

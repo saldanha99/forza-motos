@@ -1,7 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { CheckCircle2 } from 'lucide-react'
 import { ModeloSelector } from './ModeloSelector'
+import { Card, SectionTitle, Botao } from '@/components/admin/ui/primitives'
+import { Campo, Input, Textarea, Select, Switch, AcoesFormulario } from '@/components/admin/ui/form'
 
 /**
  * Formulário de geração de termo via IA — réplica modernizada do
@@ -87,127 +90,114 @@ export function GerarTermoForm({ onSucesso }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl">
+    <form onSubmit={handleSubmit} className="max-w-4xl space-y-6">
       {/* Termo */}
-      <Field label="Termo a ser definido" required>
-        <input
-          type="text"
-          value={termo}
-          onChange={(e) => setTermo(e.target.value)}
-          placeholder="Ex: Pneu Radial"
-          required
-          className="w-full px-3 py-2 border rounded-md"
-        />
-      </Field>
+      <Card className="space-y-5 p-6">
+        <SectionTitle>Termo</SectionTitle>
+        <Campo label="Termo a ser definido" obrigatorio htmlFor="termo-nome">
+          <Input
+            id="termo-nome"
+            type="text"
+            value={termo}
+            onChange={(e) => setTermo(e.target.value)}
+            placeholder="Ex: Pneu Radial"
+            required
+          />
+        </Campo>
+      </Card>
 
       {/* Modelo (DESTAQUE) */}
-      <Field label="Modelo de IA" hint="Escolha conforme o custo/qualidade desejado">
-        <ModeloSelector value={modeloId} onChange={setModeloId} quantidadeTermos={1} />
-      </Field>
+      <Card className="space-y-5 p-6">
+        <SectionTitle>Modelo de IA</SectionTitle>
+        <Campo label="Modelo de IA" dica="Escolha conforme o custo/qualidade desejado">
+          <ModeloSelector value={modeloId} onChange={setModeloId} quantidadeTermos={1} />
+        </Campo>
+      </Card>
 
-      {/* Linha: nicho + idioma */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="Nicho / Segmento" required>
-          <input
-            type="text"
-            value={nicho}
-            onChange={(e) => setNicho(e.target.value)}
-            placeholder="Ex: peças de moto"
-            required
-            className="w-full px-3 py-2 border rounded-md"
-          />
-        </Field>
+      {/* Configuração do texto */}
+      <Card className="space-y-5 p-6">
+        <SectionTitle>Configuração do texto</SectionTitle>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Campo label="Nicho / Segmento" obrigatorio htmlFor="termo-nicho">
+            <Input
+              id="termo-nicho"
+              type="text"
+              value={nicho}
+              onChange={(e) => setNicho(e.target.value)}
+              placeholder="Ex: peças de moto"
+              required
+            />
+          </Campo>
 
-        <Field label="Idioma">
-          <select
-            value={idioma}
-            onChange={(e) => setIdioma(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md"
+          <Campo label="Idioma" htmlFor="termo-idioma">
+            <Select id="termo-idioma" value={idioma} onChange={(e) => setIdioma(e.target.value)}>
+              <option value="pt-BR">Português (Brasil)</option>
+              <option value="pt-PT">Português (Portugal)</option>
+              <option value="en-US">Inglês (EUA)</option>
+              <option value="es-ES">Espanhol</option>
+            </Select>
+          </Campo>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Campo label="Estilo / Tom" htmlFor="termo-estilo">
+            <Select id="termo-estilo" value={estilo} onChange={(e) => setEstilo(e.target.value)}>
+              <option value="informativo, técnico e acessível">
+                Informativo, técnico e acessível
+              </option>
+              <option value="profissional e formal">Profissional e formal</option>
+              <option value="amigável e descontraído">Amigável e descontraído</option>
+              <option value="educativo, didático">Educativo, didático</option>
+              <option value="entusiasmado, motivacional">Entusiasmado, motivacional</option>
+            </Select>
+          </Campo>
+
+          <Campo
+            label="Tokens máximos"
+            htmlFor="termo-tokens"
+            dica="~750 = artigo curto · ~2000 = padrão · ~4000 = artigo longo"
           >
-            <option value="pt-BR">Português (Brasil)</option>
-            <option value="pt-PT">Português (Portugal)</option>
-            <option value="en-US">Inglês (EUA)</option>
-            <option value="es-ES">Espanhol</option>
-          </select>
-        </Field>
-      </div>
+            <Input
+              id="termo-tokens"
+              type="number"
+              value={maxTokens}
+              onChange={(e) => setMaxTokens(Number(e.target.value))}
+              min={500}
+              max={8000}
+              step={250}
+            />
+          </Campo>
+        </div>
 
-      {/* Linha: estilo + maxTokens */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="Estilo / Tom">
-          <select
-            value={estilo}
-            onChange={(e) => setEstilo(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md"
-          >
-            <option value="informativo, técnico e acessível">
-              Informativo, técnico e acessível
-            </option>
-            <option value="profissional e formal">Profissional e formal</option>
-            <option value="amigável e descontraído">Amigável e descontraído</option>
-            <option value="educativo, didático">Educativo, didático</option>
-            <option value="entusiasmado, motivacional">Entusiasmado, motivacional</option>
-          </select>
-        </Field>
-
-        <Field label="Tokens máximos" hint="~750 = artigo curto · ~2000 = padrão · ~4000 = artigo longo">
-          <input
-            type="number"
-            value={maxTokens}
-            onChange={(e) => setMaxTokens(Number(e.target.value))}
-            min={500}
-            max={8000}
-            step={250}
-            className="w-full px-3 py-2 border rounded-md"
-          />
-        </Field>
-      </div>
-
-      {/* Prompt extra */}
-      <Field
-        label="Prompt extra (opcional)"
-        hint="Instruções adicionais que serão concatenadas ao prompt base. Ex: 'Mencione marcas Pirelli e Michelin' ou 'Foque em motos sport'"
-      >
-        <textarea
-          value={promptExtra}
-          onChange={(e) => setPromptExtra(e.target.value)}
-          rows={3}
-          className="w-full px-3 py-2 border rounded-md resize-y"
-        />
-      </Field>
-
-      {/* Publicar */}
-      <Field label="">
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
-            checked={publicar}
-            onChange={(e) => setPublicar(e.target.checked)}
-          />
-          Publicar imediatamente (já notifica Google + Bing). Se desmarcado, o
-          termo fica em rascunho para revisão.
-        </label>
-      </Field>
-
-      {/* Botões */}
-      <div className="flex items-center gap-3 pt-4 border-t">
-        <button
-          type="submit"
-          disabled={gerando || !termo}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium disabled:opacity-50"
+        <Campo
+          label="Prompt extra (opcional)"
+          htmlFor="termo-prompt-extra"
+          dica="Instruções adicionais que serão concatenadas ao prompt base. Ex: 'Mencione marcas Pirelli e Michelin' ou 'Foque em motos sport'"
         >
-          {gerando ? 'Gerando...' : '✨ Gerar termo'}
-        </button>
-        {erro && <span className="text-sm text-red-600">{erro}</span>}
-      </div>
+          <Textarea
+            id="termo-prompt-extra"
+            value={promptExtra}
+            onChange={(e) => setPromptExtra(e.target.value)}
+            rows={3}
+          />
+        </Campo>
+
+        <Switch
+          checked={publicar}
+          onChange={setPublicar}
+          label="Publicar imediatamente"
+          descricao="Já notifica Google + Bing. Se desmarcado, o termo fica em rascunho para revisão."
+        />
+      </Card>
 
       {/* Resultado */}
       {resultado && (
-        <div className="p-4 border-2 border-green-500 bg-green-50 dark:bg-green-950 rounded-md">
-          <h3 className="font-semibold text-green-900 dark:text-green-100 mb-2">
-            ✅ Termo gerado com sucesso!
-          </h3>
-          <ul className="text-sm space-y-1 text-green-900 dark:text-green-100">
+        <Card className="space-y-2 border-brand-success bg-brand-success-soft p-5">
+          <p className="flex items-center gap-2 text-sm font-semibold text-brand-success">
+            <CheckCircle2 size={16} />
+            Termo gerado com sucesso!
+          </p>
+          <ul className="space-y-1 text-sm text-brand-text">
             <li>
               <strong>ID:</strong> <code className="font-mono">{resultado.id}</code>
             </li>
@@ -217,7 +207,7 @@ export function GerarTermoForm({ onSucesso }: Props) {
                 href={`/glossario/${resultado.slug}`}
                 target="_blank"
                 rel="noreferrer"
-                className="underline"
+                className="text-brand-accent underline"
               >
                 /glossario/{resultado.slug}
               </a>
@@ -229,32 +219,15 @@ export function GerarTermoForm({ onSucesso }: Props) {
               <strong>Resumo:</strong> {resultado.preview}
             </li>
           </ul>
-        </div>
+        </Card>
       )}
-    </form>
-  )
-}
 
-function Field({
-  label,
-  hint,
-  required,
-  children,
-}: {
-  label: string
-  hint?: string
-  required?: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <div>
-      {label && (
-        <label className="block text-sm font-medium mb-1.5">
-          {label} {required && <span className="text-red-500">*</span>}
-        </label>
-      )}
-      {children}
-      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
-    </div>
+      <AcoesFormulario>
+        {erro && <span className="mr-auto text-sm font-medium text-brand-danger">{erro}</span>}
+        <Botao type="submit" tamanho="lg" disabled={gerando || !termo}>
+          {gerando ? 'Gerando…' : '✨ Gerar termo'}
+        </Botao>
+      </AcoesFormulario>
+    </form>
   )
 }

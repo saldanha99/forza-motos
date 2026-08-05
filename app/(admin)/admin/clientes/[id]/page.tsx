@@ -2,9 +2,11 @@ export const dynamic = 'force-dynamic'
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import { formatDate, formatPrice } from '@/lib/utils'
-import { statusBadge } from '@/components/ui/Badge'
 import { ClienteCRMForm } from '@/components/admin/ClienteCRMForm'
 import Link from 'next/link'
+import {
+  Card, CardHeader, EmptyState, PageHeader, StatusPill,
+} from '@/components/admin/ui/primitives'
 
 export default async function ClienteDetalhePage({ params }: { params: { id: string } }) {
   const cliente = await prisma.user.findUnique({
@@ -23,51 +25,55 @@ export default async function ClienteDetalhePage({ params }: { params: { id: str
 
   return (
     <div className="max-w-4xl">
-      <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight mb-2">
-        {cliente.nome ?? 'Cliente'}
-      </h1>
-      <p className="text-brand-muted text-sm mb-8">{cliente.email}</p>
+      <PageHeader titulo={cliente.nome ?? 'Cliente'} descricao={cliente.email} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           {/* Pedidos */}
-          <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
-            <h2 className="font-barlow font-bold text-xl text-brand-text mb-4">Pedidos</h2>
-            {cliente.orders.length === 0 ? (
-              <p className="text-sm text-brand-muted/70">Nenhum pedido realizado.</p>
-            ) : (
-              <div className="space-y-3">
-                {cliente.orders.map((p) => (
-                  <Link key={p.id} href={`/admin/pedidos/${p.id}`} className="block group">
-                    <div className="flex items-center justify-between p-4 rounded-xl border border-white/10 bg-white/5 hover:border-brand-accent hover:bg-white/[0.08] transition-all duration-200">
-                      <div>
-                        <p className="text-sm font-semibold text-brand-accent group-hover:text-brand-accent-hover transition-colors">{p.orderNumber}</p>
-                        <p className="text-xs text-brand-muted mt-0.5">{formatDate(p.createdAt)}</p>
+          <Card>
+            <CardHeader titulo="Pedidos" />
+            <div className="p-5">
+              {cliente.orders.length === 0 ? (
+                <EmptyState
+                  compacto
+                  titulo="Nenhum pedido realizado"
+                  descricao="Um pedido aparece aqui assim que o cliente fecha uma compra na loja."
+                  className="border-0 py-4"
+                />
+              ) : (
+                <div className="space-y-3">
+                  {cliente.orders.map((p) => (
+                    <Link key={p.id} href={`/admin/pedidos/${p.id}`} className="block group">
+                      <div className="flex items-center justify-between rounded-xl border border-brand-border bg-brand-surface-2 p-4 transition-all duration-200 hover:border-brand-accent hover:bg-brand-elevated">
+                        <div>
+                          <p className="text-sm font-semibold text-brand-accent transition-colors group-hover:text-brand-accent-hover">{p.orderNumber}</p>
+                          <p className="mt-0.5 text-xs text-brand-muted">{formatDate(p.createdAt)}</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <StatusPill status={p.status} />
+                          <span className="text-sm font-bold text-brand-text">{formatPrice(Number(p.total))}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        {statusBadge(p.status)}
-                        <span className="font-bold text-brand-text text-sm">{formatPrice(Number(p.total))}</span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
 
           {/* Agendamentos */}
           {cliente.appointments.length > 0 && (
-            <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 shadow-xl transition-all duration-300 hover:border-brand-accent/30">
-              <h2 className="font-barlow font-bold text-xl text-brand-text mb-4">Agendamentos</h2>
-              <div className="space-y-3">
+            <Card>
+              <CardHeader titulo="Agendamentos" />
+              <div className="space-y-3 p-5">
                 {cliente.appointments.map((a) => (
-                  <div key={a.id} className="p-4 rounded-xl border border-white/10 bg-white/5 text-sm">
-                    <p className="text-brand-text font-semibold">{a.servico}</p>
-                    <p className="text-brand-muted text-xs mt-1">{a.motoModelo} · {formatDate(a.dataPreferida)} às {a.horarioPreferido}</p>
+                  <div key={a.id} className="rounded-xl border border-brand-border bg-brand-surface-2 p-4 text-sm">
+                    <p className="font-semibold text-brand-text">{a.servico}</p>
+                    <p className="mt-1 text-xs text-brand-muted">{a.motoModelo} · {formatDate(a.dataPreferida)} às {a.horarioPreferido}</p>
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
           )}
         </div>
 

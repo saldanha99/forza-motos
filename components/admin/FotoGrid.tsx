@@ -3,6 +3,9 @@
 import { useState, useRef, useCallback } from 'react'
 import { Upload, Link2, X, CheckCircle2, ImageOff, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { cn } from '@/lib/utils'
+import { Card, EmptyState } from '@/components/admin/ui/primitives'
+import { Input, GrupoOpcoes } from '@/components/admin/ui/form'
 
 interface Produto {
   id: string
@@ -98,12 +101,20 @@ function ProdutoCard({ produto, onSaved }: { produto: Produto; onSaved: (id: str
   }, [])
 
   return (
-    <div className={`admin-glass !bg-black/20 border rounded-xl overflow-hidden transition-all duration-300 shadow-md ${
-      saved ? 'border-brand-border/40' : 'border-brand-border/10 hover:border-brand-accent/40'
-    }`}>
+    <Card
+      className={cn(
+        'overflow-hidden p-0 transition-colors',
+        // Produto sem foto é o problema que esta tela existe para resolver —
+        // a borda em brand-danger faz ele saltar aos olhos na grade.
+        saved ? 'border-brand-border' : 'border-2 border-brand-danger',
+      )}
+    >
       {/* Área da foto */}
       <div
-        className={`relative aspect-square cursor-pointer group ${dragging ? 'ring-2 ring-brand-accent/50' : ''}`}
+        className={cn(
+          'group relative aspect-square cursor-pointer',
+          dragging && 'ring-2 ring-brand-accent',
+        )}
         onClick={() => !imgUrl && fileRef.current?.click()}
         onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
         onDragLeave={() => setDragging(false)}
@@ -115,52 +126,55 @@ function ProdutoCard({ produto, onSaved }: { produto: Produto; onSaved: (id: str
             <img
               src={imgUrl}
               alt={produto.nome}
-              className="w-full h-full object-cover"
+              className="h-full w-full object-cover"
               onError={() => setImgUrl('')}
             />
             {/* Overlay com ações */}
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-[color:var(--brand-overlay)] opacity-0 transition-opacity group-hover:opacity-100">
               <button
                 onClick={(e) => { e.stopPropagation(); fileRef.current?.click() }}
                 title="Trocar foto"
-                className="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg backdrop-blur-sm transition-colors"
+                className="rounded-lg bg-brand-surface p-2 text-brand-text transition-colors hover:bg-brand-accent hover:text-brand-on-accent"
               >
                 <Upload size={16} />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); setOpenUrl(true) }}
                 title="Colar URL"
-                className="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg backdrop-blur-sm transition-colors"
+                className="rounded-lg bg-brand-surface p-2 text-brand-text transition-colors hover:bg-brand-accent hover:text-brand-on-accent"
               >
                 <Link2 size={16} />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); removerFoto() }}
                 title="Remover foto"
-                className="bg-rose-500/80 hover:bg-rose-600 text-white p-2 rounded-lg transition-colors"
+                className="rounded-lg bg-brand-surface p-2 text-brand-danger transition-colors hover:bg-brand-danger hover:text-brand-on-accent"
               >
                 <X size={16} />
               </button>
             </div>
             {/* Badge salvo */}
             {saved && (
-              <div className="absolute top-2 right-2">
-                <CheckCircle2 size={18} className="text-emerald-400 drop-shadow" />
+              <div className="absolute right-2 top-2">
+                <CheckCircle2 size={18} className="text-brand-success" />
               </div>
             )}
           </>
         ) : (
           /* Placeholder sem foto */
-          <div className={`w-full h-full flex flex-col items-center justify-center gap-2 transition-colors ${
-            dragging ? 'bg-brand-accent/10' : 'bg-brand-surface-2 group-hover:bg-brand-accent/10 border border-brand-border/10'
-          }`}>
+          <div
+            className={cn(
+              'flex h-full w-full flex-col items-center justify-center gap-2 transition-colors',
+              dragging ? 'bg-brand-accent-soft' : 'bg-brand-surface-2',
+            )}
+          >
             {uploading ? (
-              <div className="w-6 h-6 border-2 border-brand-accent border-t-transparent rounded-full animate-spin" />
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-accent border-t-transparent" />
             ) : (
               <>
-                <ImageOff size={28} className="text-brand-muted/40" />
-                <span className="text-[10px] text-brand-muted/60 text-center px-2">
-                  {dragging ? 'Solte aqui' : 'Clique ou arraste'}
+                <ImageOff size={28} className="text-brand-danger" />
+                <span className="px-2 text-center text-[10px] font-semibold text-brand-danger">
+                  {dragging ? 'Solte aqui' : 'Sem foto — clique ou arraste'}
                 </span>
               </>
             )}
@@ -169,8 +183,8 @@ function ProdutoCard({ produto, onSaved }: { produto: Produto; onSaved: (id: str
 
         {/* Loading overlay */}
         {uploading && imgUrl && (
-          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-            <div className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center bg-[color:var(--brand-overlay)]">
+            <div className="h-7 w-7 animate-spin rounded-full border-2 border-brand-on-accent border-t-transparent" />
           </div>
         )}
       </div>
@@ -190,11 +204,11 @@ function ProdutoCard({ produto, onSaved }: { produto: Produto; onSaved: (id: str
 
       {/* Info do produto */}
       <div className="p-2.5">
-        <p className="text-[11px] text-brand-muted truncate">{produto.marca}</p>
-        <p className="text-[12px] text-white font-medium leading-[1.3] line-clamp-2 min-h-[30px]">
+        <p className="truncate text-[11px] text-brand-muted">{produto.marca}</p>
+        <p className="min-h-[30px] text-[12px] font-medium leading-[1.3] text-brand-text line-clamp-2">
           {produto.nome}
         </p>
-        <p className="text-[10px] text-brand-muted/50 font-mono mt-0.5 truncate">{produto.sku}</p>
+        <p className="mt-0.5 truncate font-mono text-[10px] text-brand-dim">{produto.sku}</p>
 
         {/* URL Input rápido */}
         {openUrl ? (
@@ -208,18 +222,18 @@ function ProdutoCard({ produto, onSaved }: { produto: Produto; onSaved: (id: str
                 if (e.key === 'Escape') setOpenUrl(false)
               }}
               placeholder="URL da imagem..."
-              className="flex-1 min-w-0 bg-brand-surface-2 border border-brand-border/30 rounded px-2 py-1 text-[11px] text-brand-text focus:outline-none focus:border-brand-accent"
+              className="min-w-0 flex-1 rounded border border-brand-border bg-brand-surface-2 px-2 py-1 text-[11px] text-brand-text outline-none focus:border-brand-accent"
             />
             <button
               onClick={() => salvarUrl(urlInput)}
               disabled={uploading}
-              className="bg-brand-accent hover:bg-brand-accent-hover text-brand-text px-2 py-1 rounded text-[10px] font-bold disabled:opacity-50"
+              className="rounded bg-brand-accent px-2 py-1 text-[10px] font-bold text-brand-on-accent disabled:opacity-50"
             >
               OK
             </button>
             <button
               onClick={() => setOpenUrl(false)}
-              className="text-brand-muted hover:text-brand-text px-1"
+              className="px-1 text-brand-muted hover:text-brand-text"
             >
               <X size={12} />
             </button>
@@ -227,13 +241,13 @@ function ProdutoCard({ produto, onSaved }: { produto: Produto; onSaved: (id: str
         ) : (
           <button
             onClick={() => setOpenUrl(true)}
-            className="mt-1.5 w-full flex items-center gap-1 text-[10px] text-brand-muted/60 hover:text-brand-text transition-colors"
+            className="mt-1.5 flex w-full items-center gap-1 text-[10px] text-brand-dim transition-colors hover:text-brand-text"
           >
             <Link2 size={10} /> Colar URL
           </button>
         )}
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -264,67 +278,63 @@ export function FotoGrid({ produtos: inicial, totalSemFoto, totalComFoto, total 
   return (
     <div>
       {/* Stats bar */}
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-5 mb-6 shadow-xl">
-        <div className="flex items-center justify-between mb-3">
+      <Card className="mb-6 p-5">
+        <div className="mb-3 flex items-center justify-between">
           <div>
-            <p className="text-brand-muted text-sm font-semibold">Progresso de fotos</p>
-            <p className="text-brand-text font-bold text-lg">
-              {comFoto} <span className="text-brand-muted/70 font-normal text-base">de {total} produtos</span>
+            <p className="text-sm font-semibold text-brand-muted">Progresso de fotos</p>
+            <p className="text-lg font-bold text-brand-text">
+              {comFoto} <span className="text-base font-normal text-brand-muted">de {total} produtos</span>
             </p>
           </div>
           <div className="text-right">
             <p className="text-3xl font-black text-brand-accent">{pct}%</p>
-            <p className="text-brand-muted/60 text-xs">{total - comFoto} sem foto</p>
+            <p className="text-xs text-brand-muted">{total - comFoto} sem foto</p>
           </div>
         </div>
-        <div className="h-2 bg-brand-surface-2 border border-brand-border/20 rounded-full overflow-hidden">
+        <div className="h-2 overflow-hidden rounded-full border border-brand-border bg-brand-surface-2">
           <div
-            className="h-full bg-gradient-to-r from-brand-accent to-brand-accent-hover rounded-full transition-all duration-500"
+            className="h-full rounded-full bg-gradient-to-r from-brand-accent to-brand-accent-hover transition-all duration-500"
             style={{ width: `${pct}%` }}
           />
         </div>
-      </div>
+      </Card>
 
       {/* Filtros + busca */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="flex bg-brand-surface-2 border border-brand-border/30 rounded-xl p-1 gap-1">
-          {(['semFoto', 'todos', 'comFoto'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFiltro(f)}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                filtro === f
-                  ? 'bg-gradient-to-r from-brand-accent to-brand-accent-hover text-brand-text shadow-md shadow-brand-accent/20'
-                  : 'text-brand-muted hover:text-brand-text'
-              }`}
-            >
-              {f === 'semFoto' ? `Sem foto (${total - comFoto})` :
-               f === 'comFoto' ? `Com foto (${comFoto})` : 'Todos'}
-            </button>
-          ))}
-        </div>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row">
+        <GrupoOpcoes
+          valor={filtro}
+          onChange={setFiltro}
+          opcoes={[
+            { valor: 'semFoto', label: `Sem foto (${total - comFoto})` },
+            { valor: 'todos', label: 'Todos' },
+            { valor: 'comFoto', label: `Com foto (${comFoto})` },
+          ]}
+        />
 
-        <div className="flex-1 relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted/50" />
-          <input
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-dim" />
+          <Input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar por nome ou SKU..."
-            className="w-full bg-brand-surface-2 border border-brand-border rounded-xl pl-8 pr-3 py-2 text-sm text-brand-text focus:outline-none focus:border-brand-accent focus:bg-brand-surface-2 transition-all duration-200"
+            className="pl-8"
           />
         </div>
       </div>
 
       {/* Grade */}
       {visíveis.length === 0 ? (
-        <div className="text-center py-16 text-brand-muted">
-          <CheckCircle2 size={48} className="mx-auto mb-3 text-emerald-500/30" />
-          <p className="text-lg font-medium text-brand-muted/50">
-            {filtro === 'semFoto' ? 'Todos os produtos têm foto! 🎉' : 'Nenhum produto encontrado'}
-          </p>
-        </div>
+        <EmptyState
+          icone={filtro === 'semFoto' ? CheckCircle2 : ImageOff}
+          titulo={filtro === 'semFoto' ? 'Todos os produtos têm foto' : 'Nenhum produto encontrado'}
+          descricao={
+            filtro === 'semFoto'
+              ? 'Um produto aparece aqui quando está ativo na loja e ainda não tem imagem cadastrada.'
+              : 'Ajuste o filtro ou a busca para ver outros produtos.'
+          }
+        />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {visíveis.slice(0, 120).map((p) => (
             <ProdutoCard key={p.id} produto={p} onSaved={handleSaved} />
           ))}
@@ -332,7 +342,7 @@ export function FotoGrid({ produtos: inicial, totalSemFoto, totalComFoto, total 
       )}
 
       {visíveis.length > 120 && (
-        <p className="text-center text-brand-muted/50 text-sm mt-6">
+        <p className="mt-6 text-center text-sm text-brand-muted">
           Mostrando 120 de {visíveis.length} — use a busca para filtrar
         </p>
       )}

@@ -1,27 +1,30 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { prisma } from '@/lib/prisma'
-import { formatDate } from '@/lib/utils'
 import {
-  Search,
+  AlertTriangle,
+  BookOpen,
+  CheckCircle2,
+  ExternalLink,
+  FileText,
   Globe,
   Link2,
-  AlertTriangle,
-  TrendingUp,
-  CheckCircle2,
-  XCircle,
-  ExternalLink,
-  RefreshCw,
-  BookOpen,
-  FileText,
   Package,
-  Settings,
+  RefreshCw,
+  Search,
+  TrendingUp,
+  XCircle,
 } from 'lucide-react'
+import { prisma } from '@/lib/prisma'
+import { cn, formatDate } from '@/lib/utils'
 import { SEO_CONFIG } from '@/lib/seo/config'
 import { ReindexNowButton } from '@/components/admin/seo/ReindexNowButton'
-import { getSetting } from '@/lib/settings'
 import { SeoConfigSection } from '@/components/admin/seo/SeoConfigSection'
+import { KpiCard } from '@/components/admin/KpiCard'
+import {
+  Badge, BotaoLink, Card, CardHeader, EmptyState, PageHeader, SectionTitle,
+  TOM_TEXTO,
+} from '@/components/admin/ui/primitives'
 
 export const metadata = { title: 'SEO Dashboard — Forza Admin' }
 
@@ -89,205 +92,178 @@ export default async function SeoDashboardPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div>
-          <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">
-            SEO Dashboard
-          </h1>
-          <p className="text-brand-muted text-sm mt-1">
-            Indexação, redirects, 404 monitor e status do ranqueamento — substituto do
-            Rank Math.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <a
-            href={`${SEO_CONFIG.siteUrl}/sitemap.xml`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-brand-border/40 text-brand-text px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-          >
-            <ExternalLink size={14} /> Ver sitemap
-          </a>
-          <a
-            href={`${SEO_CONFIG.siteUrl}/robots.txt`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-brand-border/40 text-brand-text px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-          >
-            <ExternalLink size={14} /> robots.txt
-          </a>
-          <ReindexNowButton />
-        </div>
-      </div>
+      <PageHeader
+        titulo="SEO Dashboard"
+        descricao="Indexação, redirects, monitor de 404 e ranqueamento — substituto do Rank Math."
+        acoes={
+          <>
+            <BotaoLink
+              href={`${SEO_CONFIG.siteUrl}/sitemap.xml`}
+              target="_blank"
+              rel="noreferrer"
+              variante="secundario"
+            >
+              <ExternalLink size={14} /> Ver sitemap
+            </BotaoLink>
+            <BotaoLink
+              href={`${SEO_CONFIG.siteUrl}/robots.txt`}
+              target="_blank"
+              rel="noreferrer"
+              variante="secundario"
+            >
+              <ExternalLink size={14} /> robots.txt
+            </BotaoLink>
+            <ReindexNowButton />
+          </>
+        }
+      />
 
       {/* KPIs grandes */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <BigKpi
-          icon={<TrendingUp size={20} />}
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard
           label="Taxa sucesso (7d)"
-          value={`${taxaSucesso}%`}
-          subtitle={`${totalSucesso}/${totalEnvios} envios`}
-          tone={taxaSucesso >= 90 ? 'success' : taxaSucesso >= 70 ? 'warning' : 'danger'}
+          value={taxaSucesso}
+          suffix="%"
+          icon={TrendingUp}
+          tom={taxaSucesso >= 90 ? 'success' : taxaSucesso >= 70 ? 'warning' : 'danger'}
+          detalhe={`${totalSucesso}/${totalEnvios} envios`}
         />
-        <BigKpi
-          icon={<Globe size={20} />}
+        <KpiCard
           label="Google (7d)"
           value={sucessosGoogle}
-          subtitle={`${falhasGoogle} falhas`}
-          tone="info"
+          icon={Globe}
+          tom="info"
+          detalhe={`${falhasGoogle} falha(s)`}
         />
-        <BigKpi
-          icon={<Search size={20} />}
+        <KpiCard
           label="IndexNow (7d)"
           value={sucessosIndexNow}
-          subtitle={`${falhasIndexNow} falhas`}
-          tone="info"
+          icon={Search}
+          tom="info"
+          detalhe={`${falhasIndexNow} falha(s)`}
         />
-        <BigKpi
-          icon={<AlertTriangle size={20} />}
+        <KpiCard
           label="404 não resolvidos"
           value={total404}
-          subtitle={`${totalRedirects} redirects ativos`}
-          tone={total404 > 10 ? 'danger' : 'success'}
+          icon={AlertTriangle}
+          tom={total404 > 10 ? 'danger' : 'success'}
+          detalhe={`${totalRedirects} redirects ativos`}
+          href="/admin/seo/404"
         />
       </div>
 
       {/* Conteúdo indexável */}
-      <h2 className="text-lg font-semibold text-brand-text mb-3">
-        Conteúdo no sitemap
-      </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <ContentCard
-          icon={<Package size={18} />}
-          label="Produtos"
-          value={totalProdutos}
-          href="/admin/produtos"
-        />
-        <ContentCard
-          icon={<FileText size={18} />}
-          label="Posts blog"
-          value={totalBlog}
-          href="/admin/blog"
-        />
-        <ContentCard
-          icon={<BookOpen size={18} />}
-          label="Termos glossário"
-          value={totalGlossario}
-          href="/admin/glossario"
-        />
+      <SectionTitle>Conteúdo no sitemap</SectionTitle>
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <ConteudoCard icon={Package} label="Produtos" value={totalProdutos} href="/admin/produtos" />
+        <ConteudoCard icon={FileText} label="Posts blog" value={totalBlog} href="/admin/blog" />
+        <ConteudoCard icon={BookOpen} label="Termos glossário" value={totalGlossario} href="/admin/glossario" />
       </div>
 
       {/* Duas colunas: notificações + 404 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Últimas notificações de indexação */}
-        <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-brand-border/20">
-            <h3 className="font-semibold text-brand-text">
-              Últimos envios de indexação
-            </h3>
-            {falhasRecentes > 0 && (
-              <span className="inline-flex items-center gap-1 text-xs text-rose-400">
-                <AlertTriangle size={12} /> {falhasRecentes} falhas
-              </span>
-            )}
-          </div>
-          <div className="divide-y divide-brand-border/10 max-h-96 overflow-y-auto">
-            {ultimasNotificacoes.length === 0 && (
-              <div className="px-5 py-12 text-center text-brand-muted text-sm">
-                Nenhum envio ainda. Publique um termo, post ou produto para o sistema
-                disparar notificações.
-              </div>
-            )}
-            {ultimasNotificacoes.map((n) => {
-              const path = n.url.replace(SEO_CONFIG.siteUrl, '')
-              return (
-                <div key={n.id} className="px-5 py-3 hover:bg-white/[0.02] text-xs">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="font-mono text-brand-text truncate" title={n.url}>
-                        {path || '/'}
-                      </div>
-                      {n.erro && (
-                        <div
-                          className="text-rose-400 mt-1 text-[11px] truncate"
-                          title={n.erro}
-                        >
-                          {n.erro}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${
-                          n.provider === 'GOOGLE'
-                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                        }`}
-                      >
-                        {n.provider}
-                      </span>
-                      <IndexingStatusIcon status={n.status} />
-                    </div>
-                  </div>
-                  <div className="text-brand-muted mt-1 text-[10px]">
-                    {formatDate(n.createdAt)} · {n.origem || 'sem origem'}
-                  </div>
-                </div>
+        <Card className="overflow-hidden">
+          <CardHeader
+            titulo="Últimos envios de indexação"
+            acao={
+              falhasRecentes > 0 && (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand-danger">
+                  <AlertTriangle size={12} /> {falhasRecentes} falhas
+                </span>
               )
-            })}
-          </div>
-        </div>
+            }
+          />
+          {ultimasNotificacoes.length === 0 ? (
+            <EmptyState
+              compacto
+              icone={Search}
+              titulo="Nenhum envio ainda"
+              descricao="Publique um termo, post ou produto para o sistema disparar notificações de indexação."
+              className="m-4 border-0"
+            />
+          ) : (
+            <div className="admin-scroll max-h-96 divide-y divide-brand-hair overflow-y-auto">
+              {ultimasNotificacoes.map((n) => {
+                const path = n.url.replace(SEO_CONFIG.siteUrl, '')
+                return (
+                  <div key={n.id} className="px-5 py-3 text-xs transition-colors hover:bg-brand-tint-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-mono text-brand-text" title={n.url}>
+                          {path || '/'}
+                        </div>
+                        {n.erro && (
+                          <div className="mt-1 truncate text-[11px] text-brand-danger" title={n.erro}>
+                            {n.erro}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Badge tom="neutro">{n.provider}</Badge>
+                        <IndexingStatusIcon status={n.status} />
+                      </div>
+                    </div>
+                    <div className="mt-1 text-[10px] text-brand-dim">
+                      {formatDate(n.createdAt)} · {n.origem || 'sem origem'}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </Card>
 
         {/* Top 404 */}
-        <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-brand-border/20">
-            <h3 className="font-semibold text-brand-text">404 mais frequentes</h3>
-            <Link
-              href="/admin/seo/404"
-              className="text-xs text-brand-accent hover:underline"
-            >
-              Ver todos →
-            </Link>
-          </div>
-          <div className="divide-y divide-brand-border/10">
-            {top404.length === 0 && (
-              <div className="px-5 py-12 text-center text-brand-muted text-sm">
-                Nenhum 404 ainda. Quando alguém acessar uma URL quebrada, aparece aqui.
-              </div>
-            )}
-            {top404.map((p) => (
-              <div
-                key={p.path}
-                className="px-5 py-3 flex items-center justify-between text-xs"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="font-mono text-brand-text truncate">{p.path}</div>
-                  <div className="text-brand-muted mt-0.5 text-[10px]">
-                    Último acesso: {formatDate(p.ultimoAcesso)}
+        <Card className="overflow-hidden">
+          <CardHeader
+            titulo="404 mais frequentes"
+            acao={
+              <Link href="/admin/seo/404" className="text-xs font-semibold text-brand-accent hover:underline">
+                Ver todos →
+              </Link>
+            }
+          />
+          {top404.length === 0 ? (
+            <EmptyState
+              compacto
+              icone={CheckCircle2}
+              titulo="Nenhum 404 ainda"
+              descricao="Quando alguém acessar uma URL quebrada em produção, ela aparece aqui."
+              className="m-4 border-0"
+            />
+          ) : (
+            <div className="divide-y divide-brand-hair">
+              {top404.map((p) => (
+                <div key={p.path} className="flex items-center justify-between px-5 py-3 text-xs">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-mono text-brand-text">{p.path}</div>
+                    <div className="mt-0.5 text-[10px] text-brand-dim">
+                      Último acesso: {formatDate(p.ultimoAcesso)}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="inline-flex items-center gap-1 font-semibold text-brand-danger">
+                      {p.hits}× hits
+                    </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="inline-flex items-center gap-1 text-rose-400 font-semibold">
-                    {p.hits}× hits
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+              ))}
+            </div>
+          )}
+        </Card>
       </div>
 
       {/* Links rápidos */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <QuickLink
-          icon={<Link2 size={18} />}
+          icon={Link2}
           label="Gerenciar Redirects 301"
           desc={`${totalRedirects} redirects ativos`}
           href="/admin/seo/redirects"
         />
         <QuickLink
-          icon={<AlertTriangle size={18} />}
+          icon={AlertTriangle}
           label="Monitor de 404"
           desc={`${total404} URLs quebradas não resolvidas`}
           href="/admin/seo/404"
@@ -304,48 +280,13 @@ export default async function SeoDashboardPage() {
 // Componentes auxiliares
 // ─────────────────────────────────────────────────────────────────────────────
 
-function BigKpi({
-  icon,
-  label,
-  value,
-  subtitle,
-  tone,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: string | number
-  subtitle: string
-  tone: 'success' | 'warning' | 'danger' | 'info'
-}) {
-  const map = {
-    success: 'from-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    warning: 'from-amber-500/10 text-amber-400 border-amber-500/20',
-    danger: 'from-rose-500/10 text-rose-400 border-rose-500/20',
-    info: 'from-sky-500/10 text-sky-400 border-sky-500/20',
-  }
-  return (
-    <div
-      className={`admin-glass !bg-black/20 border rounded-2xl p-5 bg-gradient-to-br to-transparent ${map[tone]}`}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-brand-muted text-xs uppercase tracking-widest font-medium">
-          {label}
-        </span>
-        <span className="opacity-70">{icon}</span>
-      </div>
-      <div className="text-3xl font-bold text-brand-text">{value}</div>
-      <div className="text-xs text-brand-muted mt-1">{subtitle}</div>
-    </div>
-  )
-}
-
-function ContentCard({
-  icon,
+function ConteudoCard({
+  icon: Icon,
   label,
   value,
   href,
 }: {
-  icon: React.ReactNode
+  icon: typeof Package
   label: string
   value: number
   href: string
@@ -353,17 +294,15 @@ function ContentCard({
   return (
     <Link
       href={href}
-      className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-4 hover:border-brand-accent/40 transition-all group"
+      className="group rounded-2xl border border-brand-border bg-brand-surface p-4 shadow-card transition-all hover:border-brand-accent"
     >
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-xs text-brand-muted uppercase tracking-widest mb-1">
-            {label}
-          </div>
-          <div className="text-2xl font-bold text-brand-text">{value}</div>
+          <div className="mb-1 text-xs uppercase tracking-widest text-brand-dim">{label}</div>
+          <div className="font-barlow text-2xl font-bold text-brand-text">{value}</div>
         </div>
-        <span className="text-brand-muted group-hover:text-brand-accent transition-colors">
-          {icon}
+        <span className="text-brand-muted transition-colors group-hover:text-brand-accent">
+          <Icon size={18} />
         </span>
       </div>
     </Link>
@@ -371,12 +310,12 @@ function ContentCard({
 }
 
 function QuickLink({
-  icon,
+  icon: Icon,
   label,
   desc,
   href,
 }: {
-  icon: React.ReactNode
+  icon: typeof Link2
   label: string
   desc: string
   href: string
@@ -384,21 +323,25 @@ function QuickLink({
   return (
     <Link
       href={href}
-      className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-4 hover:border-brand-accent/40 transition-all group flex items-center gap-4"
+      className="group flex items-center gap-4 rounded-2xl border border-brand-border bg-brand-surface p-4 shadow-card transition-all hover:border-brand-accent"
     >
-      <span className="text-brand-accent">{icon}</span>
-      <div className="flex-1 min-w-0">
+      <span className="text-brand-accent">
+        <Icon size={18} />
+      </span>
+      <div className="min-w-0 flex-1">
         <div className="font-medium text-brand-text">{label}</div>
         <div className="text-xs text-brand-muted">{desc}</div>
       </div>
-      <ExternalLink size={14} className="text-brand-muted group-hover:text-brand-accent" />
+      <ExternalLink size={14} className="text-brand-muted transition-colors group-hover:text-brand-accent" />
     </Link>
   )
 }
 
 function IndexingStatusIcon({ status }: { status: string }) {
-  if (status === 'SUCESSO') return <CheckCircle2 size={14} className="text-emerald-400" />
-  if (status === 'FALHA') return <XCircle size={14} className="text-rose-400" />
-  if (status === 'PENDENTE') return <RefreshCw size={14} className="text-amber-400 animate-spin" />
-  return <span className="text-brand-muted text-xs">{status}</span>
+  if (status === 'SUCESSO') return <CheckCircle2 size={14} className={TOM_TEXTO.success} />
+  if (status === 'FALHA') return <XCircle size={14} className={TOM_TEXTO.danger} />
+  if (status === 'PENDENTE') {
+    return <RefreshCw size={14} className={cn(TOM_TEXTO.warning, 'animate-spin')} />
+  }
+  return <span className="text-xs text-brand-muted">{status}</span>
 }

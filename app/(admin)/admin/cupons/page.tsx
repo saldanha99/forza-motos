@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { prisma } from '@/lib/prisma'
 import { CuponsManager } from '@/components/admin/CuponsManager'
+import { PageHeader } from '@/components/admin/ui/primitives'
 
 export const metadata = { title: 'Cupons — Forza Admin' }
 
@@ -23,12 +24,10 @@ export default async function CuponsAdminPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">Cupons</h1>
-        <p className="text-brand-muted text-sm mt-1">
-          Descontos para o e-commerce e eventos (ex.: pré-venda de Sorocaba). O desconto é validado no servidor no checkout.
-        </p>
-      </div>
+      <PageHeader
+        titulo="Cupons"
+        descricao="Descontos para o e-commerce e eventos (ex.: pré-venda de Sorocaba) — o desconto é sempre validado no servidor no checkout."
+      />
       <CuponsManager cuponsIniciais={cuponsSerial} />
     </div>
   )

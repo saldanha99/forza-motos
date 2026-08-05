@@ -141,17 +141,148 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   ADMIN BRAND TOKENS (Twix-style, dark-first — admin area only)
+   PÍLULAS DE STATUS — compartilhadas entre loja e painel
+
+   O mesmo <Badge> aparece no "Meus pedidos" do cliente (tema da loja) e
+   dentro do painel (tema do painel). Por isso os tokens vivem aqui e são
+   redefinidos por cada tema; quem estiver mais perto no DOM vence.
    ═══════════════════════════════════════════════════════════════════ */
 :root {
-  --brand-bg:           #0a0a0a;
-  --brand-surface:      #111111;
-  --brand-surface-2:    #1a1a1a;
-  --brand-accent:       #d42b2b;        /* vermelho */
+  --pill-success: #0f8a5f;  --pill-success-bg: rgba(15, 138, 95, 0.12);
+  --pill-warning: #a86a05;  --pill-warning-bg: rgba(168, 106, 5, 0.12);
+  --pill-danger:  #c62828;  --pill-danger-bg:  rgba(198, 40, 40, 0.12);
+  --pill-info:    #2563c4;  --pill-info-bg:    rgba(37, 99, 196, 0.12);
+  --pill-neutro:  #6b6b74;  --pill-neutro-bg:  rgba(107, 107, 116, 0.12);
+}
+[data-theme='dark'],
+[data-admin-theme='dark'] {
+  --pill-success: #34d399;  --pill-success-bg: rgba(52, 211, 153, 0.14);
+  --pill-warning: #fbbf24;  --pill-warning-bg: rgba(251, 191, 36, 0.14);
+  --pill-danger:  #f87171;  --pill-danger-bg:  rgba(248, 113, 113, 0.14);
+  --pill-info:    #7fb2ff;  --pill-info-bg:    rgba(127, 178, 255, 0.14);
+  --pill-neutro:  #a1a1aa;  --pill-neutro-bg:  rgba(161, 161, 170, 0.12);
+}
+/* Painel claro dentro de uma loja em modo escuro (e vice-versa) */
+[data-admin-theme='light'] {
+  --pill-success: #0f8a5f;  --pill-success-bg: rgba(15, 138, 95, 0.12);
+  --pill-warning: #a86a05;  --pill-warning-bg: rgba(168, 106, 5, 0.12);
+  --pill-danger:  #c62828;  --pill-danger-bg:  rgba(198, 40, 40, 0.12);
+  --pill-info:    #2563c4;  --pill-info-bg:    rgba(37, 99, 196, 0.12);
+  --pill-neutro:  #6b6b74;  --pill-neutro-bg:  rgba(107, 107, 116, 0.12);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ADMIN — TOKENS DE TEMA (escuro + claro)
+
+   O painel tem tema próprio, independente da loja. O tema fica num
+   cookie (`forza_admin_tema`) e é aplicado como `data-admin-theme` no
+   elemento raiz do shell (server-rendered → sem flash).
+
+   Regra: componentes do admin NUNCA usam hex nem `dark:`. Usam só os
+   tokens abaixo, que trocam de valor conforme o tema.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Escuro é o padrão — vale para :root também, para o caso de algum
+   componente do admin ser renderizado fora do shell. */
+:root,
+[data-admin-theme='dark'] {
+  /* ── Superfícies (do mais fundo ao mais elevado) ── */
+  --brand-bg:        #0a0a0b;
+  --brand-sidebar:   #0d0d0f;
+  --brand-surface:   #141416;
+  --brand-surface-2: #191a1d;
+  --brand-elevated:  #212125;
+
+  /* ── Linhas ── */
+  --brand-hair:          #1c1c20;   /* divisória interna, quase invisível */
+  --brand-border:        #26262b;   /* borda padrão de card */
+  --brand-border-strong: #33333a;   /* borda em hover/foco */
+
+  /* ── Texto ── */
+  --brand-text:  #f5f4f2;
+  --brand-muted: #b4b4bb;
+  --brand-dim:   #7a7a82;
+
+  /* ── Marca ── */
+  --brand-accent:       #e03333;
+  --brand-accent-hover: #f05050;
+  --brand-accent-soft:  rgba(224, 51, 51, 0.14);
+  --brand-accent-ring:  rgba(224, 51, 51, 0.35);
+  --brand-on-accent:    #ffffff;
+  /* Sombreado usado *sobre* o accent (contador dentro de um chip vermelho).
+     É o mesmo nos dois temas: o fundo abaixo dele já é vermelho. */
+  --brand-on-accent-soft: rgba(0, 0, 0, 0.22);
+
+  /* ── Semânticas de status ── */
+  --brand-success:      #2fbf88;
+  --brand-success-soft: rgba(47, 191, 136, 0.14);
+  --brand-warning:      #f5a623;
+  --brand-warning-soft: rgba(245, 166, 35, 0.14);
+  --brand-danger:       #ff5f5f;
+  --brand-danger-soft:  rgba(255, 95, 95, 0.14);
+  --brand-info:         #7fb2ff;
+  --brand-info-soft:    rgba(127, 178, 255, 0.14);
+  --brand-neutral-soft: rgba(255, 255, 255, 0.06);
+
+  /* ── Profundidade ── */
+  --brand-shadow-card: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --brand-shadow-pop:  0 18px 44px rgba(0, 0, 0, 0.5);
+  --brand-shadow-cta:  0 10px 26px rgba(224, 51, 51, 0.3);
+  --brand-overlay:     rgba(0, 0, 0, 0.65);
+
+  /* Camadas translúcidas usadas em hover/zebra — trocam no claro */
+  --brand-tint-1: rgba(255, 255, 255, 0.03);
+  --brand-tint-2: rgba(255, 255, 255, 0.06);
+  --brand-tint-3: rgba(255, 255, 255, 0.10);
+}
+/* color-scheme fica no elemento do shell, não em :root — senão o painel
+   arrastaria a loja junto (a loja tem tema próprio, independente). */
+[data-admin-theme='dark'] { color-scheme: dark; }
+
+[data-admin-theme='light'] {
+  /* Branco puro nas superfícies de trabalho; o fundo é levemente
+     rebaixado para os cards "flutuarem" sem precisar de sombra pesada. */
+  --brand-bg:        #f4f4f6;
+  --brand-sidebar:   #ffffff;
+  --brand-surface:   #ffffff;
+  --brand-surface-2: #f7f7f8;
+  --brand-elevated:  #eeeef1;
+
+  --brand-hair:          #efeff1;
+  --brand-border:        #e4e4e8;
+  --brand-border-strong: #d3d3da;
+
+  --brand-text:  #16161a;
+  --brand-muted: #5c5c66;
+  --brand-dim:   #8b8b96;
+
+  --brand-accent:       #d42b2b;
   --brand-accent-hover: #b91c1c;
-  --brand-border:       rgba(212,43,43,0.15);
-  --brand-text:         #f0f0f0;
-  --brand-muted:        #888888;
+  --brand-accent-soft:  rgba(212, 43, 43, 0.10);
+  --brand-accent-ring:  rgba(212, 43, 43, 0.28);
+  --brand-on-accent:    #ffffff;
+  --brand-on-accent-soft: rgba(0, 0, 0, 0.22);
+
+  --brand-success:      #12885d;
+  --brand-success-soft: rgba(18, 136, 93, 0.10);
+  --brand-warning:      #b06d05;
+  --brand-warning-soft: rgba(176, 109, 5, 0.10);
+  --brand-danger:       #cf2727;
+  --brand-danger-soft:  rgba(207, 39, 39, 0.10);
+  --brand-info:         #2563c4;
+  --brand-info-soft:    rgba(37, 99, 196, 0.10);
+  --brand-neutral-soft: rgba(15, 15, 20, 0.05);
+
+  --brand-shadow-card: 0 1px 2px rgba(15, 15, 20, 0.05), 0 8px 24px -12px rgba(15, 15, 20, 0.12);
+  --brand-shadow-pop:  0 12px 40px -12px rgba(15, 15, 20, 0.25);
+  --brand-shadow-cta:  0 10px 24px -8px rgba(212, 43, 43, 0.45);
+  --brand-overlay:     rgba(20, 20, 26, 0.45);
+
+  --brand-tint-1: rgba(15, 15, 20, 0.02);
+  --brand-tint-2: rgba(15, 15, 20, 0.045);
+  --brand-tint-3: rgba(15, 15, 20, 0.08);
+
+  color-scheme: light;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -278,31 +409,125 @@
   animation: shimmer-border-rotate 3s ease infinite;
 }
 
-/* Admin glass card */
+/* Superfície padrão do painel — segue o tema, sem hex fixo */
 .admin-glass {
-  background: rgba(26,26,26,0.7);
+  background: var(--brand-surface);
+  border: 1px solid var(--brand-border);
+}
+/* No escuro mantém o efeito de vidro que a marca já tinha */
+[data-admin-theme='dark'] .admin-glass {
+  background: color-mix(in srgb, var(--brand-surface) 82%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(212,43,43,0.12);
 }
 
 /* Admin scrollbar */
-.admin-scroll::-webkit-scrollbar       { width: 4px; height: 4px; }
-.admin-scroll::-webkit-scrollbar-track { background: var(--brand-surface); }
-.admin-scroll::-webkit-scrollbar-thumb { background: var(--brand-accent); border-radius: 2px; }
-.admin-scroll::-webkit-scrollbar-thumb:hover { background: var(--brand-accent-hover); }
+.admin-scroll::-webkit-scrollbar       { width: 6px; height: 6px; }
+.admin-scroll::-webkit-scrollbar-track { background: transparent; }
+.admin-scroll::-webkit-scrollbar-thumb {
+  background: var(--brand-border-strong);
+  border-radius: 999px;
+}
+.admin-scroll::-webkit-scrollbar-thumb:hover { background: var(--brand-accent); }
+.admin-scroll { scrollbar-width: thin; scrollbar-color: var(--brand-border-strong) transparent; }
 
 /* Admin radial glow (KPI card hover) */
 .admin-kpi-glow {
-  background: radial-gradient(circle at 50% 0%, rgba(212,43,43,0.08) 0%, transparent 70%);
+  background: radial-gradient(circle at 50% 0%, var(--brand-accent-soft) 0%, transparent 70%);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ADMIN — KANBAN
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Card entrando na coluna depois de um movimento otimista */
+@keyframes kanban-pousar {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+.kanban-card-novo { animation: kanban-pousar 0.28s var(--ease-out) both; }
+
+/* Card sendo arrastado (fantasma que fica no lugar de origem) */
+.kanban-card-arrastando {
+  opacity: 0.35;
+  filter: grayscale(0.4);
+}
+
+/* Coluna pronta para receber o card */
+.kanban-coluna-alvo {
+  background: var(--brand-accent-soft);
+  border-color: var(--brand-accent);
+  box-shadow: inset 0 0 0 1px var(--brand-accent-ring);
+}
+
+/* Overlay que acompanha o cursor */
+.kanban-overlay {
+  cursor: grabbing;
+  transform: rotate(2deg) scale(1.03);
+  box-shadow: var(--brand-shadow-pop);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in-up,
   .animate-glow-pulse,
   .animate-admin-gradient,
+  .kanban-card-novo,
   .shimmer-border-gradient { animation: none; }
+  .kanban-overlay { transform: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   ADMIN — COMPATIBILIDADE COM O TEMA CLARO
+
+   Telas ainda não refatoradas usam utilitários translúcidos fixos
+   (bg-white/5, border-white/10, text-white…) que só funcionam no
+   escuro. Aqui elas são remapeadas para os tokens, de modo que o
+   painel inteiro fique legível no claro desde já.
+   ═══════════════════════════════════════════════════════════════════ */
+[data-admin-theme='light'] .bg-white\/5,
+[data-admin-theme='light'] .bg-white\/\[0\.03\],
+[data-admin-theme='light'] .bg-white\/\[0\.02\],
+[data-admin-theme='light'] .bg-white\/\[0\.01\] { background-color: var(--brand-tint-1) !important; }
+
+[data-admin-theme='light'] .bg-white\/10,
+[data-admin-theme='light'] .bg-white\/\[0\.04\],
+[data-admin-theme='light'] .bg-white\/\[0\.06\],
+[data-admin-theme='light'] .bg-white\/\[0\.08\] { background-color: var(--brand-tint-2) !important; }
+
+[data-admin-theme='light'] .bg-white\/20,
+[data-admin-theme='light'] .bg-white\/30 { background-color: var(--brand-tint-3) !important; }
+
+[data-admin-theme='light'] .hover\:bg-white\/5:hover,
+[data-admin-theme='light'] .hover\:bg-white\/10:hover,
+[data-admin-theme='light'] .hover\:bg-white\/20:hover,
+[data-admin-theme='light'] .hover\:bg-white\/\[0\.04\]:hover,
+[data-admin-theme='light'] .hover\:bg-white\/\[0\.06\]:hover { background-color: var(--brand-tint-2) !important; }
+
+/* Superfícies "afundadas" viram cartão claro. Os pretos fortes (60‒80%)
+   ficam de fora de propósito: são overlays de modal, e overlay escuro
+   continua sendo o certo no tema claro. */
+[data-admin-theme='light'] .bg-black\/10,
+[data-admin-theme='light'] .bg-black\/15,
+[data-admin-theme='light'] .bg-black\/20,
+[data-admin-theme='light'] .bg-black\/25,
+[data-admin-theme='light'] .bg-black\/30,
+[data-admin-theme='light'] .bg-black\/40,
+[data-admin-theme='light'] .bg-black\/50 { background-color: var(--brand-surface) !important; }
+
+[data-admin-theme='light'] .border-white\/5,
+[data-admin-theme='light'] .border-white\/10,
+[data-admin-theme='light'] .border-white\/20 { border-color: var(--brand-border) !important; }
+
+/* Sombras pretas pesadas herdadas do tema escuro */
+[data-admin-theme='light'] .shadow-black\/20,
+[data-admin-theme='light'] .shadow-black\/30,
+[data-admin-theme='light'] .shadow-black\/40 { --tw-shadow-color: rgba(15,15,20,0.08) !important; }
+
+/* Texto branco fixo vira texto legível — exceto sobre o accent */
+[data-admin-theme='light'] .text-white { color: var(--brand-text); }
+[data-admin-theme='light'] .bg-brand-accent,
+[data-admin-theme='light'] .bg-brand-accent .text-white,
+[data-admin-theme='light'] [class*='from-brand-accent'] .text-white { color: var(--brand-on-accent); }
 
 /* ═══════════════════════════════════════════════════════════════════
    BASE STYLES

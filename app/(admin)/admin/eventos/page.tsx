@@ -1,8 +1,12 @@
 export const dynamic = 'force-dynamic'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import { Badge } from '@/components/ui/Badge'
 import { Plus, Calendar } from 'lucide-react'
+import { cn, formatPrice } from '@/lib/utils'
+import {
+  PageHeader, BotaoLink, Badge, EmptyState, Tabela,
+  THEAD_TH, TR_LINHA, TD_CELULA,
+} from '@/components/admin/ui/primitives'
 
 export const metadata = { title: 'Eventos / Calendário — Forza Admin' }
 
@@ -17,71 +21,68 @@ export default async function EventosAdminPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Calendar size={28} className="text-brand-accent" />
-          <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">Eventos</h1>
-        </div>
-        <Link
-          href="/admin/eventos/novo"
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-brand-accent to-brand-accent-hover hover:opacity-90 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 shadow-md shadow-brand-accent/20"
-        >
-          <Plus size={16} /> Novo evento
-        </Link>
-      </div>
+      <PageHeader
+        titulo="Eventos"
+        descricao="Passeios, cursos e encontros exibidos no site — publique um evento para ele ganhar página própria na loja."
+        acoes={
+          <BotaoLink href="/admin/eventos/novo">
+            <Plus size={16} /> Novo evento
+          </BotaoLink>
+        }
+      />
 
       {eventos.length === 0 ? (
-        <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-16 text-center shadow-xl">
-          <Calendar size={40} className="text-brand-muted mx-auto mb-4 opacity-40" />
-          <p className="text-brand-muted text-sm mb-4">Nenhum evento cadastrado ainda.</p>
-          <Link href="/admin/eventos/novo" className="text-brand-accent hover:underline text-sm font-semibold">
-            Criar primeiro evento →
-          </Link>
-        </div>
+        <EmptyState
+          icone={Calendar}
+          titulo="Nenhum evento cadastrado"
+          descricao="Um evento aparece aqui assim que é criado. Marque “Publicar no site” para ele ficar visível na página pública."
+          acao={<BotaoLink href="/admin/eventos/novo">Criar primeiro evento</BotaoLink>}
+        />
       ) : (
-        <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl overflow-hidden shadow-xl">
-          <table className="w-full text-sm">
-            <thead className="border-b border-brand-border/20 bg-white/[0.01]">
-              <tr className="text-xs text-brand-muted uppercase tracking-widest">
-                <th className="text-left px-6 py-3 font-medium">Evento</th>
-                <th className="text-left px-6 py-3 font-medium">Categoria</th>
-                <th className="text-left px-6 py-3 font-medium">Data</th>
-                <th className="text-left px-6 py-3 font-medium">Local</th>
-                <th className="text-left px-6 py-3 font-medium">Preço</th>
-                <th className="text-left px-6 py-3 font-medium">Status</th>
-                <th className="px-6 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {eventos.map((e) => (
-                <tr key={e.id} className="border-b border-brand-border/10 hover:bg-white/[0.04] transition-colors">
-                  <td className="px-6 py-3.5 text-brand-text font-medium max-w-[200px] truncate">{e.titulo}</td>
-                  <td className="px-6 py-3.5 text-brand-muted">{e.categoria}</td>
-                  <td className="px-6 py-3.5 text-brand-muted text-xs whitespace-nowrap">{formatData(e.dataInicio)}</td>
-                  <td className="px-6 py-3.5 text-brand-muted max-w-[140px] truncate">{e.local}</td>
-                  <td className="px-6 py-3.5 text-brand-muted">
-                    {Number(e.preco) === 0 ? (
-                      <span className="text-emerald-400 font-semibold text-xs">Gratuito</span>
-                    ) : (
-                      <span>R$ {Number(e.preco).toFixed(2)}</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-3.5">
-                    {e.publicado
-                      ? <Badge variant="success">Publicado</Badge>
-                      : <Badge variant="warning">Rascunho</Badge>
-                    }
-                  </td>
-                  <td className="px-6 py-3.5">
-                    <Link href={`/admin/eventos/${e.id}`} className="text-xs text-brand-muted hover:text-brand-text transition-colors">
-                      Editar →
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Tabela
+          cabecalho={
+            <>
+              <th className={THEAD_TH}>Evento</th>
+              <th className={THEAD_TH}>Categoria</th>
+              <th className={THEAD_TH}>Data</th>
+              <th className={THEAD_TH}>Local</th>
+              <th className={THEAD_TH}>Preço</th>
+              <th className={THEAD_TH}>Status</th>
+              <th className={THEAD_TH} />
+            </>
+          }
+        >
+          {eventos.map((e) => (
+            <tr key={e.id} className={TR_LINHA}>
+              <td className={cn(TD_CELULA, 'max-w-[200px] truncate font-medium text-brand-text')}>
+                {e.titulo}
+              </td>
+              <td className={cn(TD_CELULA, 'text-brand-muted')}>{e.categoria}</td>
+              <td className={cn(TD_CELULA, 'whitespace-nowrap text-xs text-brand-muted')}>
+                {formatData(e.dataInicio)}
+              </td>
+              <td className={cn(TD_CELULA, 'max-w-[140px] truncate text-brand-muted')}>{e.local}</td>
+              <td className={TD_CELULA}>
+                {Number(e.preco) === 0 ? (
+                  <Badge tom="success">Gratuito</Badge>
+                ) : (
+                  <span className="text-brand-muted">{formatPrice(Number(e.preco))}</span>
+                )}
+              </td>
+              <td className={TD_CELULA}>
+                {e.publicado ? <Badge tom="success">Publicado</Badge> : <Badge tom="warning">Rascunho</Badge>}
+              </td>
+              <td className={TD_CELULA}>
+                <Link
+                  href={`/admin/eventos/${e.id}`}
+                  className="text-xs text-brand-dim transition-colors hover:text-brand-accent"
+                >
+                  Editar →
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </Tabela>
       )}
     </div>
   )

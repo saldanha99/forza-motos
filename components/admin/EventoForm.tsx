@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { gerarSlug } from '@/lib/utils'
-import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
 import { Upload, X, Plus, ImagePlus } from 'lucide-react'
+import { cn, gerarSlug } from '@/lib/utils'
+import { Card, CardHeader, Botao } from '@/components/admin/ui/primitives'
+import { Campo, Input, Textarea, Select, Switch, AcoesFormulario } from '@/components/admin/ui/form'
 
 const CATEGORIAS = ['Curso', 'Passeio', 'Viagem', 'Evento', 'Corrida', 'Encontro', 'Workshop']
 
@@ -36,6 +36,14 @@ function toInputDate(val?: string | null) {
   if (!val) return ''
   return new Date(val).toISOString().slice(0, 16)
 }
+
+/** Botão de upload disfarçado de secundário — dispara o input de arquivo escondido. */
+const BOTAO_UPLOAD =
+  'inline-flex cursor-pointer select-none items-center gap-2 rounded-xl border border-brand-border bg-brand-surface-2 px-4 py-2.5 text-sm font-semibold text-brand-text transition-all hover:border-brand-border-strong hover:bg-brand-elevated'
+
+/** Botão redondo de remoção sobre miniatura de imagem. */
+const BOTAO_REMOVER_IMG =
+  'absolute right-2 top-2 rounded-lg border border-brand-border bg-brand-surface p-1.5 text-brand-muted transition-colors hover:border-brand-danger hover:bg-brand-danger-soft hover:text-brand-danger'
 
 export function EventoForm({ evento }: { evento?: Evento }) {
   const router = useRouter()
@@ -169,259 +177,282 @@ export function EventoForm({ evento }: { evento?: Evento }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Dados principais */}
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-5 shadow-xl">
-        <h2 className="text-sm font-semibold text-brand-muted uppercase tracking-widest">Dados do evento</h2>
+      <Card>
+        <CardHeader titulo="Dados do evento" />
+        <div className="space-y-5 p-5">
+          <Campo label="Título" obrigatorio htmlFor="evt-titulo">
+            <Input id="evt-titulo" value={form.titulo} onChange={(e) => update('titulo', e.target.value)} required />
+          </Campo>
 
-        <Input label="Título *" value={form.titulo} onChange={(e) => update('titulo', e.target.value)} required />
-
-        <div className="grid grid-cols-2 gap-4">
-          <Input label="Slug" value={form.slug} onChange={(e) => update('slug', e.target.value)} />
-          <div>
-            <label className="text-sm text-brand-muted font-medium block mb-1.5">Categoria</label>
-            <select
-              value={form.categoria}
-              onChange={(e) => update('categoria', e.target.value)}
-              className="w-full bg-white/5 border border-white/10 hover:border-white/20 rounded-xl px-4 py-2.5 text-brand-text text-sm focus:outline-none focus:border-brand-accent transition-all duration-200"
-            >
-              {CATEGORIAS.map((c) => (
-                <option key={c} value={c} className="bg-[#0a0a0a]">{c}</option>
-              ))}
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            <Campo label="Slug" htmlFor="evt-slug">
+              <Input id="evt-slug" value={form.slug} onChange={(e) => update('slug', e.target.value)} />
+            </Campo>
+            <Campo label="Categoria" htmlFor="evt-categoria">
+              <Select id="evt-categoria" value={form.categoria} onChange={(e) => update('categoria', e.target.value)}>
+                {CATEGORIAS.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </Select>
+            </Campo>
           </div>
-        </div>
 
-        <div>
-          <label className="text-sm text-brand-muted font-medium block mb-1.5">Descrição curta *</label>
-          <textarea
-            value={form.descricao}
-            onChange={(e) => update('descricao', e.target.value)}
-            rows={3}
-            required
-            className="w-full bg-white/5 border border-white/10 hover:border-white/20 rounded-xl px-4 py-3 text-brand-text text-sm focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent/20 resize-none transition-all duration-200 placeholder:text-brand-muted/50"
-            placeholder="Breve descrição do evento (aparece na listagem)"
-          />
+          <Campo label="Descrição curta" obrigatorio dica="Aparece na listagem pública de eventos." htmlFor="evt-descricao">
+            <Textarea
+              id="evt-descricao"
+              value={form.descricao}
+              onChange={(e) => update('descricao', e.target.value)}
+              rows={3}
+              required
+              placeholder="Breve descrição do evento (aparece na listagem)"
+            />
+          </Campo>
         </div>
-      </div>
+      </Card>
 
       {/* Data e local */}
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-5 shadow-xl">
-        <h2 className="text-sm font-semibold text-brand-muted uppercase tracking-widest">Data e local</h2>
+      <Card>
+        <CardHeader titulo="Data e local" />
+        <div className="space-y-5 p-5">
+          <div className="grid grid-cols-2 gap-4">
+            <Campo label="Data de início" obrigatorio htmlFor="evt-data-inicio">
+              <Input
+                id="evt-data-inicio"
+                type="datetime-local"
+                value={form.dataInicio}
+                onChange={(e) => update('dataInicio', e.target.value)}
+                required
+              />
+            </Campo>
+            <Campo label="Data de término" htmlFor="evt-data-fim">
+              <Input
+                id="evt-data-fim"
+                type="datetime-local"
+                value={form.dataFim}
+                onChange={(e) => update('dataFim', e.target.value)}
+              />
+            </Campo>
+          </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <Input
-            label="Data de início *"
-            type="datetime-local"
-            value={form.dataInicio}
-            onChange={(e) => update('dataInicio', e.target.value)}
-            required
-          />
-          <Input
-            label="Data de término"
-            type="datetime-local"
-            value={form.dataFim}
-            onChange={(e) => update('dataFim', e.target.value)}
-          />
+          <Campo label="Local" obrigatorio htmlFor="evt-local">
+            <Input
+              id="evt-local"
+              value={form.local}
+              onChange={(e) => update('local', e.target.value)}
+              required
+              placeholder="Ex: Kartódromo Granja Viana"
+            />
+          </Campo>
+          <Campo label="Endereço completo" htmlFor="evt-endereco">
+            <Input
+              id="evt-endereco"
+              value={form.endereco}
+              onChange={(e) => update('endereco', e.target.value)}
+              placeholder="Rua, número, cidade, estado"
+            />
+          </Campo>
         </div>
-
-        <Input label="Local *" value={form.local} onChange={(e) => update('local', e.target.value)} required placeholder="Ex: Kartódromo Granja Viana" />
-        <Input label="Endereço completo" value={form.endereco} onChange={(e) => update('endereco', e.target.value)} placeholder="Rua, número, cidade, estado" />
-      </div>
+      </Card>
 
       {/* Preço e inscrição */}
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-5 shadow-xl">
-        <h2 className="text-sm font-semibold text-brand-muted uppercase tracking-widest">Preço e inscrição</h2>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm text-brand-muted font-medium block mb-1.5">Preço (R$)</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.preco}
-              onChange={(e) => update('preco', e.target.value)}
-              className="w-full bg-white/5 border border-white/10 hover:border-white/20 rounded-xl px-4 py-2.5 text-brand-text text-sm focus:outline-none focus:border-brand-accent transition-all duration-200"
-              placeholder="0 = gratuito"
-            />
-          </div>
-          <div>
-            <label className="text-sm text-brand-muted font-medium block mb-1.5">Vagas disponíveis</label>
-            <input
-              type="number"
-              min="1"
-              value={form.vagas}
-              onChange={(e) => update('vagas', e.target.value)}
-              className="w-full bg-white/5 border border-white/10 hover:border-white/20 rounded-xl px-4 py-2.5 text-brand-text text-sm focus:outline-none focus:border-brand-accent transition-all duration-200"
-              placeholder="Deixe vazio = sem limite"
-            />
-          </div>
-        </div>
-
-        <Input
-          label="Link de inscrição externo (opcional)"
-          value={form.linkExterno}
-          onChange={(e) => update('linkExterno', e.target.value)}
-          placeholder="https://..."
-        />
-      </div>
-
-      {/* Imagem */}
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-5 shadow-xl">
-        <h2 className="text-sm font-semibold text-brand-muted uppercase tracking-widest">Imagem de capa</h2>
-
-        {form.imagemUrl && (
-          <div className="relative rounded-xl overflow-hidden border border-brand-border/30 group/img">
-            <img src={form.imagemUrl} alt="capa" className="w-full max-h-56 object-cover" />
-            <button
-              type="button"
-              onClick={() => update('imagemUrl', '')}
-              className="absolute top-2 right-2 bg-black/80 hover:bg-brand-accent p-1.5 rounded-lg text-white transition-colors"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        )}
-        <label className="inline-flex items-center gap-2.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-brand-text text-sm px-4 py-2.5 rounded-xl cursor-pointer transition-all font-semibold select-none">
-          <Upload size={16} />
-          Enviar imagem
-          <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadImagem(e.target.files[0])} />
-        </label>
-      </div>
-
-      {/* Galeria / carrossel */}
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-5 shadow-xl">
-        <div>
-          <h2 className="text-sm font-semibold text-brand-muted uppercase tracking-widest">Galeria (carrossel)</h2>
-          <p className="text-xs text-brand-muted/70 mt-1">
-            Fotos de passeios anteriores, roteiro e pontos que serão visitados — aparecem em carrossel na página do evento.
-          </p>
-        </div>
-
-        {form.galeria.length > 0 && (
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-            {form.galeria.map((url, idx) => (
-              <div key={url + idx} className="relative rounded-xl overflow-hidden border border-brand-border/30 aspect-square group/img">
-                <img src={url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => removerDaGaleria(idx)}
-                  className="absolute top-1.5 right-1.5 bg-black/80 hover:bg-brand-accent p-1 rounded-lg text-white transition-colors opacity-0 group-hover/img:opacity-100"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <label className="inline-flex items-center gap-2.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-brand-text text-sm px-4 py-2.5 rounded-xl cursor-pointer transition-all font-semibold select-none">
-          <ImagePlus size={16} />
-          Adicionar fotos
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={(e) => e.target.files && e.target.files.length > 0 && uploadGaleria(e.target.files)}
-          />
-        </label>
-      </div>
-
-      {/* Opções de vaga */}
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-5 shadow-xl">
-        <div>
-          <h2 className="text-sm font-semibold text-brand-muted uppercase tracking-widest">Opções de vaga (evento pago)</h2>
-          <p className="text-xs text-brand-muted/70 mt-1">
-            Ex: "Sozinho" (piloto só), "Com garupa" (+1 pessoa), "Quarto dividido em 4" (preço por pessoa).
-            Se deixar vazio, o cliente só escolhe a quantidade pelo preço base.
-          </p>
-        </div>
-
-        {form.opcoesVaga.map((op, idx) => (
-          <div key={idx} className="flex gap-3 items-center">
-            <input
-              value={op.label}
-              onChange={(e) => updateOpcaoVaga(idx, 'label', e.target.value)}
-              placeholder="Ex: Com garupa"
-              className="flex-1 bg-white/5 border border-white/10 hover:border-white/20 rounded-xl px-4 py-2.5 text-brand-text text-sm focus:outline-none focus:border-brand-accent transition-all duration-200"
-            />
-            <div className="relative w-40">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted text-sm">R$</span>
-              <input
+      <Card>
+        <CardHeader titulo="Preço e inscrição" />
+        <div className="space-y-5 p-5">
+          <div className="grid grid-cols-2 gap-4">
+            <Campo label="Preço (R$)" dica="0 = gratuito" htmlFor="evt-preco">
+              <Input
+                id="evt-preco"
                 type="number"
                 min="0"
                 step="0.01"
-                value={op.preco}
-                onChange={(e) => updateOpcaoVaga(idx, 'preco', e.target.value)}
-                className="w-full bg-white/5 border border-white/10 hover:border-white/20 rounded-xl pl-9 pr-3 py-2.5 text-brand-text text-sm focus:outline-none focus:border-brand-accent transition-all duration-200"
+                value={form.preco}
+                onChange={(e) => update('preco', e.target.value)}
               />
-            </div>
-            <button
-              type="button"
-              onClick={() => removerOpcaoVaga(idx)}
-              className="p-2.5 rounded-xl text-brand-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
-            >
-              <X size={16} />
-            </button>
+            </Campo>
+            <Campo label="Vagas disponíveis" dica="Deixe vazio = sem limite" htmlFor="evt-vagas">
+              <Input
+                id="evt-vagas"
+                type="number"
+                min="1"
+                value={form.vagas}
+                onChange={(e) => update('vagas', e.target.value)}
+              />
+            </Campo>
           </div>
-        ))}
 
-        <button
-          type="button"
-          onClick={addOpcaoVaga}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-brand-accent hover:text-brand-accent-hover transition-colors"
-        >
-          <Plus size={15} /> Adicionar opção de vaga
-        </button>
-      </div>
+          <Campo label="Link de inscrição externo (opcional)" htmlFor="evt-link">
+            <Input
+              id="evt-link"
+              value={form.linkExterno}
+              onChange={(e) => update('linkExterno', e.target.value)}
+              placeholder="https://..."
+            />
+          </Campo>
+        </div>
+      </Card>
+
+      {/* Imagem */}
+      <Card>
+        <CardHeader titulo="Imagem de capa" />
+        <div className="space-y-5 p-5">
+          {form.imagemUrl && (
+            <div className="relative overflow-hidden rounded-xl border border-brand-border">
+              <img src={form.imagemUrl} alt="capa" className="max-h-56 w-full object-cover" />
+              <button type="button" onClick={() => update('imagemUrl', '')} className={BOTAO_REMOVER_IMG}>
+                <X size={14} />
+              </button>
+            </div>
+          )}
+          <label className={BOTAO_UPLOAD}>
+            <Upload size={16} />
+            Enviar imagem
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadImagem(e.target.files[0])} />
+          </label>
+        </div>
+      </Card>
+
+      {/* Galeria / carrossel */}
+      <Card>
+        <CardHeader titulo="Galeria (carrossel)" />
+        <div className="space-y-5 p-5">
+          <p className="text-xs text-brand-dim">
+            Fotos de passeios anteriores, roteiro e pontos que serão visitados — aparecem em carrossel na página do evento.
+          </p>
+
+          {form.galeria.length > 0 && (
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+              {form.galeria.map((url, idx) => (
+                <div key={url + idx} className="group/img relative aspect-square overflow-hidden rounded-xl border border-brand-border">
+                  <img src={url} alt={`Foto ${idx + 1}`} className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removerDaGaleria(idx)}
+                    className={cn(BOTAO_REMOVER_IMG, 'right-1.5 top-1.5 p-1 opacity-0 group-hover/img:opacity-100')}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <label className={BOTAO_UPLOAD}>
+            <ImagePlus size={16} />
+            Adicionar fotos
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => e.target.files && e.target.files.length > 0 && uploadGaleria(e.target.files)}
+            />
+          </label>
+        </div>
+      </Card>
+
+      {/* Opções de vaga */}
+      <Card>
+        <CardHeader titulo="Opções de vaga (evento pago)" />
+        <div className="space-y-5 p-5">
+          <p className="text-xs text-brand-dim">
+            Ex: "Sozinho" (piloto só), "Com garupa" (+1 pessoa), "Quarto dividido em 4" (preço por pessoa).
+            Se deixar vazio, o cliente só escolhe a quantidade pelo preço base.
+          </p>
+
+          {form.opcoesVaga.map((op, idx) => (
+            <div key={idx} className="flex items-center gap-3">
+              <Input
+                aria-label={`Rótulo da opção de vaga ${idx + 1}`}
+                value={op.label}
+                onChange={(e) => updateOpcaoVaga(idx, 'label', e.target.value)}
+                placeholder="Ex: Com garupa"
+                className="flex-1"
+              />
+              <div className="relative w-40">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-brand-dim">R$</span>
+                <Input
+                  aria-label={`Preço da opção de vaga ${idx + 1}`}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={op.preco}
+                  onChange={(e) => updateOpcaoVaga(idx, 'preco', e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => removerOpcaoVaga(idx)}
+                className="rounded-xl p-2.5 text-brand-muted transition-colors hover:bg-brand-danger-soft hover:text-brand-danger"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={addOpcaoVaga}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-brand-accent transition-colors hover:text-brand-accent-hover"
+          >
+            <Plus size={15} /> Adicionar opção de vaga
+          </button>
+        </div>
+      </Card>
 
       {/* Conteúdo */}
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 space-y-5 shadow-xl">
-        <h2 className="text-sm font-semibold text-brand-muted uppercase tracking-widest">Conteúdo completo (HTML)</h2>
-        <textarea
-          value={form.conteudo}
-          onChange={(e) => update('conteudo', e.target.value)}
-          rows={14}
-          className="w-full bg-white/5 border border-white/10 hover:border-white/20 rounded-xl px-4 py-3 text-brand-text text-sm font-mono focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent/20 resize-y transition-all duration-200 placeholder:text-brand-muted/50"
-          placeholder="<p>Programação, roteiro, inclui e não inclui...</p>"
-        />
-      </div>
+      <Card>
+        <CardHeader titulo="Conteúdo completo (HTML)" />
+        <div className="p-5">
+          <Textarea
+            aria-label="Conteúdo completo em HTML"
+            value={form.conteudo}
+            onChange={(e) => update('conteudo', e.target.value)}
+            rows={14}
+            className="font-mono"
+            placeholder="<p>Programação, roteiro, inclui e não inclui...</p>"
+          />
+        </div>
+      </Card>
 
       {/* Flags */}
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 shadow-xl">
-        <h2 className="text-sm font-semibold text-brand-muted uppercase tracking-widest mb-4">Configurações</h2>
-        <div className="flex flex-wrap gap-6">
-          {[
-            { field: 'publicado', label: 'Publicar no site' },
-            { field: 'destaque', label: 'Destacar na home' },
-            { field: 'ativo', label: 'Ativo' },
-          ].map(({ field, label }) => (
-            <label key={field} className="flex items-center gap-2.5 cursor-pointer select-none group">
-              <input
-                type="checkbox"
-                checked={form[field as keyof typeof form] as boolean}
-                onChange={(e) => update(field, e.target.checked)}
-                className="w-4 h-4 rounded accent-brand-accent border-white/10 bg-white/5"
-              />
-              <span className="text-sm text-brand-muted group-hover:text-brand-text transition-colors">{label}</span>
-            </label>
-          ))}
+      <Card>
+        <CardHeader titulo="Configurações" />
+        <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-3">
+          <Switch
+            checked={form.publicado}
+            onChange={(v) => update('publicado', v)}
+            label="Publicar no site"
+            descricao="Fica visível na página pública de eventos."
+          />
+          <Switch
+            checked={form.destaque}
+            onChange={(v) => update('destaque', v)}
+            label="Destacar na home"
+            descricao="Aparece em posição de destaque."
+          />
+          <Switch
+            checked={form.ativo}
+            onChange={(v) => update('ativo', v)}
+            label="Ativo"
+            descricao="Desative para tirar de circulação sem excluir."
+          />
         </div>
-      </div>
+      </Card>
 
-      <div className="flex gap-4">
-        <Button type="submit" loading={loading} size="lg" className="flex-1 font-bold uppercase tracking-wider text-sm rounded-xl py-4">
-          {evento?.id ? 'Salvar alterações' : 'Criar evento'}
-        </Button>
+      <AcoesFormulario>
         {evento?.id && (
-          <Button type="button" variant="ghost" size="lg" onClick={handleDelete} loading={loading} className="font-bold text-sm rounded-xl py-4 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors px-6">
+          <Botao type="button" variante="perigo" tamanho="lg" onClick={handleDelete} disabled={loading}>
             Excluir
-          </Button>
+          </Botao>
         )}
-        <Button type="button" variant="ghost" size="lg" onClick={() => router.back()} className="font-bold uppercase tracking-wider text-sm rounded-xl py-4 text-brand-muted hover:text-brand-text hover:bg-brand-surface-2 transition-colors">
+        <Botao type="button" variante="fantasma" tamanho="lg" onClick={() => router.back()}>
           Cancelar
-        </Button>
-      </div>
+        </Botao>
+        <Botao type="submit" variante="primario" tamanho="lg" disabled={loading}>
+          {loading ? 'Salvando…' : evento?.id ? 'Salvar alterações' : 'Criar evento'}
+        </Botao>
+      </AcoesFormulario>
     </form>
   )
 }

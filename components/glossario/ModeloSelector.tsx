@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { Check, Zap, Sparkles, Crown, Clock } from 'lucide-react'
-import type { AIModel, AIProvider } from '@/lib/glossario/ai-models'
+import { cn } from '@/lib/utils'
+import type { AIModel, AIProvider, CostTier } from '@/lib/glossario/ai-models'
+import type { TomStatus } from '@/lib/admin/status'
+import { GrupoOpcoes } from '@/components/admin/ui/form'
+import { Badge } from '@/components/admin/ui/primitives'
 
 /**
  * Seletor visual de modelo de IA para o admin do glossário.
@@ -39,16 +43,22 @@ interface Props {
   incluirLegacy?: boolean
 }
 
-const tierLabel: Record<string, { label: string; cor: string; emoji: string }> = {
-  economico: { label: 'Econômico', cor: 'text-green-600 bg-green-50 border-green-200', emoji: '💰' },
-  medio: { label: 'Médio', cor: 'text-amber-600 bg-amber-50 border-amber-200', emoji: '⚖️' },
-  premium: { label: 'Premium', cor: 'text-rose-600 bg-rose-50 border-rose-200', emoji: '💎' },
+const TIER_TOM: Record<CostTier, TomStatus> = {
+  economico: 'success',
+  medio: 'warning',
+  premium: 'danger',
+}
+
+const TIER_LABEL: Record<CostTier, { label: string; emoji: string }> = {
+  economico: { label: 'Econômico', emoji: '💰' },
+  medio: { label: 'Médio', emoji: '⚖️' },
+  premium: { label: 'Premium', emoji: '💎' },
 }
 
 const qualityIcon: Record<string, React.ReactNode> = {
-  basica: <Zap className="w-3.5 h-3.5" />,
-  boa: <Sparkles className="w-3.5 h-3.5" />,
-  excelente: <Crown className="w-3.5 h-3.5" />,
+  basica: <Zap className="h-3.5 w-3.5" />,
+  boa: <Sparkles className="h-3.5 w-3.5" />,
+  excelente: <Crown className="h-3.5 w-3.5" />,
 }
 
 export function ModeloSelector({
@@ -83,7 +93,7 @@ export function ModeloSelector({
 
   if (carregando) {
     return (
-      <div className="text-sm text-muted-foreground p-4 border rounded-md">
+      <div className="rounded-xl border border-brand-border bg-brand-surface-2 p-4 text-sm text-brand-muted">
         Carregando modelos...
       </div>
     )
@@ -92,32 +102,22 @@ export function ModeloSelector({
   return (
     <div className="space-y-4">
       {!fixarProvider && (
-        <div className="flex gap-2">
-          <FiltroBtn
-            ativo={filtroProvider === 'todos'}
-            onClick={() => setFiltroProvider('todos')}
-          >
-            Todos ({modelos.length})
-          </FiltroBtn>
-          <FiltroBtn
-            ativo={filtroProvider === 'gemini'}
-            onClick={() => setFiltroProvider('gemini')}
-          >
-            Gemini ({modelos.filter((m) => m.provider === 'gemini').length})
-          </FiltroBtn>
-          <FiltroBtn
-            ativo={filtroProvider === 'openai'}
-            onClick={() => setFiltroProvider('openai')}
-          >
-            OpenAI ({modelos.filter((m) => m.provider === 'openai').length})
-          </FiltroBtn>
-        </div>
+        <GrupoOpcoes
+          valor={filtroProvider}
+          onChange={setFiltroProvider}
+          opcoes={[
+            { valor: 'todos', label: `Todos (${modelos.length})` },
+            { valor: 'gemini', label: `Gemini (${modelos.filter((m) => m.provider === 'gemini').length})` },
+            { valor: 'openai', label: `OpenAI (${modelos.filter((m) => m.provider === 'openai').length})` },
+          ]}
+          className="max-w-sm"
+        />
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {filtrados.map((m) => {
           const selecionado = value === m.id
-          const tier = tierLabel[m.costTier]
+          const tier = TIER_LABEL[m.costTier]
 
           // Estimativa de custo se quantidade foi passada
           let custoBRL: number | null = null
@@ -135,76 +135,72 @@ export function ModeloSelector({
               key={m.id}
               type="button"
               onClick={() => onChange(m.id)}
-              className={`relative text-left p-4 rounded-lg border-2 transition-all ${
+              className={cn(
+                'relative rounded-xl border p-4 text-left transition-all',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent',
                 selecionado
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-primary/50'
-              }`}
+                  ? 'border-brand-accent bg-brand-accent-soft shadow-cta'
+                  : 'border-brand-border bg-brand-surface-2 hover:border-brand-border-strong',
+              )}
             >
               {/* Check de selecionado */}
               {selecionado && (
-                <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                  <Check className="w-3 h-3" />
+                <div className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-brand-accent text-brand-on-accent">
+                  <Check className="h-3 w-3" />
                 </div>
               )}
 
               {/* Recomendado */}
               {m.recommended && !selecionado && (
-                <span className="absolute top-3 right-3 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                <span className="absolute right-3 top-3 text-[10px] font-semibold uppercase tracking-wide text-brand-accent">
                   ⭐ Recomendado
                 </span>
               )}
 
               {/* Header */}
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-semibold">{m.label}</span>
-                {m.legacy && (
-                  <span className="text-[10px] uppercase text-muted-foreground border px-1 rounded">
-                    legado
-                  </span>
-                )}
+              <div className="mb-1 flex items-center gap-2">
+                <span className="font-semibold text-brand-text">{m.label}</span>
+                {m.legacy && <Badge tom="neutro">legado</Badge>}
               </div>
 
-              <p className="text-xs text-muted-foreground mb-3">{m.description}</p>
+              <p className="mb-3 text-xs text-brand-muted">{m.description}</p>
 
               {/* Badges */}
               <div className="flex flex-wrap gap-1.5 text-[11px]">
-                <span
-                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border ${tier.cor}`}
-                >
+                <Badge tom={TIER_TOM[m.costTier]}>
                   <span>{tier.emoji}</span>
                   {tier.label}
-                </span>
+                </Badge>
 
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-muted">
+                <Badge tom="neutro">
                   {qualityIcon[m.quality]}
                   {m.quality}
-                </span>
+                </Badge>
 
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-muted">
-                  <Clock className="w-3 h-3" />
+                <Badge tom="neutro">
+                  <Clock className="h-3 w-3" />
                   {m.speed}
-                </span>
+                </Badge>
 
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded border bg-muted font-mono">
+                <Badge tom="neutro" className="font-mono">
                   ${m.pricing.inputPer1M}/${m.pricing.outputPer1M}
-                </span>
+                </Badge>
               </div>
 
               {/* Estimativa de custo */}
               {custoBRL !== null && (
-                <div className="mt-3 pt-3 border-t text-xs">
-                  <span className="text-muted-foreground">
+                <div className="mt-3 border-t border-brand-hair pt-3 text-xs">
+                  <span className="text-brand-muted">
                     Estimado para {quantidadeTermos} termos:
                   </span>{' '}
-                  <span className="font-semibold text-foreground">
+                  <span className="font-semibold text-brand-text">
                     R$ {custoBRL.toFixed(2)}
                   </span>
                 </div>
               )}
 
               {/* Ideal para... */}
-              <p className="mt-2 text-[11px] text-muted-foreground italic">
+              <p className="mt-2 text-[11px] italic text-brand-dim">
                 Ideal: {m.ideal}
               </p>
             </button>
@@ -213,34 +209,10 @@ export function ModeloSelector({
       </div>
 
       {filtrados.length === 0 && (
-        <div className="text-sm text-muted-foreground text-center py-8">
+        <div className="py-8 text-center text-sm text-brand-muted">
           Nenhum modelo disponível com os filtros atuais.
         </div>
       )}
     </div>
-  )
-}
-
-function FiltroBtn({
-  ativo,
-  onClick,
-  children,
-}: {
-  ativo: boolean
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`text-sm px-3 py-1.5 rounded-md border transition-colors ${
-        ativo
-          ? 'bg-primary text-primary-foreground border-primary'
-          : 'bg-background hover:bg-muted'
-      }`}
-    >
-      {children}
-    </button>
   )
 }

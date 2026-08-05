@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { prisma } from '@/lib/prisma'
 import { FotoGrid } from '@/components/admin/FotoGrid'
+import { PageHeader } from '@/components/admin/ui/primitives'
 
 export const metadata = { title: 'Gerenciador de Fotos' }
 
@@ -29,12 +30,10 @@ export default async function FotosAdminPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">Gerenciador de Fotos</h1>
-        <p className="text-brand-muted text-sm mt-1">
-          Suba imagens direto no card · Clique, arraste ou cole uma URL · Salva automaticamente
-        </p>
-      </div>
+      <PageHeader
+        titulo="Gerenciador de Fotos"
+        descricao="Suba, arraste ou cole a URL da imagem de cada produto ativo — a troca é salva na hora, direto no card."
+      />
 
       <FotoGrid
         produtos={produtos as any}

@@ -11,8 +11,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import {
   Wifi, WifiOff, QrCode, RefreshCw, LogOut, Loader2,
-  CheckCircle2, AlertTriangle, MessageCircle, Smartphone,
+  AlertTriangle, MessageCircle, Smartphone,
 } from 'lucide-react'
+import { Card, CardHeader, Botao, Badge } from '@/components/admin/ui/primitives'
+import type { TomStatus } from '@/lib/admin/status'
 
 type ConnectionState = 'loading' | 'connected' | 'disconnected' | 'connecting' | 'not_configured' | 'not_found' | 'error'
 
@@ -27,6 +29,17 @@ const STATE_LABELS: Record<string, string> = {
   not_found:      'Instância não encontrada',
   error:          'Erro de conexão',
   loading:        'Verificando…',
+}
+
+/** Tom de cor por estado — o estado precisa dar pra ler só pela cor. */
+const STATE_TOM: Record<ConnectionState, TomStatus> = {
+  connected:      'success',
+  connecting:     'warning',
+  disconnected:   'danger',
+  not_found:      'danger',
+  error:          'danger',
+  not_configured: 'neutro',
+  loading:        'neutro',
 }
 
 const POLL_CONNECTED    = 30_000   // 30s quando conectado
@@ -158,81 +171,69 @@ export function WhatsAppConnect() {
   const isLoading      = connState === 'loading'
   const notConfigured  = connState === 'not_configured'
 
-  const statusColor = isConnected
-    ? '#22c55e'
-    : connState === 'connecting'
-    ? '#f59e0b'
-    : connState === 'error' || connState === 'not_configured'
-    ? '#6b7280'
-    : '#ef4444'
-
   return (
-    <div className="admin-glass rounded-xl border border-brand-border/20 overflow-hidden">
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-brand-border/20 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <MessageCircle size={18} style={{ color: '#25d366' }} />
-          <h2 className="font-bold text-brand-text">Conexão WhatsApp</h2>
-          <span
-            className="px-2 py-0.5 rounded-full text-[10px] font-bold border"
-            style={{
-              background: `${statusColor}22`,
-              color:       statusColor,
-              borderColor: `${statusColor}44`,
-            }}
-          >
-            {STATE_LABELS[connState] ?? connState}
+    <Card>
+      <CardHeader
+        titulo={
+          <span className="flex items-center gap-2">
+            <MessageCircle size={18} className="text-brand-success" />
+            Conexão WhatsApp
           </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {isConnected && (
-            <button
-              onClick={handleDisconnect}
-              title="Desconectar"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-400 hover:bg-red-500/10 border border-red-500/20 transition-all"
-            >
-              <LogOut size={13} />
-              Desconectar
-            </button>
-          )}
-          {!isConnected && !notConfigured && (
-            <button
-              onClick={handleRestart}
-              title="Reiniciar instância"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-brand-muted hover:text-brand-text hover:bg-white/5 border border-brand-border/20 transition-all"
-            >
-              <RefreshCw size={13} />
-              Reiniciar
-            </button>
-          )}
-        </div>
-      </div>
+        }
+        acao={
+          <div className="flex items-center gap-2">
+            <Badge tom={STATE_TOM[connState]}>{STATE_LABELS[connState] ?? connState}</Badge>
+            {isConnected && (
+              <button
+                onClick={handleDisconnect}
+                title="Desconectar"
+                className="flex items-center gap-1.5 rounded-lg border border-brand-danger bg-brand-danger-soft px-3 py-1.5 text-xs font-medium text-brand-danger transition-all hover:brightness-95"
+              >
+                <LogOut size={13} />
+                Desconectar
+              </button>
+            )}
+            {!isConnected && !notConfigured && (
+              <Botao
+                variante="secundario"
+                tamanho="sm"
+                onClick={handleRestart}
+                title="Reiniciar instância"
+              >
+                <RefreshCw size={13} />
+                Reiniciar
+              </Botao>
+            )}
+          </div>
+        }
+      />
 
       {/* Body */}
       <div className="p-5">
         {/* Ação em progresso */}
         {actionMsg && (
-          <div className="mb-4 flex items-center gap-2 text-xs text-brand-muted bg-white/5 rounded-lg px-3 py-2 border border-brand-border/10">
-            <Loader2 size={12} className="animate-spin shrink-0" />
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-brand-hair bg-brand-surface-2 px-3 py-2 text-xs text-brand-muted">
+            <Loader2 size={12} className="shrink-0 animate-spin" />
             {actionMsg}
           </div>
         )}
 
         {/* ─ CONECTADO ─ */}
         {isConnected && (
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
             <div className="flex items-center gap-3">
-              <div className="relative w-12 h-12 rounded-full bg-[#25d366]/10 border border-[#25d366]/30 flex items-center justify-center shrink-0">
-                <Wifi size={22} style={{ color: '#25d366' }} />
-                <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-[#22c55e] rounded-full border-2 border-black animate-pulse" />
+              <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-success-soft">
+                <Wifi size={22} className="text-brand-success" />
+                <span className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-full border-2 border-brand-surface bg-brand-success" />
               </div>
               <div>
-                <p className="font-semibold text-brand-text text-sm">WhatsApp conectado! 🟢</p>
-                <p className="text-xs text-brand-muted">Instância: <code className="text-brand-accent">{instance}</code></p>
+                <p className="text-sm font-semibold text-brand-text">WhatsApp conectado!</p>
+                <p className="text-xs text-brand-muted">
+                  Instância: <code className="text-brand-accent">{instance}</code>
+                </p>
               </div>
             </div>
-            <div className="sm:ml-auto text-xs text-brand-muted/60">
+            <div className="text-xs text-brand-dim sm:ml-auto">
               Status verificado a cada 30s
             </div>
           </div>
@@ -249,10 +250,10 @@ export function WhatsAppConnect() {
         {/* ─ NÃO CONFIGURADO ─ */}
         {notConfigured && (
           <div className="flex items-start gap-3">
-            <AlertTriangle size={18} className="text-amber-400 shrink-0 mt-0.5" />
+            <AlertTriangle size={18} className="mt-0.5 shrink-0 text-brand-warning" />
             <div>
-              <p className="font-medium text-brand-text text-sm mb-1">Evolution API não configurada</p>
-              <p className="text-xs text-brand-muted leading-relaxed">
+              <p className="mb-1 text-sm font-medium text-brand-text">Evolution API não configurada</p>
+              <p className="text-xs leading-relaxed text-brand-muted">
                 Adicione as variáveis <code className="text-brand-accent">EVOLUTION_API_URL</code>,{' '}
                 <code className="text-brand-accent">EVOLUTION_API_KEY</code> e{' '}
                 <code className="text-brand-accent">EVOLUTION_INSTANCE</code> no Vercel e faça um novo deploy.
@@ -263,12 +264,14 @@ export function WhatsAppConnect() {
 
         {/* ─ QR CODE ─ */}
         {(connState === 'disconnected' || connState === 'not_found' || connState === 'connecting') && (
-          <div className="flex flex-col sm:flex-row gap-6 items-start">
+          <div className="flex flex-col items-start gap-6 sm:flex-row">
             {/* QR */}
             <div className="shrink-0">
-              <div className="w-48 h-48 rounded-xl bg-white border-2 border-[#25d366]/30 flex items-center justify-center overflow-hidden relative shadow-lg shadow-black/30">
+              {/* Fundo branco fixo nos dois temas: a câmera do celular precisa de alto
+                  contraste preto-sobre-branco pra ler o código — isso não muda com o tema. */}
+              <div className="relative flex h-48 w-48 items-center justify-center overflow-hidden rounded-xl border-2 border-brand-success bg-white shadow-card">
                 {loadingQr || !qrBase64 ? (
-                  <div className="flex flex-col items-center gap-2 text-gray-400">
+                  <div className="flex flex-col items-center gap-2 text-brand-dim">
                     <QrCode size={32} className={loadingQr ? 'animate-pulse' : ''} />
                     <span className="text-[10px]">{loadingQr ? 'Gerando QR…' : 'Aguardando…'}</span>
                   </div>
@@ -277,7 +280,7 @@ export function WhatsAppConnect() {
                   <img
                     src={qrBase64}
                     alt="QR Code WhatsApp"
-                    className="w-full h-full object-contain p-2"
+                    className="h-full w-full object-contain p-2"
                   />
                 )}
               </div>
@@ -286,7 +289,7 @@ export function WhatsAppConnect() {
               {qrBase64 && (
                 <button
                   onClick={handleRefreshQr}
-                  className="mt-2 w-full flex items-center justify-center gap-1.5 text-[10px] text-brand-muted hover:text-brand-text transition-colors"
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 text-[10px] text-brand-muted transition-colors hover:text-brand-text"
                 >
                   <RefreshCw size={10} />
                   Atualizar QR code
@@ -296,8 +299,8 @@ export function WhatsAppConnect() {
 
             {/* Instruções */}
             <div className="flex-1">
-              <p className="font-semibold text-brand-text text-sm mb-3 flex items-center gap-2">
-                <Smartphone size={15} className="text-[#25d366]" />
+              <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-text">
+                <Smartphone size={15} className="text-brand-success" />
                 Como conectar:
               </p>
               <ol className="space-y-2.5 text-xs text-brand-muted">
@@ -309,14 +312,14 @@ export function WhatsAppConnect() {
                   'Aponte a câmera para o QR code ao lado',
                 ].map((step, i) => (
                   <li key={i} className="flex items-start gap-2">
-                    <span className="shrink-0 w-5 h-5 rounded-full bg-[#25d366]/15 text-[#25d366] border border-[#25d366]/25 flex items-center justify-center font-bold text-[9px]">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-brand-success bg-brand-success-soft text-[9px] font-bold text-brand-success">
                       {i + 1}
                     </span>
                     {step}
                   </li>
                 ))}
               </ol>
-              <p className="mt-3 text-[10px] text-brand-muted/50 flex items-center gap-1">
+              <p className="mt-3 flex items-center gap-1 text-[10px] text-brand-dim">
                 <RefreshCw size={9} />
                 QR atualizado automaticamente a cada 45s
               </p>
@@ -327,15 +330,15 @@ export function WhatsAppConnect() {
         {/* ─ ERRO ─ */}
         {connState === 'error' && (
           <div className="flex items-start gap-3">
-            <WifiOff size={18} className="text-red-400 shrink-0 mt-0.5" />
+            <WifiOff size={18} className="mt-0.5 shrink-0 text-brand-danger" />
             <div>
-              <p className="font-medium text-brand-text text-sm mb-1">Erro ao conectar com Evolution API</p>
+              <p className="mb-1 text-sm font-medium text-brand-text">Erro ao conectar com Evolution API</p>
               <p className="text-xs text-brand-muted">
                 Verifique se a URL da API está acessível e a API key está correta.
               </p>
               <button
                 onClick={fetchStatus}
-                className="mt-2 text-xs text-brand-accent hover:underline flex items-center gap-1"
+                className="mt-2 flex items-center gap-1 text-xs text-brand-accent hover:underline"
               >
                 <RefreshCw size={10} /> Tentar novamente
               </button>
@@ -345,18 +348,18 @@ export function WhatsAppConnect() {
 
         {/* Instância + webhook info (rodapé) */}
         {!notConfigured && (
-          <div className="mt-4 pt-4 border-t border-brand-border/10 grid sm:grid-cols-2 gap-2 text-[10px] text-brand-muted/60">
+          <div className="mt-4 grid gap-2 border-t border-brand-hair pt-4 text-[10px] text-brand-dim sm:grid-cols-2">
             <div>
-              <span className="text-brand-muted/40 block mb-0.5">Instância</span>
-              <code className="text-brand-accent/70">{instance}</code>
+              <span className="mb-0.5 block text-brand-dim">Instância</span>
+              <code className="text-brand-accent">{instance}</code>
             </div>
             <div>
-              <span className="text-brand-muted/40 block mb-0.5">Webhook configurado em</span>
-              <code className="text-brand-accent/70 break-all">/api/evolution/webhook</code>
+              <span className="mb-0.5 block text-brand-dim">Webhook configurado em</span>
+              <code className="break-all text-brand-accent">/api/evolution/webhook</code>
             </div>
           </div>
         )}
       </div>
-    </div>
+    </Card>
   )
 }

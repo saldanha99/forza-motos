@@ -4,7 +4,10 @@ import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { ChevronLeft, ChevronRight, Plus, X, MessageCircle, Trash2, Clock, Bike, Wrench } from 'lucide-react'
-import { whatsappLink } from '@/lib/utils'
+import { cn, whatsappLink } from '@/lib/utils'
+import { STATUS_AGENDAMENTO, definicaoStatus } from '@/lib/admin/status'
+import { Card, StatusPill, TOM_PONTO, EmptyState, Botao } from '@/components/admin/ui/primitives'
+import { Modal, Campo, Input, Select, Textarea } from '@/components/admin/ui/form'
 import { ReservaAgendamento } from '@/components/admin/ReservaAgendamento'
 
 const SERVICOS = [
@@ -21,25 +24,9 @@ const SERVICOS = [
 // Admin vê todos os slots possíveis (semana 9h–17h + sábado a partir das 8h)
 const HORARIOS = ['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00']
 
-const STATUS_LABELS: Record<string, string> = {
-  pendente: 'Pendente',
-  confirmado: 'Confirmado',
-  concluido: 'Concluído',
-  cancelado: 'Cancelado',
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  pendente: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-  confirmado: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  concluido: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-  cancelado: 'bg-red-500/20 text-red-400 border-red-500/30',
-}
-
-const DOT_COLORS: Record<string, string> = {
-  pendente: 'bg-yellow-400',
-  confirmado: 'bg-blue-400',
-  concluido: 'bg-emerald-400',
-  cancelado: 'bg-red-400',
+/** Ponto de status para as marcações do dia — vocabulário único em lib/admin/status. */
+function pontoDoStatus(status: string) {
+  return TOM_PONTO[definicaoStatus(status).tom]
 }
 
 type Appointment = {
@@ -192,44 +179,41 @@ export function AgendaCalendario({ agendamentos: initial }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <button onClick={() => navMes(-1)} className="p-2 rounded-xl border border-brand-border/30 text-brand-muted hover:text-brand-text hover:border-brand-accent/40 transition-all">
+          <button onClick={() => navMes(-1)} className="p-2 rounded-xl border border-brand-border text-brand-muted hover:text-brand-text hover:border-brand-accent transition-all">
             <ChevronLeft size={18} />
           </button>
           <h2 className="font-barlow font-bold text-xl text-brand-text min-w-[160px] text-center">
             {MESES[mes]} {ano}
           </h2>
-          <button onClick={() => navMes(1)} className="p-2 rounded-xl border border-brand-border/30 text-brand-muted hover:text-brand-text hover:border-brand-accent/40 transition-all">
+          <button onClick={() => navMes(1)} className="p-2 rounded-xl border border-brand-border text-brand-muted hover:text-brand-text hover:border-brand-accent transition-all">
             <ChevronRight size={18} />
           </button>
           <button
             onClick={() => { setAno(hoje.getFullYear()); setMes(hoje.getMonth()) }}
-            className="text-xs text-brand-muted border border-brand-border/30 px-3 py-1.5 rounded-lg hover:border-brand-accent/40 transition-all ml-1"
+            className="text-xs text-brand-muted border border-brand-border px-3 py-1.5 rounded-lg hover:border-brand-accent transition-all ml-1"
           >
             Hoje
           </button>
         </div>
-        <button
-          onClick={() => setShowNovo(true)}
-          className="flex items-center gap-2 bg-brand-accent hover:bg-brand-accent/80 text-white text-sm px-4 py-2 rounded-xl font-semibold transition-all shadow-lg shadow-brand-accent/20"
-        >
+        <Botao onClick={() => setShowNovo(true)}>
           <Plus size={16} />
           Novo Agendamento
-        </button>
+        </Botao>
       </div>
 
       {/* Legenda */}
       <div className="flex gap-4 flex-wrap">
-        {Object.entries(STATUS_LABELS).map(([k, label]) => (
+        {Object.entries(STATUS_AGENDAMENTO).map(([k, def]) => (
           <div key={k} className="flex items-center gap-1.5 text-xs text-brand-muted">
-            <span className={`w-2.5 h-2.5 rounded-full ${DOT_COLORS[k]}`} />
-            {label}
+            <span className={cn('w-2.5 h-2.5 rounded-full', TOM_PONTO[def.tom])} />
+            {def.label}
           </div>
         ))}
       </div>
 
       <div className="flex gap-4 flex-col xl:flex-row">
         {/* Calendário */}
-        <div className="flex-1 admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-4 shadow-xl">
+        <Card className="flex-1 p-4">
           {/* Cabeçalho dias semana */}
           <div className="grid grid-cols-7 mb-2">
             {DIAS_SEMANA.map(d => (
@@ -248,23 +232,23 @@ export function AgendaCalendario({ agendamentos: initial }: Props) {
                 <button
                   key={idx}
                   onClick={() => setDiaAberto(selecionado ? null : key)}
-                  className={[
+                  className={cn(
                     'relative flex flex-col items-center rounded-xl py-2 px-1 min-h-[56px] transition-all duration-150',
                     selecionado
-                      ? 'bg-brand-accent/20 border border-brand-accent/50 text-brand-text'
+                      ? 'bg-brand-accent text-brand-on-accent shadow-cta'
                       : ehHoje
-                        ? 'bg-white/5 border border-brand-accent/20 text-brand-accent font-bold'
-                        : 'border border-transparent hover:bg-white/5 hover:border-brand-border/30 text-brand-text',
-                  ].join(' ')}
+                        ? 'bg-brand-accent-soft border border-brand-accent text-brand-accent font-bold'
+                        : 'border border-transparent hover:bg-brand-tint-1 hover:border-brand-border text-brand-text',
+                  )}
                 >
                   <span className="text-sm font-medium">{dia}</span>
                   {eventos.length > 0 && (
                     <div className="flex gap-0.5 mt-1 flex-wrap justify-center max-w-[40px]">
                       {eventos.slice(0, 4).map((a, i) => (
-                        <span key={i} className={`w-1.5 h-1.5 rounded-full ${DOT_COLORS[a.status] || 'bg-gray-400'}`} />
+                        <span key={i} className={cn('w-1.5 h-1.5 rounded-full', pontoDoStatus(a.status))} />
                       ))}
                       {eventos.length > 4 && (
-                        <span className="text-[9px] text-brand-muted">+{eventos.length - 4}</span>
+                        <span className="text-[9px] text-brand-dim">+{eventos.length - 4}</span>
                       )}
                     </div>
                   )}
@@ -272,11 +256,11 @@ export function AgendaCalendario({ agendamentos: initial }: Props) {
               )
             })}
           </div>
-        </div>
+        </Card>
 
         {/* Painel lateral do dia */}
         {diaAberto && (
-          <div className="xl:w-[380px] admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-5 shadow-xl">
+          <Card className="xl:w-[380px] p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-xs text-brand-muted uppercase tracking-wide">Agendamentos</p>
@@ -290,13 +274,19 @@ export function AgendaCalendario({ agendamentos: initial }: Props) {
             </div>
 
             {diaAbertoAgendamentos.length === 0 ? (
-              <div className="text-center py-8 text-brand-muted text-sm">
-                <p>Nenhum agendamento neste dia.</p>
-                <button onClick={() => { setNovoForm(f => ({ ...f, dataPreferida: diaAberto })); setShowNovo(true) }}
-                  className="mt-3 text-brand-accent hover:underline text-sm font-medium">
-                  + Criar agendamento
-                </button>
-              </div>
+              <EmptyState
+                compacto
+                titulo="Nenhum agendamento neste dia"
+                acao={
+                  <Botao
+                    variante="fantasma"
+                    tamanho="sm"
+                    onClick={() => { setNovoForm(f => ({ ...f, dataPreferida: diaAberto })); setShowNovo(true) }}
+                  >
+                    <Plus size={14} /> Criar agendamento
+                  </Botao>
+                }
+              />
             ) : (
               <div className="space-y-3 overflow-y-auto max-h-[500px] pr-1 -mr-1">
                 {diaAbertoAgendamentos
@@ -305,15 +295,13 @@ export function AgendaCalendario({ agendamentos: initial }: Props) {
                     const tel = a.telefone.replace(/\D/g, '')
                     const whatsMsg = `Olá ${a.nome}! Confirmamos seu agendamento para ${a.servico} às ${a.horarioPreferido}. Forza Motos.`
                     return (
-                      <div key={a.id} className="bg-white/5 border border-brand-border/20 rounded-xl p-4 space-y-2">
+                      <div key={a.id} className="bg-brand-surface-2 border border-brand-border rounded-xl p-4 space-y-2">
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <p className="font-semibold text-brand-text text-sm">{a.nome}</p>
                             <p className="text-xs text-brand-muted">{a.telefone}</p>
                           </div>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${STATUS_COLORS[a.status] || 'bg-gray-500/20 text-gray-300 border-gray-500/30'}`}>
-                            {STATUS_LABELS[a.status] || a.status}
-                          </span>
+                          <StatusPill status={a.status} />
                         </div>
                         <div className="flex items-center gap-2 text-xs text-brand-muted">
                           <Clock size={11} className="shrink-0" />
@@ -328,35 +316,35 @@ export function AgendaCalendario({ agendamentos: initial }: Props) {
                           <span>{a.motoModelo}</span>
                         </div>
                         {a.notas && (
-                          <p className="text-xs text-brand-muted italic border-l-2 border-brand-accent/30 pl-2">{a.notas}</p>
+                          <p className="text-xs text-brand-muted italic border-l-2 border-brand-accent pl-2">{a.notas}</p>
                         )}
                         <div className="flex items-center gap-2 pt-1">
-                          <select
+                          <Select
                             value={a.status}
                             disabled={loadingId === a.id}
                             onChange={(e) => alterarStatus(a.id, e.target.value)}
-                            className="flex-1 bg-brand-surface-2 border border-brand-border text-brand-text text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-accent transition-colors"
+                            className="flex-1 py-1.5 text-xs"
                           >
-                            {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                              <option key={k} value={k}>{v}</option>
+                            {Object.entries(STATUS_AGENDAMENTO).map(([k, def]) => (
+                              <option key={k} value={k}>{def.label}</option>
                             ))}
-                          </select>
+                          </Select>
                           <a
                             href={whatsappLink(tel, whatsMsg)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 bg-emerald-600/80 hover:bg-emerald-600 rounded-lg transition-colors"
+                            className="p-1.5 bg-brand-success text-brand-on-accent hover:brightness-95 rounded-lg transition-colors"
                             title="Abrir WhatsApp"
                           >
-                            <MessageCircle size={14} className="text-white" />
+                            <MessageCircle size={14} />
                           </a>
                           <button
                             onClick={() => excluir(a.id)}
                             disabled={loadingId === a.id}
-                            className="p-1.5 bg-red-500/20 hover:bg-red-500/40 border border-red-500/30 rounded-lg transition-colors"
+                            className="p-1.5 bg-brand-danger-soft hover:brightness-95 border border-brand-danger rounded-lg transition-colors"
                             title="Excluir"
                           >
-                            <Trash2 size={14} className="text-red-400" />
+                            <Trash2 size={14} className="text-brand-danger" />
                           </button>
                         </div>
                         {/* Reserva de estoque (assessoria) */}
@@ -366,120 +354,95 @@ export function AgendaCalendario({ agendamentos: initial }: Props) {
                   })}
               </div>
             )}
-          </div>
+          </Card>
         )}
       </div>
 
       {/* Modal Novo Agendamento */}
-      {showNovo && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="admin-glass !bg-[#0e0e0e] border border-brand-border/40 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-barlow font-bold text-brand-text text-lg">Novo Agendamento</h3>
-              <button onClick={() => setShowNovo(false)} className="text-brand-muted hover:text-brand-text transition-colors">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-brand-muted block mb-1">Nome *</label>
-                  <input
-                    value={novoForm.nome}
-                    onChange={e => setNovoForm(f => ({ ...f, nome: e.target.value }))}
-                    className="w-full bg-black/30 border border-brand-border/30 rounded-lg px-3 py-2 text-brand-text text-sm focus:outline-none focus:border-brand-accent transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-brand-muted block mb-1">Telefone *</label>
-                  <input
-                    value={novoForm.telefone}
-                    onChange={e => setNovoForm(f => ({ ...f, telefone: e.target.value }))}
-                    placeholder="(19) 99999-9999"
-                    className="w-full bg-black/30 border border-brand-border/30 rounded-lg px-3 py-2 text-brand-text text-sm focus:outline-none focus:border-brand-accent transition-colors"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs text-brand-muted block mb-1">Serviço *</label>
-                <select
-                  value={novoForm.servico}
-                  onChange={e => setNovoForm(f => ({ ...f, servico: e.target.value }))}
-                  className="w-full bg-black/30 border border-brand-border/30 rounded-lg px-3 py-2 text-brand-text text-sm focus:outline-none focus:border-brand-accent transition-colors"
-                >
-                  <option value="">Selecione...</option>
-                  {SERVICOS.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-brand-muted block mb-1">Modelo da moto *</label>
-                <input
-                  value={novoForm.motoModelo}
-                  onChange={e => setNovoForm(f => ({ ...f, motoModelo: e.target.value }))}
-                  placeholder="Ex: Honda CB 300R 2023"
-                  className="w-full bg-black/30 border border-brand-border/30 rounded-lg px-3 py-2 text-brand-text text-sm focus:outline-none focus:border-brand-accent transition-colors"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-brand-muted block mb-1">Data *</label>
-                  <input
-                    type="date"
-                    value={novoForm.dataPreferida}
-                    onChange={e => setNovoForm(f => ({ ...f, dataPreferida: e.target.value }))}
-                    className="w-full bg-black/30 border border-brand-border/30 rounded-lg px-3 py-2 text-brand-text text-sm focus:outline-none focus:border-brand-accent transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-brand-muted block mb-1">Horário *</label>
-                  <select
-                    value={novoForm.horarioPreferido}
-                    onChange={e => setNovoForm(f => ({ ...f, horarioPreferido: e.target.value }))}
-                    className="w-full bg-black/30 border border-brand-border/30 rounded-lg px-3 py-2 text-brand-text text-sm focus:outline-none focus:border-brand-accent transition-colors"
-                  >
-                    <option value="">Selecione...</option>
-                    {HORARIOS.map(h => <option key={h} value={h}>{h}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="text-xs text-brand-muted block mb-1">Status</label>
-                <select
-                  value={novoForm.status}
-                  onChange={e => setNovoForm(f => ({ ...f, status: e.target.value }))}
-                  className="w-full bg-black/30 border border-brand-border/30 rounded-lg px-3 py-2 text-brand-text text-sm focus:outline-none focus:border-brand-accent transition-colors"
-                >
-                  {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-brand-muted block mb-1">Observações</label>
-                <textarea
-                  value={novoForm.notas}
-                  onChange={e => setNovoForm(f => ({ ...f, notas: e.target.value }))}
-                  rows={2}
-                  className="w-full bg-black/30 border border-brand-border/30 rounded-lg px-3 py-2 text-brand-text text-sm focus:outline-none focus:border-brand-accent resize-none transition-colors"
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => setShowNovo(false)}
-                  className="flex-1 border border-brand-border/30 text-brand-muted hover:text-brand-text py-2.5 rounded-xl text-sm transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={criarAgendamento}
-                  disabled={loadingId === 'novo'}
-                  className="flex-1 bg-brand-accent hover:bg-brand-accent/80 disabled:opacity-50 text-white py-2.5 rounded-xl text-sm font-semibold transition-all"
-                >
-                  {loadingId === 'novo' ? 'Salvando...' : 'Salvar'}
-                </button>
-              </div>
-            </div>
+      <Modal
+        aberto={showNovo}
+        aoFechar={() => setShowNovo(false)}
+        titulo="Novo Agendamento"
+        rodape={
+          <>
+            <Botao variante="secundario" onClick={() => setShowNovo(false)}>
+              Cancelar
+            </Botao>
+            <Botao onClick={criarAgendamento} disabled={loadingId === 'novo'}>
+              {loadingId === 'novo' ? 'Salvando…' : 'Salvar'}
+            </Botao>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Campo label="Nome" obrigatorio>
+              <Input
+                value={novoForm.nome}
+                onChange={e => setNovoForm(f => ({ ...f, nome: e.target.value }))}
+              />
+            </Campo>
+            <Campo label="Telefone" obrigatorio>
+              <Input
+                value={novoForm.telefone}
+                onChange={e => setNovoForm(f => ({ ...f, telefone: e.target.value }))}
+                placeholder="(19) 99999-9999"
+              />
+            </Campo>
           </div>
+          <Campo label="Serviço" obrigatorio>
+            <Select
+              value={novoForm.servico}
+              onChange={e => setNovoForm(f => ({ ...f, servico: e.target.value }))}
+            >
+              <option value="">Selecione...</option>
+              {SERVICOS.map(s => <option key={s} value={s}>{s}</option>)}
+            </Select>
+          </Campo>
+          <Campo label="Modelo da moto" obrigatorio>
+            <Input
+              value={novoForm.motoModelo}
+              onChange={e => setNovoForm(f => ({ ...f, motoModelo: e.target.value }))}
+              placeholder="Ex: Honda CB 300R 2023"
+            />
+          </Campo>
+          <div className="grid grid-cols-2 gap-3">
+            <Campo label="Data" obrigatorio>
+              <Input
+                type="date"
+                value={novoForm.dataPreferida}
+                onChange={e => setNovoForm(f => ({ ...f, dataPreferida: e.target.value }))}
+              />
+            </Campo>
+            <Campo label="Horário" obrigatorio>
+              <Select
+                value={novoForm.horarioPreferido}
+                onChange={e => setNovoForm(f => ({ ...f, horarioPreferido: e.target.value }))}
+              >
+                <option value="">Selecione...</option>
+                {HORARIOS.map(h => <option key={h} value={h}>{h}</option>)}
+              </Select>
+            </Campo>
+          </div>
+          <Campo label="Status">
+            <Select
+              value={novoForm.status}
+              onChange={e => setNovoForm(f => ({ ...f, status: e.target.value }))}
+            >
+              {Object.entries(STATUS_AGENDAMENTO).map(([k, def]) => (
+                <option key={k} value={k}>{def.label}</option>
+              ))}
+            </Select>
+          </Campo>
+          <Campo label="Observações">
+            <Textarea
+              value={novoForm.notas}
+              onChange={e => setNovoForm(f => ({ ...f, notas: e.target.value }))}
+              rows={2}
+            />
+          </Campo>
         </div>
-      )}
+      </Modal>
     </div>
   )
 }

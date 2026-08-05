@@ -90,13 +90,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <GoogleAnalytics />
         <Providers>
           {children}
+          {/* Segue o tema vigente: `--brand-*` quando o painel está aberto
+              (o shell espelha o atributo no <body>), `--card`/`--ink` na loja. */}
           <Toaster
             position="top-right"
             toastOptions={{
               style: {
-                background: '#fff',
-                color: '#111',
-                border: '1px solid #eee',
+                background: 'var(--brand-surface, var(--card))',
+                color: 'var(--brand-text, var(--ink))',
+                border: '1px solid var(--brand-border, var(--line))',
                 fontFamily: 'var(--font-inter)',
               },
             }}

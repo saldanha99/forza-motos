@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { GerarTermoForm } from '@/components/glossario/GerarTermoForm'
+import { Card, PageHeader } from '@/components/admin/ui/primitives'
 
 export const metadata = { title: 'Gerar termo via IA — Forza Admin' }
 
@@ -14,21 +15,14 @@ export default function NovoTermoPage() {
         <ArrowLeft size={14} /> Voltar ao glossário
       </Link>
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">
-            Gerar termo via IA
-          </h1>
-          <p className="text-brand-muted text-sm mt-1">
-            Escolha o modelo de IA, defina o nicho e a IA cria o conteúdo
-            otimizado para SEO automaticamente.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        titulo="Gerar termo via IA"
+        descricao="Escolha o modelo de IA, defina o nicho e a IA cria o conteúdo já otimizado para SEO."
+      />
 
-      <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl p-6 lg:p-8 shadow-xl">
+      <Card className="p-6 lg:p-8">
         <GerarTermoForm />
-      </div>
+      </Card>
     </div>
   )
 }

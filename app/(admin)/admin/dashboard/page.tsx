@@ -1,168 +1,298 @@
 export const dynamic = 'force-dynamic'
-import { prisma } from '@/lib/prisma'
-import { formatPrice, formatDate } from '@/lib/utils'
-import { statusBadge } from '@/components/ui/Badge'
-import { KpiCard } from '@/components/admin/KpiCard'
-import { FadeIn } from '@/components/admin/FadeIn'
+
 import Link from 'next/link'
 import {
-  ShoppingBag, DollarSign, Users, AlertTriangle,
-  CloudOff, CalendarClock, MessageCircleWarning, CheckCircle2,
+  AlertTriangle, ArrowUpRight, CalendarClock, CheckCircle2, CloudOff,
+  DollarSign, MessageCircleWarning, Package, ShoppingBag, Users,
 } from 'lucide-react'
+import { prisma } from '@/lib/prisma'
+import { formatDate, formatPrice, cn } from '@/lib/utils'
+import { KpiCard } from '@/components/admin/KpiCard'
+import { FadeIn } from '@/components/admin/FadeIn'
+import {
+  Card, CardHeader, EmptyState, PageHeader, SectionTitle, StatusPill,
+  TD_CELULA, THEAD_TH, TR_LINHA,
+} from '@/components/admin/ui/primitives'
+import { COLUNAS_PEDIDO } from '@/components/admin/kanban/PedidosKanban'
 
 export const metadata = { title: 'Dashboard — Forza Admin' }
 
-/** Card acionável: vermelho/âmbar quando exige ação, verde quando está tudo ok */
-function ActionCard({
-  count, label, ok, href, icon: Icon, urgente = false,
+const DIA = 24 * 60 * 60 * 1000
+
+/* ═══════════════════════════════════════════════════════════════════
+   Card de pendência — verde quando não há nada a fazer
+   ═══════════════════════════════════════════════════════════════════ */
+
+function CardAcao({
+  quantidade, label, tudoCerto, href, icone: Icone, urgente = false,
 }: {
-  count: number; label: string; ok: string; href: string; icon: any; urgente?: boolean
+  quantidade: number
+  /** O que fazer, quando há pendência. */
+  label: string
+  /** O que dizer quando está tudo em dia. */
+  tudoCerto: string
+  href: string
+  icone: typeof ShoppingBag
+  urgente?: boolean
 }) {
-  const precisaAcao = count > 0
+  const precisaAcao = quantidade > 0
+  const tom = urgente ? 'danger' : 'warning'
+
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 transition-all duration-200 hover:scale-[1.02] ${
+      className={cn(
+        'group flex items-center gap-3 rounded-2xl border px-4 py-3.5 transition-all hover:-translate-y-0.5',
         precisaAcao
-          ? urgente
-            ? 'bg-red-500/10 border-red-500/40 hover:border-red-400'
-            : 'bg-amber-500/10 border-amber-500/40 hover:border-amber-400'
-          : 'bg-emerald-500/[0.06] border-emerald-500/20 hover:border-emerald-500/40'
-      }`}
-    >
-      {precisaAcao ? (
-        <Icon size={22} className={urgente ? 'text-red-400' : 'text-amber-400'} />
-      ) : (
-        <CheckCircle2 size={22} className="text-emerald-500/70" />
+          ? tom === 'danger'
+            ? 'border-brand-danger bg-brand-danger-soft'
+            : 'border-brand-warning bg-brand-warning-soft'
+          : 'border-brand-border bg-brand-surface',
       )}
-      <div className="min-w-0">
-        <p className={`font-barlow font-black text-xl leading-none ${
-          precisaAcao ? (urgente ? 'text-red-300' : 'text-amber-300') : 'text-emerald-400/80'
-        }`}>
-          {precisaAcao ? count : '✓'}
+    >
+      <span
+        className={cn(
+          'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+          precisaAcao
+            ? tom === 'danger'
+              ? 'text-brand-danger'
+              : 'text-brand-warning'
+            : 'bg-brand-success-soft text-brand-success',
+        )}
+      >
+        {precisaAcao ? <Icone size={20} /> : <CheckCircle2 size={20} />}
+      </span>
+
+      <div className="min-w-0 flex-1">
+        <p
+          className={cn(
+            'font-barlow text-xl font-black leading-none tabular-nums',
+            precisaAcao
+              ? tom === 'danger'
+                ? 'text-brand-danger'
+                : 'text-brand-warning'
+              : 'text-brand-success',
+          )}
+        >
+          {precisaAcao ? quantidade : 'OK'}
         </p>
-        <p className="text-xs text-brand-muted mt-1 truncate">{precisaAcao ? label : ok}</p>
+        <p className="mt-1 truncate text-xs text-brand-muted">
+          {precisaAcao ? label : tudoCerto}
+        </p>
       </div>
+
+      <ArrowUpRight
+        size={15}
+        className="shrink-0 text-brand-dim opacity-0 transition-opacity group-hover:opacity-100"
+      />
     </Link>
   )
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   Pipeline — o funil de pedidos em uma linha, clicável
+   ═══════════════════════════════════════════════════════════════════ */
+
+function Pipeline({ contagens }: { contagens: Record<string, number> }) {
+  const etapas = COLUNAS_PEDIDO.filter((c) => c.id !== 'CANCELADO')
+  const total = etapas.reduce((s, e) => s + (contagens[e.id] ?? 0), 0)
+
+  const BARRA: Record<string, string> = {
+    warning: 'bg-brand-warning',
+    danger:  'bg-brand-danger',
+    info:    'bg-brand-info',
+    success: 'bg-brand-success',
+    neutro:  'bg-brand-dim',
+    accent:  'bg-brand-accent',
+  }
+
+  return (
+    <Card className="p-5">
+      <SectionTitle
+        acao={
+          <Link
+            href="/admin/pedidos"
+            className="text-xs font-semibold text-brand-accent hover:underline"
+          >
+            Abrir quadro →
+          </Link>
+        }
+      >
+        Pipeline de pedidos
+      </SectionTitle>
+
+      {total === 0 ? (
+        <p className="py-4 text-sm text-brand-muted">
+          Nenhum pedido em movimento no momento.
+        </p>
+      ) : (
+        <>
+          {/* Barra proporcional: dá pra ver onde o fluxo está entupido */}
+          <div className="mb-4 flex h-2 gap-0.5 overflow-hidden rounded-full bg-brand-elevated">
+            {etapas.map((e) => {
+              const n = contagens[e.id] ?? 0
+              if (n === 0) return null
+              return (
+                <span
+                  key={e.id}
+                  title={`${e.titulo}: ${n}`}
+                  className={BARRA[e.tom]}
+                  style={{ width: `${(n / total) * 100}%` }}
+                />
+              )
+            })}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            {etapas.map((e) => (
+              <Link
+                key={e.id}
+                href={`/admin/pedidos?vista=lista&status=${e.id}`}
+                className="rounded-xl border border-brand-border bg-brand-surface-2 px-3 py-2.5 transition-colors hover:border-brand-accent"
+              >
+                <span className="flex items-center gap-1.5">
+                  <span className={cn('h-2 w-2 shrink-0 rounded-full', BARRA[e.tom])} />
+                  <span className="font-barlow text-lg font-bold tabular-nums text-brand-text">
+                    {contagens[e.id] ?? 0}
+                  </span>
+                </span>
+                <p className="mt-0.5 truncate text-[11px] leading-tight text-brand-muted">
+                  {e.titulo}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+    </Card>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Página
+   ═══════════════════════════════════════════════════════════════════ */
+
 export default async function DashboardPage() {
   const hoje = new Date()
   hoje.setHours(0, 0, 0, 0)
-  const seteAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  const ontem = new Date(hoje.getTime() - DIA)
+  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+  const inicioMesPassado = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1)
+  const seteAtras = new Date(Date.now() - 7 * DIA)
 
   const [
-    pedidosHoje,
-    receitaMes,
-    clientesNovos,
-    produtosBaixoEstoque,
-    ultimosPedidos,
-    // "Precisa de ação"
-    aDespachar,
-    replicacaoFalhou,
-    agendamentosPendentes,
-    whatsappFalhas,
+    pedidosHoje, pedidosOntem,
+    receitaMes, receitaMesPassado,
+    clientesNovos, estoqueCritico,
+    ultimosPedidos, porStatus,
+    aDespachar, replicacaoFalhou, agendamentosPendentes, whatsappFalhas,
   ] = await Promise.all([
-    prisma.order.count({
-      where: { createdAt: { gte: hoje }, status: { not: 'CANCELADO' } },
-    }),
+    prisma.order.count({ where: { createdAt: { gte: hoje }, status: { not: 'CANCELADO' } } }),
+    prisma.order.count({ where: { createdAt: { gte: ontem, lt: hoje }, status: { not: 'CANCELADO' } } }),
     prisma.order.aggregate({
-      where: {
-        createdAt: {
-          gte: new Date(hoje.getFullYear(), hoje.getMonth(), 1),
-        },
-        status: { not: 'CANCELADO' },
-      },
+      where: { createdAt: { gte: inicioMes }, status: { not: 'CANCELADO' } },
       _sum: { total: true },
     }),
-    prisma.user.count({
-      where: { createdAt: { gte: new Date(hoje.getFullYear(), hoje.getMonth(), 1) } },
+    prisma.order.aggregate({
+      where: { createdAt: { gte: inicioMesPassado, lt: inicioMes }, status: { not: 'CANCELADO' } },
+      _sum: { total: true },
     }),
+    prisma.user.count({ where: { createdAt: { gte: inicioMes } } }),
     prisma.product.count({ where: { estoque: { lt: 5 }, ativo: true } }),
     prisma.order.findMany({
-      take: 10,
+      take: 8,
       orderBy: { createdAt: 'desc' },
-      include: { user: true, items: true },
+      include: { user: true, items: { select: { id: true } } },
     }),
-    // Pedidos pagos aguardando separação/despacho
+    prisma.order.groupBy({ by: ['status'], _count: true }),
     prisma.order.count({ where: { status: { in: ['CONFIRMADO', 'SEPARANDO'] } } }),
-    // Pagos que NÃO chegaram ao Olist (sem NF nem baixa de estoque no ERP!)
     prisma.order.count({ where: { status: 'CONFIRMADO', olistOrderId: null } }),
-    // Agendamentos aguardando confirmação
     prisma.appointment.count({ where: { status: 'pendente', dataPreferida: { gte: hoje } } }),
-    // Mensagens WhatsApp que falharam nos últimos 7 dias
     prisma.crmMensagem.count({ where: { status: 'FALHA', updatedAt: { gte: seteAtras } } }),
   ])
 
-  const receitaNum = Number(receitaMes._sum.total ?? 0)
+  const receita = Number(receitaMes._sum.total ?? 0)
+  const receitaAnterior = Number(receitaMesPassado._sum.total ?? 0)
+
+  /** Variação só faz sentido com base de comparação — senão não mostramos nada. */
+  function variacao(atual: number, anterior: number) {
+    if (!anterior) return undefined
+    return { value: Math.round(((atual - anterior) / anterior) * 100) }
+  }
+
+  const contagens = Object.fromEntries(porStatus.map((s) => [s.status, s._count]))
+  const totalPendencias = replicacaoFalhou + aDespachar + agendamentosPendentes + whatsappFalhas
 
   return (
     <div>
-      {/* Page header */}
-      <div className="mb-8">
-        <h1 className="font-barlow font-black text-4xl text-brand-text tracking-tight">
-          Dashboard
-        </h1>
-        <p className="text-brand-muted text-sm mt-1">
-          Visão geral do dia — atualizado agora
-        </p>
-      </div>
+      <PageHeader
+        titulo="Dashboard"
+        descricao={
+          totalPendencias > 0
+            ? `${totalPendencias} ${totalPendencias === 1 ? 'item precisa' : 'itens precisam'} da sua atenção agora.`
+            : 'Nenhuma pendência aberta — a operação está em dia.'
+        }
+      />
 
-      {/* Precisa de ação */}
+      {/* Precisa de ação — sempre no topo, é o motivo de abrir o painel */}
       <FadeIn delay={0} className="mb-8">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-brand-muted/70 mb-2">
-          Precisa de ação
-        </p>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <ActionCard
-            count={replicacaoFalhou}
+        <SectionTitle>Precisa de você agora</SectionTitle>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <CardAcao
+            quantidade={replicacaoFalhou}
             urgente
-            label="pedidos pagos SEM replicar no Olist"
-            ok="Todos os pagos estão no Olist"
-            href="/admin/pedidos?filtro=sem-olist"
-            icon={CloudOff}
+            label="pagos e não replicados no Olist"
+            tudoCerto="Todos os pagos estão no Olist"
+            href="/admin/pedidos?vista=lista&status=CONFIRMADO"
+            icone={CloudOff}
           />
-          <ActionCard
-            count={aDespachar}
+          <CardAcao
+            quantidade={aDespachar}
             label="pedidos aguardando despacho"
-            ok="Nenhum pedido esperando despacho"
+            tudoCerto="Nenhum pedido esperando despacho"
             href="/admin/pedidos"
-            icon={ShoppingBag}
+            icone={ShoppingBag}
           />
-          <ActionCard
-            count={agendamentosPendentes}
-            label="agendamentos p/ confirmar"
-            ok="Agendamentos em dia"
+          <CardAcao
+            quantidade={agendamentosPendentes}
+            label="agendamentos a confirmar"
+            tudoCerto="Agendamentos em dia"
             href="/admin/agendamentos"
-            icon={CalendarClock}
+            icone={CalendarClock}
           />
-          <ActionCard
-            count={whatsappFalhas}
-            label="WhatsApp com falha (7d)"
-            ok="WhatsApp 100% entregue"
+          <CardAcao
+            quantidade={whatsappFalhas}
+            label="mensagens de WhatsApp com falha (7d)"
+            tudoCerto="WhatsApp entregando normalmente"
             href="/admin/crm"
-            icon={MessageCircleWarning}
+            icone={MessageCircleWarning}
           />
         </div>
       </FadeIn>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {/* Números do período */}
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <FadeIn delay={0}>
           <KpiCard
             label="Pedidos hoje"
             value={pedidosHoje}
             icon={ShoppingBag}
+            tom="accent"
+            trend={variacao(pedidosHoje, pedidosOntem)}
+            detalhe={pedidosOntem ? `${pedidosOntem} ontem` : 'sem base de ontem'}
+            href="/admin/pedidos"
           />
         </FadeIn>
         <FadeIn delay={80}>
           <KpiCard
             label="Receita do mês"
-            value={receitaNum}
+            value={receita}
             icon={DollarSign}
+            tom="success"
             prefix="R$ "
             decimals={2}
+            trend={variacao(receita, receitaAnterior)}
+            detalhe={receitaAnterior ? 'vs. mês passado' : undefined}
           />
         </FadeIn>
         <FadeIn delay={160}>
@@ -170,74 +300,93 @@ export default async function DashboardPage() {
             label="Clientes novos"
             value={clientesNovos}
             icon={Users}
+            tom="info"
+            detalhe="cadastrados neste mês"
+            href="/admin/clientes"
           />
         </FadeIn>
         <FadeIn delay={240}>
           <KpiCard
             label="Estoque crítico"
-            value={produtosBaixoEstoque}
+            value={estoqueCritico}
             icon={AlertTriangle}
+            tom={estoqueCritico > 0 ? 'warning' : 'success'}
+            detalhe="ativos com menos de 5 unidades"
+            href="/admin/produtos"
           />
         </FadeIn>
       </div>
 
-      {/* Últimos pedidos */}
-      <FadeIn delay={380}>
-        <div className="admin-glass !bg-black/20 border border-brand-border/30 rounded-2xl overflow-hidden shadow-xl">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-brand-border/20 bg-white/[0.02]">
-            <h2 className="font-barlow font-bold text-lg text-brand-text">
-              Últimos Pedidos
-            </h2>
-            <Link
-              href="/admin/pedidos"
-              className="text-xs text-brand-accent hover:text-brand-accent-hover font-semibold transition-colors flex items-center gap-1"
-            >
-              Ver todos →
-            </Link>
-          </div>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-5">
+        <FadeIn delay={320} className="xl:col-span-2">
+          <Pipeline contagens={contagens} />
+        </FadeIn>
 
-          <div className="overflow-x-auto admin-scroll">
-            <table className="w-full text-sm">
-              <thead className="border-b border-brand-border/20 bg-white/[0.01]">
-                <tr className="text-xs text-brand-muted uppercase tracking-widest">
-                  <th className="text-left px-6 py-3 font-medium">Pedido</th>
-                  <th className="text-left px-6 py-3 font-medium">Cliente</th>
-                  <th className="text-left px-6 py-3 font-medium">Total</th>
-                  <th className="text-left px-6 py-3 font-medium">Status</th>
-                  <th className="text-left px-6 py-3 font-medium">Data</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ultimosPedidos.map((p) => (
-                  <tr
-                    key={p.id}
-                    className="border-b border-brand-border/10 hover:bg-white/[0.04] transition-colors"
-                  >
-                    <td className="px-6 py-3.5">
-                      <Link
-                        href={`/admin/pedidos/${p.id}`}
-                        className="text-brand-accent hover:text-brand-accent-hover font-semibold transition-colors"
-                      >
-                        {p.orderNumber}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-3.5 text-brand-muted">
-                      {p.user?.nome ?? p.user?.email ?? 'Visitante'}
-                    </td>
-                    <td className="px-6 py-3.5 text-brand-text font-semibold">
-                      {formatPrice(Number(p.total))}
-                    </td>
-                    <td className="px-6 py-3.5">{statusBadge(p.status)}</td>
-                    <td className="px-6 py-3.5 text-brand-muted">
-                      {formatDate(p.createdAt)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </FadeIn>
+        <FadeIn delay={400} className="xl:col-span-3">
+          <Card className="overflow-hidden">
+            <CardHeader
+              titulo="Últimos pedidos"
+              acao={
+                <Link
+                  href="/admin/pedidos"
+                  className="text-xs font-semibold text-brand-accent hover:underline"
+                >
+                  Ver todos →
+                </Link>
+              }
+            />
+            {ultimosPedidos.length === 0 ? (
+              <EmptyState
+                compacto
+                icone={Package}
+                titulo="Nenhum pedido ainda"
+                descricao="A primeira compra fechada na loja aparece aqui."
+                className="m-4 border-0"
+              />
+            ) : (
+              <div className="admin-scroll overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-brand-hair bg-brand-surface-2">
+                    <tr className="text-[11px] uppercase tracking-[0.12em] text-brand-dim">
+                      <th className={THEAD_TH}>Pedido</th>
+                      <th className={THEAD_TH}>Cliente</th>
+                      <th className={THEAD_TH}>Total</th>
+                      <th className={THEAD_TH}>Etapa</th>
+                      <th className={THEAD_TH}>Data</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ultimosPedidos.map((p) => (
+                      <tr key={p.id} className={TR_LINHA}>
+                        <td className={TD_CELULA}>
+                          <Link
+                            href={`/admin/pedidos/${p.id}`}
+                            className="font-semibold text-brand-accent hover:underline"
+                          >
+                            {p.orderNumber}
+                          </Link>
+                        </td>
+                        <td className={cn(TD_CELULA, 'text-brand-muted')}>
+                          {p.user?.nome ?? p.user?.email ?? 'Visitante'}
+                        </td>
+                        <td className={cn(TD_CELULA, 'font-semibold tabular-nums text-brand-text')}>
+                          {formatPrice(Number(p.total))}
+                        </td>
+                        <td className={TD_CELULA}>
+                          <StatusPill status={p.status} />
+                        </td>
+                        <td className={cn(TD_CELULA, 'text-brand-muted')}>
+                          {formatDate(p.createdAt)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </FadeIn>
+      </div>
     </div>
   )
 }
