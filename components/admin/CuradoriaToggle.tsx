@@ -35,7 +35,7 @@ export function CuradoriaToggle({
       onClick={alternar}
       disabled={carregando}
       className={cn(
-        'flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-all',
+        'flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition',
         // Ligado/desligado precisa ser óbvio a um metro de distância — por
         // isso o estado "na loja" usa fundo sólido em vez de um tom sutil.
         visivel

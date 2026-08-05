@@ -28,7 +28,7 @@ function StatBadge({ label, value, tom = 'neutro' }: { label: string; value: num
   return (
     <div
       className={cn(
-        'rounded-xl border border-brand-border px-3 py-2.5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-pop',
+        'rounded-xl border border-brand-border px-3 py-2.5 shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-pop',
         TOM_FUNDO[tom],
       )}
     >
@@ -42,7 +42,7 @@ function StatBadge({ label, value, tom = 'neutro' }: { label: string; value: num
 function ProgressBar({ pct }: { pct: number }) {
   return (
     <div className="h-1.5 w-full overflow-hidden rounded-full bg-brand-surface-2">
-      <div className="h-full rounded-full bg-brand-accent transition-all duration-300" style={{ width: `${pct}%` }} />
+      <div className="h-full rounded-full bg-brand-accent transition duration-300" style={{ width: `${pct}%` }} />
     </div>
   )
 }
@@ -405,7 +405,7 @@ export function OlistSyncButton() {
   const isAnyRunning = loadingSync || loadingImagens || loadingEstoque || loadingFantasmas || loadingCleanup || loadingSemImagem || loadingDelta || loadingRecon || loadingResetImgs
 
   return (
-    <div className="relative space-y-6 overflow-hidden rounded-3xl border border-brand-border bg-brand-surface p-6 shadow-pop transition-all duration-300 md:p-8">
+    <div className="relative space-y-6 overflow-hidden rounded-3xl border border-brand-border bg-brand-surface p-6 shadow-pop transition duration-300 md:p-8">
 
       {/* Glow decorativo de fundo */}
       <div className="pointer-events-none absolute right-0 top-0 h-80 w-80 rounded-full bg-brand-accent-soft blur-[100px]" />
@@ -430,7 +430,7 @@ export function OlistSyncButton() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                'flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all duration-200',
+                'flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition duration-200',
                 activeTab === tab.id
                   ? 'bg-brand-accent text-brand-on-accent shadow-cta'
                   : 'text-brand-muted hover:text-brand-text',
@@ -493,7 +493,7 @@ export function OlistSyncButton() {
                   <div className="h-2 w-full overflow-hidden rounded-full border border-brand-hair bg-brand-bg">
                     <div
                       className={cn(
-                        'h-full rounded-full transition-all duration-1000',
+                        'h-full rounded-full transition duration-1000',
                         diag.pctComImagem >= 90 ? 'bg-brand-success' : diag.pctComImagem >= 70 ? 'bg-brand-warning' : 'bg-brand-danger',
                       )}
                       style={{ width: `${diag.pctComImagem}%` }}

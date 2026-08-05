@@ -179,18 +179,18 @@ export function AgendaCalendario({ agendamentos: initial }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <button onClick={() => navMes(-1)} className="p-2 rounded-xl border border-brand-border text-brand-muted hover:text-brand-text hover:border-brand-accent transition-all">
+          <button onClick={() => navMes(-1)} className="p-2 rounded-xl border border-brand-border text-brand-muted hover:text-brand-text hover:border-brand-accent transition">
             <ChevronLeft size={18} />
           </button>
           <h2 className="font-barlow font-bold text-xl text-brand-text min-w-[160px] text-center">
             {MESES[mes]} {ano}
           </h2>
-          <button onClick={() => navMes(1)} className="p-2 rounded-xl border border-brand-border text-brand-muted hover:text-brand-text hover:border-brand-accent transition-all">
+          <button onClick={() => navMes(1)} className="p-2 rounded-xl border border-brand-border text-brand-muted hover:text-brand-text hover:border-brand-accent transition">
             <ChevronRight size={18} />
           </button>
           <button
             onClick={() => { setAno(hoje.getFullYear()); setMes(hoje.getMonth()) }}
-            className="text-xs text-brand-muted border border-brand-border px-3 py-1.5 rounded-lg hover:border-brand-accent transition-all ml-1"
+            className="text-xs text-brand-muted border border-brand-border px-3 py-1.5 rounded-lg hover:border-brand-accent transition ml-1"
           >
             Hoje
           </button>
@@ -233,7 +233,7 @@ export function AgendaCalendario({ agendamentos: initial }: Props) {
                   key={idx}
                   onClick={() => setDiaAberto(selecionado ? null : key)}
                   className={cn(
-                    'relative flex flex-col items-center rounded-xl py-2 px-1 min-h-[56px] transition-all duration-150',
+                    'relative flex flex-col items-center rounded-xl py-2 px-1 min-h-[56px] transition duration-150',
                     selecionado
                       ? 'bg-brand-accent text-brand-on-accent shadow-cta'
                       : ehHoje

@@ -103,7 +103,7 @@ export function BlogForm({ post }: { post?: Post }) {
               </button>
             </div>
           )}
-          <label className="inline-flex cursor-pointer select-none items-center gap-2.5 rounded-xl border border-brand-border bg-brand-surface-2 px-4 py-2.5 text-sm font-semibold text-brand-text transition-all hover:border-brand-border-strong hover:bg-brand-elevated">
+          <label className="inline-flex cursor-pointer select-none items-center gap-2.5 rounded-xl border border-brand-border bg-brand-surface-2 px-4 py-2.5 text-sm font-semibold text-brand-text transition hover:border-brand-border-strong hover:bg-brand-elevated">
             <Upload size={16} />
             Enviar capa
             <input

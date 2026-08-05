@@ -34,7 +34,7 @@ function AlternadorVista({ vista }: { vista: 'quadro' | 'lista' }) {
           href={`/admin/pedidos?vista=${o.id}`}
           aria-current={vista === o.id ? 'page' : undefined}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all',
+            'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition',
             vista === o.id
               ? 'bg-brand-accent text-brand-on-accent shadow-cta'
               : 'text-brand-muted hover:text-brand-text',
@@ -168,7 +168,7 @@ export default async function PedidosAdminPage({
                     key={p}
                     href={`/admin/pedidos?vista=lista&status=${statusAtivo}&page=${p}`}
                     className={cn(
-                      'flex h-7 w-7 items-center justify-center rounded-lg text-xs font-semibold transition-all',
+                      'flex h-7 w-7 items-center justify-center rounded-lg text-xs font-semibold transition',
                       p === page
                         ? 'bg-brand-accent text-brand-on-accent'
                         : 'border border-brand-border text-brand-muted hover:text-brand-text',

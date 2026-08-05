@@ -187,7 +187,7 @@ export function WhatsAppConnect() {
               <button
                 onClick={handleDisconnect}
                 title="Desconectar"
-                className="flex items-center gap-1.5 rounded-lg border border-brand-danger bg-brand-danger-soft px-3 py-1.5 text-xs font-medium text-brand-danger transition-all hover:brightness-95"
+                className="flex items-center gap-1.5 rounded-lg border border-brand-danger bg-brand-danger-soft px-3 py-1.5 text-xs font-medium text-brand-danger transition hover:brightness-95"
               >
                 <LogOut size={13} />
                 Desconectar

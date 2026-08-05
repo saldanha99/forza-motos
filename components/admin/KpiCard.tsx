@@ -91,7 +91,7 @@ export function KpiCard({
 
   const classe = cn(
     'group relative block overflow-hidden rounded-2xl border border-brand-border bg-brand-surface p-5',
-    'shadow-card transition-all duration-300 hover:border-brand-accent',
+    'shadow-card transition duration-300 hover:border-brand-accent',
     href && 'hover:-translate-y-0.5 hover:shadow-pop',
     className,
   )

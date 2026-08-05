@@ -294,7 +294,7 @@ function ConteudoCard({
   return (
     <Link
       href={href}
-      className="group rounded-2xl border border-brand-border bg-brand-surface p-4 shadow-card transition-all hover:border-brand-accent"
+      className="group rounded-2xl border border-brand-border bg-brand-surface p-4 shadow-card transition hover:border-brand-accent"
     >
       <div className="flex items-center justify-between">
         <div>
@@ -323,7 +323,7 @@ function QuickLink({
   return (
     <Link
       href={href}
-      className="group flex items-center gap-4 rounded-2xl border border-brand-border bg-brand-surface p-4 shadow-card transition-all hover:border-brand-accent"
+      className="group flex items-center gap-4 rounded-2xl border border-brand-border bg-brand-surface p-4 shadow-card transition hover:border-brand-accent"
     >
       <span className="text-brand-accent">
         <Icon size={18} />

@@ -44,7 +44,7 @@ export default async function ClienteDetalhePage({ params }: { params: { id: str
                 <div className="space-y-3">
                   {cliente.orders.map((p) => (
                     <Link key={p.id} href={`/admin/pedidos/${p.id}`} className="block group">
-                      <div className="flex items-center justify-between rounded-xl border border-brand-border bg-brand-surface-2 p-4 transition-all duration-200 hover:border-brand-accent hover:bg-brand-elevated">
+                      <div className="flex items-center justify-between rounded-xl border border-brand-border bg-brand-surface-2 p-4 transition duration-200 hover:border-brand-accent hover:bg-brand-elevated">
                         <div>
                           <p className="text-sm font-semibold text-brand-accent transition-colors group-hover:text-brand-accent-hover">{p.orderNumber}</p>
                           <p className="mt-0.5 text-xs text-brand-muted">{formatDate(p.createdAt)}</p>

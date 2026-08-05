@@ -293,7 +293,7 @@ export function FotoGrid({ produtos: inicial, totalSemFoto, totalComFoto, total 
         </div>
         <div className="h-2 overflow-hidden rounded-full border border-brand-border bg-brand-surface-2">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-brand-accent to-brand-accent-hover transition-all duration-500"
+            className="h-full rounded-full bg-gradient-to-r from-brand-accent to-brand-accent-hover transition duration-500"
             style={{ width: `${pct}%` }}
           />
         </div>

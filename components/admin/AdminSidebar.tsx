@@ -46,7 +46,7 @@ function ItemLink({
       title={recolhida ? item.label : undefined}
       aria-current={ativo ? 'page' : undefined}
       className={cn(
-        'group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all',
+        'group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition',
         recolhida && 'justify-center px-0',
         ativo
           ? 'bg-brand-accent text-brand-on-accent shadow-cta'
@@ -117,7 +117,7 @@ function Conteudo({
           title="Buscar (⌘K)"
           className={cn(
             'flex w-full items-center gap-2 rounded-xl border border-brand-border bg-brand-surface-2 px-3 py-2',
-            'text-sm text-brand-dim transition-all hover:border-brand-accent hover:text-brand-text',
+            'text-sm text-brand-dim transition hover:border-brand-accent hover:text-brand-text',
             recolhida && 'justify-center px-0',
           )}
         >
@@ -170,7 +170,7 @@ function Conteudo({
           href="/"
           title={recolhida ? 'Ver loja' : undefined}
           className={cn(
-            'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-brand-muted transition-all hover:bg-brand-tint-2 hover:text-brand-text',
+            'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-brand-muted transition hover:bg-brand-tint-2 hover:text-brand-text',
             recolhida && 'justify-center px-0',
           )}
         >
@@ -181,7 +181,7 @@ function Conteudo({
           onClick={() => signOut({ callbackUrl: '/login' })}
           title={recolhida ? 'Sair' : undefined}
           className={cn(
-            'flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-brand-muted transition-all hover:bg-brand-danger-soft hover:text-brand-danger',
+            'flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-brand-muted transition hover:bg-brand-danger-soft hover:text-brand-danger',
             recolhida && 'justify-center px-0',
           )}
         >
@@ -308,7 +308,7 @@ export function AdminSidebar({ user, badges = {} }: { user: any; badges?: Badges
               href={item.href}
               aria-current={ativo ? 'page' : undefined}
               className={cn(
-                'flex min-w-[56px] flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-[10px] font-semibold transition-all',
+                'flex min-w-[56px] flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-[10px] font-semibold transition',
                 ativo ? 'text-brand-accent' : 'text-brand-dim',
               )}
             >

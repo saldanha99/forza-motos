@@ -205,7 +205,7 @@ export function SyncCategoriaClient() {
           <div className="h-2 w-full overflow-hidden rounded-full border border-brand-border bg-brand-surface-2">
             <div
               className={cn(
-                'h-full rounded-full transition-all duration-500',
+                'h-full rounded-full transition duration-500',
                 done ? 'bg-brand-success' : error ? 'bg-brand-danger' : 'bg-brand-accent',
               )}
               style={{ width: `${pct}%` }}

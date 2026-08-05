@@ -139,7 +139,7 @@ export function SectionTitle({
 
 /** Exportado para telas que precisam de um estado fora das variantes padrão. */
 export const BOTAO_BASE =
-  'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all ' +
+  'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent ' +
   'active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50'
 
@@ -306,7 +306,7 @@ export function FilterChip({
       href={href}
       aria-current={ativo ? 'page' : undefined}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all',
+        'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition',
         ativo
           ? 'bg-brand-accent text-brand-on-accent shadow-cta'
           : 'border border-brand-border bg-brand-surface-2 text-brand-muted hover:border-brand-border-strong hover:text-brand-text',

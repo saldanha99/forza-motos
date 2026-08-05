@@ -136,7 +136,7 @@ export function ModeloSelector({
               type="button"
               onClick={() => onChange(m.id)}
               className={cn(
-                'relative rounded-xl border p-4 text-left transition-all',
+                'relative rounded-xl border p-4 text-left transition',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent',
                 selecionado
                   ? 'border-brand-accent bg-brand-accent-soft shadow-cta'

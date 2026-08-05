@@ -151,7 +151,7 @@ function Coluna<T extends ItemKanban>({
         aria-label={coluna.titulo}
         className={cn(
           'admin-scroll flex max-h-[calc(100vh-330px)] min-h-[132px] flex-col gap-2.5 overflow-y-auto rounded-xl',
-          'border border-dashed border-transparent p-1 transition-all',
+          'border border-dashed border-transparent p-1 transition',
           arrastandoDeFora && 'border-brand-border-strong bg-brand-tint-1',
           isOver && arrastandoDeFora && 'kanban-coluna-alvo',
         )}

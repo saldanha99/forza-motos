@@ -139,7 +139,7 @@ export function WhatsAppQRCard() {
             {loading ? 'Verificando...' : isConnected ? 'Conectado' : isConnecting ? 'Conectando...' : 'Desconectado'}
           </Badge>
           <button onClick={fetchStatus} disabled={loading} title="Atualizar"
-            className="rounded-lg p-1.5 text-brand-muted transition-all hover:bg-brand-tint-2 hover:text-brand-text disabled:opacity-40">
+            className="rounded-lg p-1.5 text-brand-muted transition hover:bg-brand-tint-2 hover:text-brand-text disabled:opacity-40">
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
@@ -254,7 +254,7 @@ export function WhatsAppQRCard() {
                 const tomInst = tomEstado(inst.state)
                 return (
                   <div key={inst.name}
-                    className={`flex items-center justify-between rounded-xl border px-3 py-2 transition-all ${
+                    className={`flex items-center justify-between rounded-xl border px-3 py-2 transition ${
                       isActive
                         ? 'border-brand-accent bg-brand-accent-soft'
                         : 'border-brand-border bg-brand-surface-2'

@@ -475,7 +475,7 @@ export function GlossarioAdminClient({ initialTermos }: Props) {
       {isGeneratingBulk && (
         <Card className="border-brand-accent p-4">
           <div className="h-1 bg-brand-border rounded-full overflow-hidden mb-3">
-            <div className="h-full bg-brand-accent transition-all duration-300 rounded-full" style={{ width: `${(bulkCurrent / bulkTotal) * 100}%` }} />
+            <div className="h-full bg-brand-accent transition duration-300 rounded-full" style={{ width: `${(bulkCurrent / bulkTotal) * 100}%` }} />
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-brand-muted flex items-center gap-2">
@@ -532,7 +532,7 @@ export function GlossarioAdminClient({ initialTermos }: Props) {
                     {ALFABETO.map((l) => (
                       <button key={l} type="button" onClick={() => setLetraSugerir(l)}
                         className={cn(
-                          'h-8 text-[11px] font-bold rounded-lg border transition-all duration-150',
+                          'h-8 text-[11px] font-bold rounded-lg border transition duration-150',
                           letraSugerir === l
                             ? 'bg-brand-accent border-brand-accent text-brand-on-accent scale-105 shadow-cta'
                             : 'border-brand-border text-brand-muted hover:border-brand-accent hover:text-brand-text',
@@ -603,7 +603,7 @@ export function GlossarioAdminClient({ initialTermos }: Props) {
             <div className="flex flex-wrap gap-1 pt-1 border-t border-brand-hair">
               <button onClick={() => setLetraFiltro(null)}
                 className={cn(
-                  'h-6 px-2.5 text-[10px] font-bold rounded-lg uppercase transition-all',
+                  'h-6 px-2.5 text-[10px] font-bold rounded-lg uppercase transition',
                   letraFiltro === null
                     ? 'bg-brand-accent text-brand-on-accent'
                     : 'border border-brand-border bg-brand-surface-2 text-brand-muted hover:text-brand-text',
@@ -614,7 +614,7 @@ export function GlossarioAdminClient({ initialTermos }: Props) {
                 return (
                   <button key={l} onClick={() => setLetraFiltro(l)}
                     className={cn(
-                      'h-6 px-2 text-[10px] font-bold rounded-lg uppercase transition-all flex items-center gap-1',
+                      'h-6 px-2 text-[10px] font-bold rounded-lg uppercase transition flex items-center gap-1',
                       letraFiltro === l
                         ? 'bg-brand-accent text-brand-on-accent'
                         : 'border border-brand-border bg-brand-surface-2 text-brand-muted hover:text-brand-text',

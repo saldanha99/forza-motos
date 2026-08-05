@@ -31,7 +31,7 @@ function AlternadorVista({ vista }: { vista: 'quadro' | 'agenda' | 'lista' }) {
           href={`/admin/agendamentos?vista=${o.id}`}
           aria-current={vista === o.id ? 'page' : undefined}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all',
+            'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition',
             vista === o.id
               ? 'bg-brand-accent text-brand-on-accent shadow-cta'
               : 'text-brand-muted hover:text-brand-text',

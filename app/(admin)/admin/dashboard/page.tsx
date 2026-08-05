@@ -42,7 +42,7 @@ function CardAcao({
     <Link
       href={href}
       className={cn(
-        'group flex items-center gap-3 rounded-2xl border px-4 py-3.5 transition-all hover:-translate-y-0.5',
+        'group flex items-center gap-3 rounded-2xl border px-4 py-3.5 transition hover:-translate-y-0.5',
         precisaAcao
           ? tom === 'danger'
             ? 'border-brand-danger bg-brand-danger-soft'

@@ -171,7 +171,7 @@ export function GrupoOpcoes<T extends string>({
             disabled={disabled}
             onClick={() => onChange(o.valor)}
             className={cn(
-              'flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all',
+              'flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent',
               'disabled:cursor-not-allowed disabled:opacity-50',
               ativo
@@ -253,7 +253,7 @@ export function Paginacao({
             href={href(p)}
             aria-current={p === paginaAtual ? 'page' : undefined}
             className={cn(
-              'flex h-7 min-w-7 items-center justify-center rounded-lg px-1.5 text-xs font-semibold tabular-nums transition-all',
+              'flex h-7 min-w-7 items-center justify-center rounded-lg px-1.5 text-xs font-semibold tabular-nums transition',
               p === paginaAtual
                 ? 'bg-brand-accent text-brand-on-accent'
                 : 'border border-brand-border text-brand-muted hover:border-brand-accent hover:text-brand-text',

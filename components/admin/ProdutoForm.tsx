@@ -244,7 +244,7 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
               </button>
             </div>
           ))}
-          <label className="group flex h-24 w-24 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-brand-border bg-brand-surface-2 transition-all hover:border-brand-accent">
+          <label className="group flex h-24 w-24 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-brand-border bg-brand-surface-2 transition hover:border-brand-accent">
             <input
               type="file"
               accept="image/*"
