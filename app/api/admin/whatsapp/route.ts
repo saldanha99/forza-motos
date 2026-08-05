@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { resolverQrDataUri } from '@/lib/evolution/qr'
 
 export const dynamic = 'force-dynamic'
 
@@ -108,8 +109,8 @@ export async function GET() {
       headers: evoHeaders(),
     })
     const connectData = await connectRes.json()
-    const qrCode: string | null =
-      connectData?.code ?? connectData?.base64 ?? connectData?.qrcode?.base64 ?? null
+    // Devolve sempre data URI pronto — o cliente não precisa adivinhar formato.
+    const qrCode = await resolverQrDataUri(connectData)
 
     return NextResponse.json({ state, qr: qrCode, instance, instancias, ocultas })
   } catch (e: any) {

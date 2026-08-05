@@ -6,6 +6,7 @@
 
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { resolverQrDataUri } from '@/lib/evolution/qr'
 import { authOptions } from '@/lib/auth'
 
 const BASE_URL  = process.env.EVOLUTION_API_URL   ?? ''
@@ -72,20 +73,15 @@ export async function GET() {
       return NextResponse.json({ connected: true })
     }
 
-    const base64: string | undefined =
-      data?.base64 ??
-      data?.qrcode?.base64 ??
-      data?.qr?.base64 ??
-      data?.code  // em algumas versões o code já é o base64
+    // `code` é o payload de pareamento, não uma imagem — quando é só isso que
+    // vem, o PNG é desenhado no servidor. Ver lib/evolution/qr.ts.
+    const qr = await resolverQrDataUri(data)
 
-    if (!base64) {
-      return NextResponse.json({ error: 'QR code não disponível', raw: data }, { status: 422 })
+    if (!qr) {
+      return NextResponse.json({ error: 'QR code não disponível' }, { status: 422 })
     }
 
-    return NextResponse.json({
-      qr:        base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`,
-      connected: false,
-    })
+    return NextResponse.json({ qr, connected: false })
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })
   }

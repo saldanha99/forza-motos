@@ -141,9 +141,10 @@ export function WhatsAppQRCard() {
 
   const isConnected  = data?.state === 'open'
   const isConnecting = data?.state === 'connecting'
-  const qrSrc = data?.qr
-    ? data.qr.startsWith('data:') ? data.qr : `data:image/png;base64,${data.qr}`
-    : null
+  // O servidor devolve data URI pronto. Se vier outra coisa, não renderiza:
+  // prefixar cegamente com `data:image/png;base64,` foi o que produzia o
+  // ícone de imagem quebrada quando a Evolution mandava só o payload.
+  const qrSrc = data?.qr?.startsWith('data:') ? data.qr : null
 
   const tomAtual: TomStatus = isConnected ? 'success' : isConnecting ? 'warning' : 'danger'
 
