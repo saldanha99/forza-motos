@@ -13,7 +13,7 @@ import {
   Card, CardHeader, EmptyState, PageHeader, SectionTitle, StatusPill,
   TD_CELULA, THEAD_TH, TR_LINHA,
 } from '@/components/admin/ui/primitives'
-import { COLUNAS_PEDIDO } from '@/components/admin/kanban/PedidosKanban'
+import { COLUNAS_PEDIDO } from '@/lib/admin/kanban'
 
 export const metadata = { title: 'Dashboard — Forza Admin' }
 

@@ -3,8 +3,12 @@
 import Link from 'next/link'
 import { CloudOff, Package, Truck } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
-import { KanbanBoard, type ColunaKanban, type ItemKanban } from './KanbanBoard'
+import { KanbanBoard } from './KanbanBoard'
 import { Badge } from '@/components/admin/ui/primitives'
+// As colunas vêm de lib/admin/kanban.ts — de propósito NÃO são reexportadas
+// daqui: importar valor de módulo 'use client' num server component devolve
+// um proxy, e qualquer `.filter()`/`.map()` nele estoura só em runtime.
+import { COLUNAS_PEDIDO, type ItemKanban } from '@/lib/admin/kanban'
 
 export type PedidoKanban = ItemKanban & {
   numero: string
@@ -17,48 +21,6 @@ export type PedidoKanban = ItemKanban & {
   semOlist: boolean
 }
 
-/**
- * As colunas falam a língua da operação, não a do enum: quem opera precisa
- * saber o que fazer a seguir, não como o campo se chama no banco.
- */
-export const COLUNAS_PEDIDO: ColunaKanban[] = [
-  {
-    id: 'AGUARDANDO_PAGAMENTO',
-    titulo: 'Aguardando pagamento',
-    tom: 'warning',
-    vazio: 'Pedidos entram aqui assim que o cliente fecha o carrinho e ainda não pagou.',
-  },
-  {
-    id: 'CONFIRMADO',
-    titulo: 'Pago — separar',
-    tom: 'danger',
-    vazio: 'Assim que o Mercado Pago aprovar, o pedido cai aqui para você separar.',
-  },
-  {
-    id: 'SEPARANDO',
-    titulo: 'Em separação',
-    tom: 'warning',
-    vazio: 'Arraste um pedido pago para cá quando começar a separar as peças.',
-  },
-  {
-    id: 'ENVIADO',
-    titulo: 'Enviado / a retirar',
-    tom: 'info',
-    vazio: 'Pedidos despachados nos Correios ou prontos no balcão ficam aqui.',
-  },
-  {
-    id: 'ENTREGUE',
-    titulo: 'Entregue',
-    tom: 'success',
-    vazio: 'Fim da linha: pedido entregue ou retirado pelo cliente.',
-  },
-  {
-    id: 'CANCELADO',
-    titulo: 'Cancelado',
-    tom: 'neutro',
-    vazio: 'Nenhum pedido cancelado no período.',
-  },
-]
 
 async function alterarStatus(id: string, status: string) {
   const r = await fetch(`/api/pedidos/${id}/status`, {

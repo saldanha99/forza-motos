@@ -11,32 +11,15 @@ import toast from 'react-hot-toast'
 import { GripVertical, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { TomStatus } from '@/lib/admin/status'
+import type { ColunaKanban, ItemKanban } from '@/lib/admin/kanban'
 import { TOM_PONTO, TOM_TEXTO, EmptyState } from '@/components/admin/ui/primitives'
 
 /* ═══════════════════════════════════════════════════════════════════
    Contrato
    ═══════════════════════════════════════════════════════════════════ */
 
-export type ColunaKanban = {
-  /** Valor do status que esta coluna representa. */
-  id: string
-  /** Nome em linguagem de operação ("Pago — separar"), não o enum cru. */
-  titulo: string
-  tom: TomStatus
-  /** O que faz um card cair aqui — vira o texto do estado vazio. */
-  vazio?: string
-  /** Coluna derivada/somente leitura: mostra, mas não aceita card. */
-  bloqueada?: boolean
-}
-
-export type ItemKanban = {
-  id: string
-  coluna: string
-  /** Usado no rodapé da coluna (soma de valores, por ex.). */
-  valor?: number
-  /** Texto curto que identifica o card nos avisos ("Pedido FM-2026-0042"). */
-  rotulo: string
-}
+// Os tipos vivem em lib/admin/kanban.ts para que páginas server possam lê-los.
+export type { ColunaKanban, ItemKanban }
 
 type Props<T extends ItemKanban> = {
   colunas: ColunaKanban[]
