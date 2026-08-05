@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { RefreshCw, Wifi, WifiOff, Smartphone, LogOut, Plus, Check, ChevronDown, ChevronUp } from 'lucide-react'
+import { RefreshCw, Wifi, WifiOff, Smartphone, LogOut, Plus, Check, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Image from 'next/image'
 import { Badge, Botao, TOM_TEXTO, TOM_PONTO } from '@/components/admin/ui/primitives'
@@ -19,6 +19,8 @@ interface WaStatus {
   qr: string | null
   instance: string
   instancias: Instancia[]
+  /** Quantas o servidor escondeu por serem de outros clientes. */
+  ocultas?: number
   error?: string
 }
 
@@ -37,6 +39,7 @@ export function WhatsAppQRCard() {
   const [novaInstancia, setNovaInstancia]   = useState('')
   const [criando, setCriando]               = useState(false)
   const [selecionando, setSelecionando]     = useState<string | null>(null)
+  const [excluindo, setExcluindo]           = useState<string | null>(null)
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -93,6 +96,26 @@ export function WhatsAppQRCard() {
       toast.error(e?.message ?? 'Erro ao criar instância.')
     } finally {
       setCriando(false)
+    }
+  }
+
+  async function excluir(nome: string) {
+    if (!confirm(
+      `Excluir a instância "${nome}" na Evolution API?\n\n` +
+      'Ela é desconectada e removida do servidor. Irreversível — para voltar a ' +
+      'usar esse número será preciso criar a instância de novo e ler o QR.'
+    )) return
+    setExcluindo(nome)
+    try {
+      const res = await post({ action: 'delete', instanceName: nome })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error ?? 'Erro ao excluir')
+      toast.success(`Instância "${nome}" excluída.`)
+      setTimeout(fetchStatus, 1500)
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Erro ao excluir instância.')
+    } finally {
+      setExcluindo(null)
     }
   }
 
@@ -232,7 +255,8 @@ export function WhatsAppQRCard() {
           </Botao>
         </div>
         <p className="mt-1.5 text-[11px] text-brand-muted">
-          Cria a instância na Evolution API e já a seleciona como ativa.
+          Cria a instância na Evolution API e já a seleciona como ativa. O prefixo
+          <code className="px-1 text-brand-muted">forza-</code> é aplicado automaticamente.
         </p>
       </div>
 
@@ -243,12 +267,19 @@ export function WhatsAppQRCard() {
             onClick={() => setShowInstancias(v => !v)}
             className="flex w-full items-center justify-between text-xs font-semibold text-brand-text"
           >
-            <span>Instâncias existentes ({data!.instancias.length})</span>
+            <span>Instâncias deste painel ({data!.instancias.length})</span>
             {showInstancias ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
           </button>
 
           {showInstancias && (
             <div className="mt-2 space-y-1.5">
+              {!!data?.ocultas && data.ocultas > 0 && (
+                <p className="rounded-lg bg-brand-tint-1 px-3 py-2 text-[10px] leading-relaxed text-brand-dim">
+                  {data.ocultas} {data.ocultas === 1 ? 'instância pertence' : 'instâncias pertencem'} a
+                  outros clientes no mesmo servidor Evolution e {data.ocultas === 1 ? 'foi ocultada' : 'foram ocultadas'}.
+                  Este painel só enxerga e opera as do Forza.
+                </p>
+              )}
               {data!.instancias.map(inst => {
                 const isActive = inst.name === data?.instance
                 const tomInst = tomEstado(inst.state)
@@ -287,6 +318,16 @@ export function WhatsAppQRCard() {
                           <RefreshCw size={10} />
                         </button>
                       )}
+                      <button
+                        onClick={() => excluir(inst.name)}
+                        disabled={excluindo === inst.name}
+                        className="text-[10px] text-brand-muted transition-colors hover:text-brand-danger disabled:opacity-40"
+                        title={`Excluir "${inst.name}" da Evolution API`}
+                      >
+                        {excluindo === inst.name
+                          ? <RefreshCw size={10} className="animate-spin" />
+                          : <Trash2 size={10} />}
+                      </button>
                     </div>
                   </div>
                 )
