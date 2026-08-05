@@ -8,14 +8,14 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { resolverQrDataUri } from '@/lib/evolution/qr'
 import { authOptions } from '@/lib/auth'
+import { getInstanciaAtiva } from '@/lib/evolution/instancia'
 
 const BASE_URL  = process.env.EVOLUTION_API_URL   ?? ''
 const API_KEY   = process.env.EVOLUTION_API_KEY   ?? ''
-const INSTANCE  = process.env.EVOLUTION_INSTANCE  ?? 'forza-motos'
 
 export const dynamic = 'force-dynamic'
 
-async function criarInstancia() {
+async function criarInstancia(INSTANCE: string) {
   const res = await fetch(`${BASE_URL}/instance/create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: API_KEY },
@@ -33,7 +33,11 @@ async function criarInstancia() {
 
 export async function GET() {
   const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  if (!session || session.user.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
+  }
+
+  const INSTANCE = await getInstanciaAtiva()
 
   if (!BASE_URL || !API_KEY) {
     return NextResponse.json({ error: 'Evolution API não configurada' }, { status: 503 })
@@ -48,7 +52,7 @@ export async function GET() {
 
     // Se instância não existe, cria e tenta novamente
     if (connectRes.status === 404 || connectRes.status === 400) {
-      const criar = await criarInstancia()
+      const criar = await criarInstancia(INSTANCE)
       if (!criar.ok) {
         const err = await criar.text()
         return NextResponse.json({ error: `Erro ao criar instância: ${err}` }, { status: 500 })

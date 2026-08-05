@@ -8,26 +8,11 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import { getInstanciaAtiva } from './instancia'
 
 const BASE_URL = () => process.env.EVOLUTION_API_URL ?? ''
 const API_KEY  = () => process.env.EVOLUTION_API_KEY ?? ''
 
-// Cache simples: evita query ao banco em cada mensagem enviada
-let _instanceCache: { value: string; expiresAt: number } | null = null
-
-async function getEvolutionInstance(): Promise<string> {
-  const now = Date.now()
-  if (_instanceCache && now < _instanceCache.expiresAt) return _instanceCache.value
-
-  try {
-    const setting = await prisma.setting.findUnique({ where: { key: 'evolution_instance' } })
-    const value = setting?.value || process.env.EVOLUTION_INSTANCE || 'forza-motos'
-    _instanceCache = { value, expiresAt: now + 5 * 60 * 1000 } // TTL 5 min
-    return value
-  } catch {
-    return process.env.EVOLUTION_INSTANCE || 'forza-motos'
-  }
-}
 
 /** Normaliza número para formato WhatsApp: 5519999999999 */
 export function normalizarWhatsApp(tel: string): string {
@@ -61,7 +46,7 @@ export async function enviarMensagem(params: SendTextParams): Promise<{ ok: bool
   }
 
   const numero = normalizarWhatsApp(params.whatsapp)
-  const instance = await getEvolutionInstance()
+  const instance = await getInstanciaAtiva()
 
   try {
     const res = await fetch(`${BASE_URL()}/message/sendText/${instance}`, {
@@ -93,7 +78,7 @@ export async function enviarMensagem(params: SendTextParams): Promise<{ ok: bool
 export async function verificarConexao(): Promise<{ conectado: boolean; estado?: string }> {
   if (!BASE_URL() || !API_KEY()) return { conectado: false, estado: 'não configurado' }
 
-  const instance = await getEvolutionInstance()
+  const instance = await getInstanciaAtiva()
   try {
     const res = await fetch(`${BASE_URL()}/instance/connectionState/${instance}`, {
       headers: { apikey: API_KEY() },
@@ -110,7 +95,7 @@ export async function verificarConexao(): Promise<{ conectado: boolean; estado?:
 export async function configurarWebhook(url: string): Promise<boolean> {
   if (!BASE_URL() || !API_KEY()) return false
 
-  const instance = await getEvolutionInstance()
+  const instance = await getInstanciaAtiva()
   try {
     const res = await fetch(`${BASE_URL()}/webhook/set/${instance}`, {
       method: 'POST',

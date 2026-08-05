@@ -17,6 +17,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { resolverQrDataUri } from '@/lib/evolution/qr'
+import { getInstanciaAtiva, invalidarCacheInstancia } from '@/lib/evolution/instancia'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,14 +31,6 @@ function evoHeaders() {
   return { apikey: API_KEY(), 'Content-Type': 'application/json' }
 }
 
-async function instanciaAtiva(): Promise<string> {
-  try {
-    const setting = await prisma.setting.findUnique({ where: { key: 'evolution_instance' } })
-    return setting?.value || process.env.EVOLUTION_INSTANCE || 'forza-motos'
-  } catch {
-    return process.env.EVOLUTION_INSTANCE || 'forza-motos'
-  }
-}
 
 /**
  * A instância pertence ao Forza?
@@ -76,7 +69,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Evolution API não configurada' }, { status: 503 })
   }
 
-  const instance = await instanciaAtiva()
+  const instance = await getInstanciaAtiva()
 
   try {
     const listRes = await fetch(`${base}/instance/fetchInstances`, { headers: evoHeaders() })
@@ -136,7 +129,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}))
   const { action, instanceName } = body as { action?: string; instanceName?: string }
-  const ativa = await instanciaAtiva()
+  const ativa = await getInstanciaAtiva()
 
   /** Resolve e valida o alvo. Nunca confia no nome que veio do cliente. */
   function alvoValido(nome?: string) {
@@ -181,6 +174,7 @@ export async function POST(req: NextRequest) {
       create: { key: 'evolution_instance', value: nome },
       update: { value: nome },
     })
+    invalidarCacheInstancia()
 
     const qr = data?.qrcode?.base64 ?? data?.qrcode?.code ?? null
     return NextResponse.json({ ok: true, instance: nome, qr })
@@ -196,6 +190,7 @@ export async function POST(req: NextRequest) {
       create: { key: 'evolution_instance', value: target },
       update: { value: target },
     })
+    invalidarCacheInstancia()
     return NextResponse.json({ ok: true, instance: target })
   }
 
@@ -255,6 +250,8 @@ export async function POST(req: NextRequest) {
         update: { value: padrao },
       })
     }
+    // Sem isto o cache seguraria por até 5 min o nome da instância apagada.
+    invalidarCacheInstancia()
 
     return NextResponse.json({ ok: true, action: 'delete', instance: target })
   }
