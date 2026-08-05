@@ -5,11 +5,12 @@ import { CalendarDays, KanbanSquare, Rows3 } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { cn, formatDate } from '@/lib/utils'
 import {
-  PageHeader, StatusPill, Tabela, EmptyState,
+  PageHeader, Tabela, EmptyState,
   THEAD_TH, TR_LINHA, TD_CELULA,
 } from '@/components/admin/ui/primitives'
 import { AgendamentosKanban, type AgendamentoKanban } from '@/components/admin/kanban/AgendamentosKanban'
 import { AgendaCalendario } from '@/components/admin/AgendaCalendario'
+import { AlterarStatusAgendamento } from '@/components/admin/AlterarStatusAgendamento'
 
 export const metadata = { title: 'Agendamentos — Forza Admin' }
 
@@ -175,7 +176,7 @@ export default async function AgendamentosAdminPage({
               <td className={cn(TD_CELULA, 'text-brand-muted')}>{formatDate(a.dataPreferida)}</td>
               <td className={cn(TD_CELULA, 'tabular-nums text-brand-muted')}>{a.horarioPreferido}</td>
               <td className={TD_CELULA}>
-                <StatusPill status={a.status} />
+                <AlterarStatusAgendamento agendamentoId={a.id} statusAtual={a.status} />
               </td>
             </tr>
           ))}

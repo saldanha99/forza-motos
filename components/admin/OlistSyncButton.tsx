@@ -151,10 +151,12 @@ export function OlistSyncButton() {
 
   // ── Limpeza de fantasmas ─────────────────────────────────────────────────────
   const [loadingFantasmas, setLoadingFantasmas] = useState(false)
-  const [fantasmasStep, setFantasmasStep] = useState<'idle' | 'coletando' | 'marcando' | 'deletando' | 'done'>('idle')
+  const [fantasmasStep, setFantasmasStep] = useState<'idle' | 'coletando' | 'confirmando' | 'marcando' | 'deletando' | 'done'>('idle')
   const [fantasmasProgresso, setFantasmasProgresso] = useState({ pagina: 0, totalPaginas: 0, skusColetados: 0 })
   const [fantasmasResult, setFantasmasResult] = useState<any>(null)
   const [fantasmasError, setFantasmasError] = useState('')
+  /** SKUs coletados do Tiny na fase 1 — guardados aqui até o usuário confirmar a fase 2 (destrutiva). */
+  const fantasmasSkusRef = useRef<string[]>([])
 
   // ── Delta sync ───────────────────────────────────────────────────────────────
   const [loadingDelta, setLoadingDelta] = useState(false)
@@ -176,6 +178,16 @@ export function OlistSyncButton() {
   // ── Outros cleanups ──────────────────────────────────────────────────────────
   const [loadingCleanup, setLoadingCleanup] = useState(false)
   const [cleanupResult, setCleanupResult] = useState<any>(null)
+
+  // ── Confirmação: Remover Preço Zerado ────────────────────────────────────────
+  const [loadingPrecoZeroCount, setLoadingPrecoZeroCount] = useState(false)
+  const [precoZeroCount, setPrecoZeroCount] = useState<number | null>(null)
+  const [precoZeroConfirming, setPrecoZeroConfirming] = useState(false)
+
+  // ── Confirmação: Corrigir Duplicados ─────────────────────────────────────────
+  const [loadingDuplicadosCount, setLoadingDuplicadosCount] = useState(false)
+  const [duplicadosCount, setDuplicadosCount] = useState<number | null>(null)
+  const [duplicadosConfirming, setDuplicadosConfirming] = useState(false)
 
   // ── Excluir sem imagem ────────────────────────────────────────────────────────
   const [loadingSemImagem, setLoadingSemImagem] = useState(false)
@@ -264,6 +276,7 @@ export function OlistSyncButton() {
     imagensCancelRef.current = true
   }
 
+  /** Fase A (somente leitura): coleta os SKUs ativos no Tiny e pausa para confirmação antes de tocar no banco. */
   async function handleLimparFantasmas() {
     setLoadingFantasmas(true)
     setFantasmasStep('coletando')
@@ -295,12 +308,21 @@ export function OlistSyncButton() {
       }
     }
 
-    // ── Fase B: Marcar e limpar fantasmas no banco ───────────────────────────
+    // Coleta concluída — nada foi alterado no banco ainda. Guarda os SKUs e
+    // pede confirmação explícita antes de rodar a fase destrutiva (marcar/deletar).
+    fantasmasSkusRef.current = todosSkus
+    setLoadingFantasmas(false)
+    setFantasmasStep('confirmando')
+  }
+
+  /** Fase B (destrutiva): só roda depois que o usuário confirma o que foi coletado na fase A. */
+  async function handleLimparFantasmasConfirmar() {
+    setLoadingFantasmas(true)
     setFantasmasStep('marcando')
     try {
       const res: Response = await fetch('/api/admin/marcar-fantasmas', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fase: 'marcar', skusTiny: todosSkus }),
+        body: JSON.stringify({ fase: 'marcar', skusTiny: fantasmasSkusRef.current }),
       })
       const data = await res.json()
       if (data.error) {
@@ -318,6 +340,12 @@ export function OlistSyncButton() {
     setLoadingFantasmas(false)
     setFantasmasStep('done')
     fetchDiag()
+  }
+
+  /** Descarta os SKUs coletados sem tocar no banco. */
+  function handleLimparFantasmasCancelar() {
+    fantasmasSkusRef.current = []
+    setFantasmasStep('idle')
   }
 
   async function handleResetImagens() {
@@ -356,6 +384,46 @@ export function OlistSyncButton() {
       setCleanupResult(await res.json())
     } catch { setCleanupResult({ error: 'Erro de conexão' }) }
     finally { setLoadingCleanup(false); fetchDiag() }
+  }
+
+  // ── Preço Zerado: conta antes, deleta só depois de confirmado ───────────────
+  async function handlePrecoZeroCount() {
+    setLoadingPrecoZeroCount(true); setPrecoZeroCount(null); setPrecoZeroConfirming(false); setCleanupResult(null)
+    try {
+      const res = await fetch('/api/admin/cleanup-produtos', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'preco_zero_count' }),
+      })
+      const data = await res.json()
+      setPrecoZeroCount(data.count ?? 0)
+      setPrecoZeroConfirming(true)
+    } catch { setCleanupResult({ error: 'Erro de conexão' }) }
+    finally { setLoadingPrecoZeroCount(false) }
+  }
+
+  async function handlePrecoZeroConfirm() {
+    setPrecoZeroConfirming(false)
+    await handleCleanup('preco_zero')
+  }
+
+  // ── Duplicados: conta antes, corrige só depois de confirmado ────────────────
+  async function handleDuplicadosCount() {
+    setLoadingDuplicadosCount(true); setDuplicadosCount(null); setDuplicadosConfirming(false); setCleanupResult(null)
+    try {
+      const res = await fetch('/api/admin/cleanup-produtos', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'duplicados_count' }),
+      })
+      const data = await res.json()
+      setDuplicadosCount(data.count ?? 0)
+      setDuplicadosConfirming(true)
+    } catch { setCleanupResult({ error: 'Erro de conexão' }) }
+    finally { setLoadingDuplicadosCount(false) }
+  }
+
+  async function handleDuplicadosConfirm() {
+    setDuplicadosConfirming(false)
+    await handleCleanup('duplicados')
   }
 
   async function handleSemImagemCount() {
@@ -402,7 +470,7 @@ export function OlistSyncButton() {
   const pctFantasmas = fantasmasProgresso.totalPaginas > 0
     ? Math.round((fantasmasProgresso.pagina / fantasmasProgresso.totalPaginas) * 100) : 0
 
-  const isAnyRunning = loadingSync || loadingImagens || loadingEstoque || loadingFantasmas || loadingCleanup || loadingSemImagem || loadingDelta || loadingRecon || loadingResetImgs
+  const isAnyRunning = loadingSync || loadingImagens || loadingEstoque || loadingFantasmas || loadingCleanup || loadingSemImagem || loadingDelta || loadingRecon || loadingResetImgs || loadingPrecoZeroCount || loadingDuplicadosCount
 
   return (
     <div className="relative space-y-6 overflow-hidden rounded-3xl border border-brand-border bg-brand-surface p-6 shadow-pop transition duration-300 md:p-8">
@@ -734,24 +802,43 @@ export function OlistSyncButton() {
               </div>
             </div>
 
-            <Botao
-              variante="perigo"
-              onClick={handleLimparFantasmas}
-              disabled={isAnyRunning}
-              className="w-full"
-            >
-              {loadingFantasmas ? <Loader2 size={12} className="animate-spin" /> : <Ghost size={12} />}
-              {loadingFantasmas
-                ? fantasmasStep === 'coletando'
-                  ? `Coletando SKUs do Tiny… ${fantasmasProgresso.pagina}/${fantasmasProgresso.totalPaginas} páginas (${fantasmasProgresso.skusColetados} SKUs)`
-                  : fantasmasStep === 'marcando'
-                  ? 'Comparando banco local…'
-                  : 'Limpando e deletando fantasmas…'
-                : 'Iniciar Limpeza de Fantasmas'
-              }
-            </Botao>
+            {fantasmasStep !== 'confirmando' ? (
+              <Botao
+                variante="perigo"
+                onClick={handleLimparFantasmas}
+                disabled={isAnyRunning}
+                className="w-full"
+              >
+                {loadingFantasmas ? <Loader2 size={12} className="animate-spin" /> : <Ghost size={12} />}
+                {loadingFantasmas
+                  ? fantasmasStep === 'coletando'
+                    ? `Coletando SKUs do Tiny… ${fantasmasProgresso.pagina}/${fantasmasProgresso.totalPaginas} páginas (${fantasmasProgresso.skusColetados} SKUs)`
+                    : fantasmasStep === 'marcando'
+                    ? 'Comparando banco local…'
+                    : 'Limpando e deletando fantasmas…'
+                  : 'Iniciar Limpeza de Fantasmas'
+                }
+              </Botao>
+            ) : (
+              <div className="space-y-3 rounded-xl border border-brand-warning bg-brand-warning-soft p-4">
+                <p className="text-center text-xs font-bold text-brand-warning">
+                  ⚠️ {fantasmasProgresso.skusColetados} SKUs ativos foram encontrados no Tiny ERP. Todo produto local
+                  vinculado ao Tiny que não estiver nessa lista será excluído para sempre do banco (ou desativado
+                  permanentemente, se tiver pedidos). Essa operação é irreversível.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <Botao variante="secundario" onClick={handleLimparFantasmasCancelar}>
+                    Cancelar
+                  </Botao>
+                  <Botao variante="perigo" onClick={handleLimparFantasmasConfirmar} disabled={loadingFantasmas}>
+                    {loadingFantasmas ? <Loader2 size={12} className="animate-spin" /> : <Ghost size={12} />}
+                    Confirmar Limpeza
+                  </Botao>
+                </div>
+              </div>
+            )}
 
-            {loadingFantasmas && fantasmasProgresso.totalPaginas > 0 && (
+            {loadingFantasmas && fantasmasStep === 'coletando' && fantasmasProgresso.totalPaginas > 0 && (
               <div className="space-y-1">
                 <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-brand-muted">
                   <span>Varrendo catálogo Tiny ERP...</span>
@@ -781,9 +868,32 @@ export function OlistSyncButton() {
                   Exclui produtos que foram importados com preço zerado.
                 </p>
               </div>
-              <Botao variante="perigo" tamanho="sm" onClick={() => handleCleanup('preco_zero')} disabled={isAnyRunning} className="w-full">
-                Remover Preço Zerado
-              </Botao>
+
+              {!precoZeroConfirming ? (
+                <Botao variante="perigo" tamanho="sm" onClick={handlePrecoZeroCount} disabled={isAnyRunning} className="w-full">
+                  {loadingPrecoZeroCount ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                  Remover Preço Zerado
+                </Botao>
+              ) : (
+                <div className="space-y-2 rounded-xl border border-brand-warning bg-brand-warning-soft p-3">
+                  <p className="text-center text-[11px] font-bold text-brand-warning">
+                    ⚠️ {precoZeroCount} produtos com preço R$ 0,00 serão excluídos para sempre. Irreversível.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Botao
+                      variante="secundario"
+                      tamanho="sm"
+                      onClick={() => { setPrecoZeroConfirming(false); setPrecoZeroCount(null) }}
+                    >
+                      Cancelar
+                    </Botao>
+                    <Botao variante="perigo" tamanho="sm" onClick={handlePrecoZeroConfirm} disabled={loadingCleanup}>
+                      {loadingCleanup ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                      Confirmar
+                    </Botao>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Duplicados */}
@@ -797,9 +907,32 @@ export function OlistSyncButton() {
                   Identifica produtos com o mesmo tinyId e mantém apenas a versão mais recente.
                 </p>
               </div>
-              <Botao variante="perigo" tamanho="sm" onClick={() => handleCleanup('duplicados')} disabled={isAnyRunning} className="w-full">
-                Corrigir Duplicados
-              </Botao>
+
+              {!duplicadosConfirming ? (
+                <Botao variante="perigo" tamanho="sm" onClick={handleDuplicadosCount} disabled={isAnyRunning} className="w-full">
+                  {loadingDuplicadosCount ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                  Corrigir Duplicados
+                </Botao>
+              ) : (
+                <div className="space-y-2 rounded-xl border border-brand-warning bg-brand-warning-soft p-3">
+                  <p className="text-center text-[11px] font-bold text-brand-warning">
+                    ⚠️ {duplicadosCount} produtos duplicados serão excluídos para sempre (mantendo o mais recente de cada). Irreversível.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Botao
+                      variante="secundario"
+                      tamanho="sm"
+                      onClick={() => { setDuplicadosConfirming(false); setDuplicadosCount(null) }}
+                    >
+                      Cancelar
+                    </Botao>
+                    <Botao variante="perigo" tamanho="sm" onClick={handleDuplicadosConfirm} disabled={loadingCleanup}>
+                      {loadingCleanup ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                      Confirmar
+                    </Botao>
+                  </div>
+                </div>
+              )}
             </div>
 
           </div>

@@ -46,20 +46,20 @@ model VerificationToken {
 }
 
 model User {
-  id            String      @id @default(cuid())
+  id            String        @id @default(cuid())
   nome          String?
-  email         String      @unique
+  email         String        @unique
   emailVerified DateTime?
   image         String?
   senha         String?
   telefone      String?
   cpf           String?
-  role          Role        @default(CUSTOMER)
+  role          Role          @default(CUSTOMER)
   /// Origem do cadastro do cliente
   origem        OrigemCliente @default(ECOMMERCE)
   /// ID do cliente no Tiny ERP (quando importado do ML)
   tinyClienteId String?
-  createdAt     DateTime    @default(now())
+  createdAt     DateTime      @default(now())
 
   accounts     Account[]
   sessions     Session[]
@@ -76,55 +76,55 @@ enum Role {
 
 /// Origem do cliente para separar e-commerce próprio de Mercado Livre
 enum OrigemCliente {
-  ECOMMERCE       // Comprou direto no nosso site
-  MERCADOLIVRE    // Cliente do ML importado do Tiny
-  AGENDAMENTO     // Entrou via agendamento de serviço
-  MANUAL          // Cadastrado manualmente pelo admin
+  ECOMMERCE // Comprou direto no nosso site
+  MERCADOLIVRE // Cliente do ML importado do Tiny
+  AGENDAMENTO // Entrou via agendamento de serviço
+  MANUAL // Cadastrado manualmente pelo admin
 }
 
 model Product {
-  id                   String      @id @default(cuid())
-  sku                  String      @unique
+  id                   String   @id @default(cuid())
+  sku                  String   @unique
   nome                 String
-  slug                 String      @unique
-  descricao            String      @db.Text
-  preco                Decimal     @db.Decimal(10, 2)
-  precoPromocional     Decimal?    @db.Decimal(10, 2)
-  estoque              Int         @default(0)
+  slug                 String   @unique
+  descricao            String   @db.Text
+  preco                Decimal  @db.Decimal(10, 2)
+  precoPromocional     Decimal? @db.Decimal(10, 2)
+  estoque              Int      @default(0)
   categoria            String
   marca                String
-  compatibilidadeMotos Json        @default("[]")
-  imagens              Json        @default("[]")
-  ativo                Boolean     @default(true)
-  destaque             Boolean     @default(false)
+  compatibilidadeMotos Json     @default("[]")
+  imagens              Json     @default("[]")
+  ativo                Boolean  @default(true)
+  destaque             Boolean  @default(false)
   /// Pré-venda: pode ser comprado mesmo com estoque 0 (ex.: produtos Pirelli do evento de Sorocaba)
-  preVenda             Boolean     @default(false)
+  preVenda             Boolean  @default(false)
   /// Prazo de postagem prometido na pré-venda, em dias úteis (exibido no card/página)
   prazoEntregaDias     Int?
   /// ID do produto no Tiny ERP
   tinyId               String?
   /// Marca true após verificar imagens no Tiny (mesmo que não tenha nenhuma)
-  imagensVerificadas   Boolean     @default(false)
+  imagensVerificadas   Boolean  @default(false)
   /// True quando o produto tem pelo menos 1 imagem — usado para filtrar exibição
-  temImagem            Boolean     @default(false)
+  temImagem            Boolean  @default(false)
   /// SKU do produto-pai quando este é uma variação de tamanho (filho some das listagens)
   variacaoDe           String?
   /// True para produto-pai de variações (_PAI do Tiny) — card vira "escolher tamanho"
-  ehPai                Boolean     @default(false)
+  ehPai                Boolean  @default(false)
   /// Depósito de origem no Olist: loja | f_drop | eurolaqui | outro (populado pelo worker)
   fornecedor           String?
   /// Admin marcou p/ MANTER na loja mesmo sendo de fornecedor bloqueado (Eurolaqui)
-  mantidoManual        Boolean     @default(false)
+  mantidoManual        Boolean  @default(false)
   /// Admin OCULTOU manualmente da loja (mesmo ativo no Olist) — sync respeita
-  ocultoManual         Boolean     @default(false)
+  ocultoManual         Boolean  @default(false)
   /// Peso em kg (para cotação de frete)
-  peso                 Decimal?    @db.Decimal(8, 3)
+  peso                 Decimal? @db.Decimal(8, 3)
   /// Altura em cm
-  altura               Decimal?    @db.Decimal(8, 2)
+  altura               Decimal? @db.Decimal(8, 2)
   /// Largura em cm
-  largura              Decimal?    @db.Decimal(8, 2)
+  largura              Decimal? @db.Decimal(8, 2)
   /// Comprimento em cm
-  comprimento          Decimal?    @db.Decimal(8, 2)
+  comprimento          Decimal? @db.Decimal(8, 2)
   /// Medida do pneu decomposta a partir do nome — o Olist mistura as grafias
   /// ("150/60-17", "150/60 R17", "150/60ZR17"), então a busca usa estes 3
   /// inteiros em vez de texto. Null = produto não é pneu. Ver lib/medida-pneu.ts
@@ -134,16 +134,20 @@ model Product {
   /// Construção do pneu: "radial" (150/70R17) ou "diagonal" (150/70-17).
   /// Não é estilo de escrita — são pneus diferentes e não intercambiáveis.
   medidaConstrucao     String?
-  createdAt            DateTime    @default(now())
-  updatedAt            DateTime    @updatedAt
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   orderItems OrderItem[]
   reviews    Review[]
   motos      ProdutoMoto[]
   reservas   ReservaEstoque[]
 
+  // Reintroduzidos por introspecção: existiam no banco e não no schema
+  estoqueReservado Int @default(0)
+
   @@index([variacaoDe])
   @@index([medidaLargura, medidaPerfil, medidaAro])
+  @@index([estoqueReservado])
 }
 
 model Review {
@@ -154,7 +158,7 @@ model Review {
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   /// Nome exibido (pode ser anônimo)
   nome      String
-  nota      Int      // 1–5
+  nota      Int // 1–5
   titulo    String?
   corpo     String   @db.Text
   /// Moderação: só exibe se true
@@ -166,36 +170,47 @@ model Review {
 }
 
 model Order {
-  id                 String      @id @default(cuid())
-  orderNumber        String      @unique
-  userId             String?
-  user               User?       @relation(fields: [userId], references: [id])
-  status             OrderStatus @default(AGUARDANDO_PAGAMENTO)
-  subtotal           Decimal     @db.Decimal(10, 2)
-  frete              Decimal     @db.Decimal(10, 2)
-  desconto           Decimal     @default(0) @db.Decimal(10, 2)
+  id                  String      @id @default(cuid())
+  orderNumber         String      @unique
+  userId              String?
+  user                User?       @relation(fields: [userId], references: [id])
+  status              OrderStatus @default(AGUARDANDO_PAGAMENTO)
+  subtotal            Decimal     @db.Decimal(10, 2)
+  frete               Decimal     @db.Decimal(10, 2)
+  desconto            Decimal     @default(0) @db.Decimal(10, 2)
   /// Código do cupom aplicado no pedido (o valor do desconto vai em `desconto`)
-  cupomCodigo        String?
-  total              Decimal     @db.Decimal(10, 2)
-  enderecoEntrega    Json
-  pagamentoMetodo    String?
-  pagamentoIdExterno String?
-  olistOrderId       String?
+  cupomCodigo         String?
+  total               Decimal     @db.Decimal(10, 2)
+  enderecoEntrega     Json
+  pagamentoMetodo     String?
+  pagamentoIdExterno  String?
+  olistOrderId        String?
   /// Serviço de frete escolhido pelo cliente (ex: "pac", "sedex", "jadlog", "jet")
-  freteServico       String?
+  freteServico        String?
   /// Nome da transportadora exibido ao cliente (ex: "Correios PAC", "Jadlog Package")
   freteTransportadora String?
   /// Prazo estimado em dias úteis informado na cotação
-  fretePrazo         Int?
+  fretePrazo          Int?
   /// Código de rastreamento informado pela transportadora (preenchido após envio)
-  trackingCode       String?
+  trackingCode        String?
   /// Canal de origem do pedido
-  canal              CanalVenda  @default(ECOMMERCE)
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
+  canal               CanalVenda  @default(ECOMMERCE)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 
   items    OrderItem[]
   tracking OrderTracking[]
+
+  // Reintroduzidos por introspecção: existiam no banco e não no schema
+  checkoutTentativaId       String?              @unique
+  pagamentoResultadoIncerto Boolean              @default(false)
+  cupomConsumido            Boolean              @default(false)
+  reservaExpiraEm           DateTime?
+  reservaLiberadaEm         DateTime?
+  PagamentoTentativa        PagamentoTentativa[]
+  ReembolsoPagamento        ReembolsoPagamento[]
+
+  @@index([status, reservaExpiraEm])
 }
 
 enum CanalVenda {
@@ -220,6 +235,9 @@ model OrderItem {
   product       Product @relation(fields: [productId], references: [id])
   quantidade    Int
   precoUnitario Decimal @db.Decimal(10, 2)
+
+  // Reintroduzidos por introspecção: existiam no banco e não no schema
+  estoqueReservado Boolean @default(true)
 }
 
 model OrderTracking {
@@ -232,27 +250,27 @@ model OrderTracking {
 }
 
 model CustomerCRM {
-  id              String       @id @default(cuid())
-  userId          String       @unique
-  user            User         @relation(fields: [userId], references: [id])
+  id            String       @id @default(cuid())
+  userId        String       @unique
+  user          User         @relation(fields: [userId], references: [id])
   /// Categoria principal do relacionamento com este cliente
-  categoria       CRMCategoria @default(VENDA_ECOMMERCE)
-  totalPedidos    Int          @default(0)
-  totalGasto      Decimal      @default(0) @db.Decimal(10, 2)
-  totalServicos   Int          @default(0)    // agendamentos realizados
-  ultimaCompra    DateTime?
-  ultimoServico   DateTime?
-  notas           String?      @db.Text
-  etapaFunil      Funil        @default(LEAD)
-  updatedAt       DateTime     @updatedAt
+  categoria     CRMCategoria @default(VENDA_ECOMMERCE)
+  totalPedidos  Int          @default(0)
+  totalGasto    Decimal      @default(0) @db.Decimal(10, 2)
+  totalServicos Int          @default(0) // agendamentos realizados
+  ultimaCompra  DateTime?
+  ultimoServico DateTime?
+  notas         String?      @db.Text
+  etapaFunil    Funil        @default(LEAD)
+  updatedAt     DateTime     @updatedAt
 }
 
 /// Categorias do CRM
 enum CRMCategoria {
-  VENDA_ECOMMERCE   // Clientes que compraram no nosso site
-  VENDA_ML          // Clientes do Mercado Livre
-  SERVICO           // Clientes que agendaram serviços (box rápido)
-  MISTO             // Comprou E agendou serviço
+  VENDA_ECOMMERCE // Clientes que compraram no nosso site
+  VENDA_ML // Clientes do Mercado Livre
+  SERVICO // Clientes que agendaram serviços (box rápido)
+  MISTO // Comprou E agendou serviço
 }
 
 enum Funil {
@@ -278,7 +296,7 @@ model Appointment {
   valorServico     Decimal? @db.Decimal(10, 2)
   createdAt        DateTime @default(now())
 
-  reservas         ReservaEstoque[]
+  reservas ReservaEstoque[]
 }
 
 // ============================================================
@@ -287,77 +305,81 @@ model Appointment {
 
 /// Lead capturado via pop-up, botão WhatsApp, agendamento ou checkout
 model CrmLead {
-  id               String        @id @default(cuid())
-  nome             String
-  whatsapp         String
+  id          String     @id @default(cuid())
+  nome        String
+  whatsapp    String     @unique // o banco já tem esse índice único
   /// Origem da captura
-  origem           LeadOrigem    @default(POPUP)
+  origem      LeadOrigem @default(POPUP)
   /// Produto que estava visualizando (opcional)
-  produtoSlug      String?
+  produtoSlug String?
   /// Etapa atual no funil
-  etapa            LeadEtapa     @default(NOVO)
+  etapa       LeadEtapa  @default(NOVO)
   /// UTM para rastrear campanha
-  utmSource        String?
-  utmMedium        String?
-  utmCampaign      String?
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
   /// Notas internas
-  notas            String?       @db.Text
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  notas       String?    @db.Text
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
-  mensagens        CrmMensagem[]
+  mensagens CrmMensagem[]
+
+  // Reintroduzidos por introspecção: existiam no banco e não no schema
+  consentimentoMarketingEm DateTime?
 
   @@index([whatsapp])
   @@index([etapa, createdAt])
 }
 
 enum LeadOrigem {
-  POPUP           // Pop-up de captura no site
-  WHATSAPP_BTN    // Clicou no botão WhatsApp de um produto
-  AGENDAMENTO     // Preencheu formulário de agendamento
-  CHECKOUT        // Abandonou o carrinho
-  MANUAL          // Adicionado manualmente pelo admin
+  POPUP // Pop-up de captura no site
+  WHATSAPP_BTN // Clicou no botão WhatsApp de um produto
+  AGENDAMENTO // Preencheu formulário de agendamento
+  CHECKOUT // Abandonou o carrinho
+  MANUAL // Adicionado manualmente pelo admin
+  EVENTO_PIRELLI // Evento presencial Pirelli
 }
 
 enum LeadEtapa {
-  NOVO          // Acabou de ser capturado
-  CONTATADO     // Mensagem enviada
-  RESPONDEU     // Cliente respondeu no WhatsApp
-  CONVERTIDO    // Realizou uma compra ou agendamento
-  PERDIDO       // Sem resposta / desinteressado
+  NOVO // Acabou de ser capturado
+  CONTATADO // Mensagem enviada
+  RESPONDEU // Cliente respondeu no WhatsApp
+  CONVERTIDO // Realizou uma compra ou agendamento
+  PERDIDO // Sem resposta / desinteressado
 }
 
 /// Fila de mensagens WhatsApp via Evolution API
 model CrmMensagem {
-  id                String          @id @default(cuid())
+  id           String         @id @default(cuid())
   /// Lead relacionado (opcional — mensagens de pedido têm userId)
-  leadId            String?
-  lead              CrmLead?        @relation(fields: [leadId], references: [id])
+  leadId       String?
+  lead         CrmLead?       @relation(fields: [leadId], references: [id])
   /// Usuário relacionado (opcional)
-  userId            String?
+  userId       String?
   /// Número WhatsApp destino (com DDI, ex: 5519999999999)
-  whatsapp          String
-  nome              String
+  whatsapp     String
+  nome         String
   /// Tipo da mensagem para saber qual template usar
-  tipo              MensagemTipo
+  tipo         MensagemTipo
   /// Conteúdo final da mensagem (já com variáveis substituídas)
-  conteudo          String          @db.Text
+  conteudo     String         @db.Text
   /// Status do envio
-  status            MensagemStatus  @default(PENDENTE)
+  status       MensagemStatus @default(PENDENTE)
   /// Payload com dados extras (número pedido, rastreio, etc.)
-  payload           Json            @default("{}")
+  payload      Json           @default("{}")
   /// ID retornado pela Evolution API
-  evolutionId       String?
+  evolutionId  String?
   /// Quantidade de tentativas de envio
-  tentativas        Int             @default(0)
+  tentativas   Int            @default(0)
   /// Erro da última tentativa
-  erro              String?         @db.Text
+  erro         String?        @db.Text
   /// Quando enviar (suporte a envio agendado)
-  agendadoPara      DateTime        @default(now())
+  agendadoPara DateTime       @default(now())
   /// Quando foi efetivamente enviada
-  enviadaEm         DateTime?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  enviadaEm    DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   @@index([status, agendadoPara])
   @@index([whatsapp])
@@ -365,25 +387,25 @@ model CrmMensagem {
 }
 
 enum MensagemTipo {
-  BOAS_VINDAS         // Lead capturado
-  AGENDAMENTO         // Agendamento confirmado
-  PEDIDO_CONFIRMADO   // Pagamento aprovado
-  PEDIDO_ENVIADO      // Código de rastreio disponível
+  BOAS_VINDAS // Lead capturado
+  AGENDAMENTO // Agendamento confirmado
+  PEDIDO_CONFIRMADO // Pagamento aprovado
+  PEDIDO_ENVIADO // Código de rastreio disponível
   CARRINHO_ABANDONADO // Carrinho abandonado (2h)
-  POS_VENDA           // Pós-venda D+7
-  REATIVACAO          // Cliente inativo 60 dias
+  POS_VENDA // Pós-venda D+7
+  REATIVACAO // Cliente inativo 60 dias
   INGRESSO_CONFIRMADO // Ingresso de evento confirmado
-  MANUAL              // Enviada manualmente pelo admin
+  MANUAL // Enviada manualmente pelo admin
 }
 
 enum MensagemStatus {
-  PENDENTE    // Na fila, aguardando envio
-  ENVIANDO    // Em processo de envio
-  ENVIADA     // Evolution API confirmou envio
-  ENTREGUE    // WhatsApp confirmou entrega
-  LIDA        // Cliente leu a mensagem
-  FALHA       // Falhou após max tentativas
-  CANCELADA   // Cancelada manualmente
+  PENDENTE // Na fila, aguardando envio
+  ENVIANDO // Em processo de envio
+  ENVIADA // Evolution API confirmou envio
+  ENTREGUE // WhatsApp confirmou entrega
+  LIDA // Cliente leu a mensagem
+  FALHA // Falhou após max tentativas
+  CANCELADA // Cancelada manualmente
 }
 
 model BlogPost {
@@ -397,6 +419,7 @@ model BlogPost {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
 // ============================================================
 // MÓDULO GLOSSÁRIO — fragmento de schema.prisma
 // ============================================================
@@ -406,15 +429,15 @@ model BlogPost {
 
 /// Termo do glossário (substituto do post type "glossario" do WordPress)
 model GlossaryTerm {
-  id           String   @id @default(cuid())
+  id           String         @id @default(cuid())
   /// Título do termo. Ex: "Pneu Radial"
   termo        String
   /// Slug URL-friendly. Ex: "pneu-radial"
-  slug         String   @unique
+  slug         String         @unique
   /// Letra inicial em maiúscula (A-Z, ou "0-9" para números). Indexada para filtrar A-Z rapidamente.
   letra        String
   /// Conteúdo HTML/Markdown da definição. Mínimo recomendado: 300 palavras para SEO.
-  conteudo     String   @db.Text
+  conteudo     String         @db.Text
   /// Resumo curto (até 160 chars) — usado em meta description e schema.org
   resumo       String?
   /// Título SEO customizado (até 60 chars). Se vazio, usa "{termo} — Forza Motos"
@@ -424,21 +447,21 @@ model GlossaryTerm {
   /// URL da imagem destacada (opcional)
   imagem       String?
   /// Nome do autor exibido no schema.org
-  autor        String   @default("Equipe Forza")
+  autor        String         @default("Equipe Forza")
   /// Categoria/nicho do termo. Ex: "Pneus", "Motor", "Freios"
   categoria    String?
   /// Lista de termos relacionados (slugs)
-  relacionados Json     @default("[]")
+  relacionados Json           @default("[]")
   /// Origem do conteúdo: MANUAL, AI_GEMINI, AI_OPENAI
   origem       GlossaryOrigem @default(MANUAL)
   /// Status de publicação
-  publicado    Boolean  @default(false)
+  publicado    Boolean        @default(false)
   /// Marca true quando o conteúdo foi revisado por humano após geração por IA
-  revisado     Boolean  @default(false)
+  revisado     Boolean        @default(false)
   /// Visualizações (incrementadas em background)
-  views        Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  views        Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   @@index([letra, publicado])
   @@index([categoria, publicado])
@@ -454,20 +477,20 @@ enum GlossaryOrigem {
 
 /// Fila de geração em massa de termos via IA
 model GlossaryJob {
-  id           String   @id @default(cuid())
+  id           String            @id @default(cuid())
   titulo       String
   letra        String
   nicho        String
   /// Provedor de IA a usar
-  provider     GlossaryOrigem @default(AI_GEMINI)
+  provider     GlossaryOrigem    @default(AI_GEMINI)
   /// Modelo específico. Ex: "gemini-2.0-flash" ou "gpt-4o-mini"
   modelo       String
-  idioma       String   @default("pt-BR")
-  estilo       String   @default("informativo e técnico")
+  idioma       String            @default("pt-BR")
+  estilo       String            @default("informativo e técnico")
   /// Tokens máximos (controla tamanho)
-  maxTokens    Int      @default(2000)
+  maxTokens    Int               @default(2000)
   /// Prompt customizado adicional (concatenado ao prompt base)
-  promptExtra  String?  @db.Text
+  promptExtra  String?           @db.Text
   /// Status do job
   status       GlossaryJobStatus @default(PENDENTE)
   /// Quando processar (suporte a agendamento)
@@ -475,11 +498,11 @@ model GlossaryJob {
   /// ID do termo criado após sucesso
   termoId      String?
   /// Mensagem de erro caso falhe
-  erro         String?  @db.Text
+  erro         String?           @db.Text
   /// Quantas tentativas já foram feitas
-  tentativas   Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  tentativas   Int               @default(0)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
   @@index([status, agendadoPara])
 }
@@ -490,6 +513,7 @@ enum GlossaryJobStatus {
   CONCLUIDO
   ERRO
 }
+
 // ============================================================
 // MÓDULOS EXTRAS DE SEO — fragmento de schema.prisma
 // ============================================================
@@ -499,40 +523,40 @@ enum GlossaryJobStatus {
 
 /// Redirecionamentos gerenciáveis (via middleware ou route handler)
 model SeoRedirect {
-  id        String   @id @default(cuid())
+  id         String   @id @default(cuid())
   /// Path de origem. Ex: "/produto-antigo"
-  from      String   @unique
+  from       String   @unique
   /// Path ou URL de destino
-  to        String
+  to         String
   /// Código HTTP (301 permanente, 302 temporário, 307, 308)
-  statusCode Int     @default(301)
+  statusCode Int      @default(301)
   /// Quantas vezes esse redirect foi acessado
-  hits      Int      @default(0)
-  ativo     Boolean  @default(true)
-  notas     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  hits       Int      @default(0)
+  ativo      Boolean  @default(true)
+  notas      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([from, ativo])
 }
 
 /// Log de 404 — útil para identificar links quebrados e oportunidades de redirect
 model SeoNotFoundLog {
-  id        String   @id @default(cuid())
-  path      String
+  id           String   @id @default(cuid())
+  path         String
   /// User-agent agregado
-  userAgent String?  @db.Text
+  userAgent    String?  @db.Text
   /// Referer (de onde o usuário veio)
-  referer   String?
+  referer      String?
   /// IP anonimizado (últimos octetos zerados)
-  ip        String?
+  ip           String?
   /// Quantas vezes esse path foi acessado e deu 404
-  hits      Int      @default(1)
+  hits         Int      @default(1)
   /// Marca true após criar um redirect para este path
-  resolvido Boolean  @default(false)
+  resolvido    Boolean  @default(false)
   /// Última vez acessado
   ultimoAcesso DateTime @default(now())
-  createdAt DateTime @default(now())
+  createdAt    DateTime @default(now())
 
   @@unique([path])
   @@index([resolvido, hits])
@@ -541,27 +565,27 @@ model SeoNotFoundLog {
 /// Log de toda notificação de indexação enviada para Google/Bing/etc.
 /// Permite auditar o que foi enviado, debugar falhas e retry de URLs que falharam.
 model SeoIndexingLog {
-  id          String   @id @default(cuid())
+  id         String              @id @default(cuid())
   /// URL completa notificada
-  url         String
+  url        String
   /// Ação enviada
-  action      SeoIndexingAction @default(URL_UPDATED)
+  action     SeoIndexingAction   @default(URL_UPDATED)
   /// Provedor que recebeu a notificação
-  provider    SeoIndexingProvider
+  provider   SeoIndexingProvider
   /// Status do envio
-  status      SeoIndexingStatus @default(PENDENTE)
+  status     SeoIndexingStatus   @default(PENDENTE)
   /// Mensagem de erro caso falhe
-  erro        String?  @db.Text
+  erro       String?             @db.Text
   /// Quantidade de tentativas (incrementada a cada retry)
-  tentativas  Int      @default(0)
+  tentativas Int                 @default(0)
   /// Resposta crua do provedor (útil para debug)
-  resposta    String?  @db.Text
+  resposta   String?             @db.Text
   /// Origem do trigger (manual, cron, hook automático)
-  origem      String?
+  origem     String?
   /// Quando o envio foi efetivamente concluído (sucesso ou desistência)
-  enviadoEm   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  enviadoEm  DateTime?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
 
   @@index([url, provider])
   @@index([status, createdAt])
@@ -585,7 +609,6 @@ enum SeoIndexingStatus {
   IGNORADO
 }
 
-
 // Configurações editáveis pelo painel admin (chave/valor).
 // Usado para Google Site Verification, nome do site, URL, etc.
 model Setting {
@@ -608,32 +631,32 @@ model PlacaConsulta {
 // ============================================================
 
 model Evento {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   titulo      String
-  slug        String   @unique
-  descricao   String   @db.Text
-  conteudo    String   @db.Text
+  slug        String    @unique
+  descricao   String    @db.Text
+  conteudo    String    @db.Text
   dataInicio  DateTime
   dataFim     DateTime?
   local       String
   endereco    String?
   imagemUrl   String?
   /// Galeria de fotos do evento — carrossel (roteiro, passeios anteriores, pontos visitados)
-  galeria     Json     @default("[]")
+  galeria     Json      @default("[]")
   /// Opções de vaga p/ evento pago: [{label, preco}] — ex: Sozinho, Com garupa, Quarto p/ 4
-  opcoesVaga  Json     @default("[]")
+  opcoesVaga  Json      @default("[]")
   /// 0 = gratuito
-  preco       Decimal  @default(0) @db.Decimal(10, 2)
-  categoria   String   @default("Evento")
+  preco       Decimal   @default(0) @db.Decimal(10, 2)
+  categoria   String    @default("Evento")
   vagas       Int?
   linkExterno String?
-  ativo       Boolean  @default(true)
-  publicado   Boolean  @default(false)
-  destaque    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  ativo       Boolean   @default(true)
+  publicado   Boolean   @default(false)
+  destaque    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  inscricoes  EventoInscricao[]
+  inscricoes EventoInscricao[]
 
   @@index([publicado, dataInicio])
   @@index([categoria, publicado])
@@ -718,27 +741,27 @@ model Cupom {
 // ============================================================
 
 model Moto {
-  id        String   @id @default(cuid())
-  marca     String
-  modelo    String
+  id                String   @id @default(cuid())
+  marca             String
+  modelo            String
   /// Ano inicial da faixa (ex.: GS 1200 2013–2018 → anoDe=2013)
-  anoDe     Int
+  anoDe             Int
   /// Ano final; null = "em diante"
-  anoAte    Int?
-  slug      String   @unique
+  anoAte            Int?
+  slug              String   @unique
   /// Medida de fábrica do pneu dianteiro (ex.: "120/70-19")
   medidaDianteira   String?
   /// Medida de fábrica do pneu traseiro (ex.: "170/60-17")
   medidaTraseira    String?
   /// Só medidas conferidas pela loja aparecem na busca por placa — o
   /// pré-preenchimento entra como false para o Caio validar no admin
-  medidasConferidas Boolean @default(false)
+  medidasConferidas Boolean  @default(false)
   /// De onde veio a medida: "pneus.org", "curadoria", "loja"
   fonteMedidas      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  produtos  ProdutoMoto[]
+  produtos ProdutoMoto[]
 
   @@unique([marca, modelo, anoDe, anoAte])
   @@index([marca, modelo])
@@ -779,4 +802,283 @@ model ReservaEstoque {
 
   @@index([productId, status])
   @@index([appointmentId])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// REINTRODUZIDOS POR INTROSPECÇÃO DO BANCO DE PRODUÇÃO
+//
+// Estes objetos existem no banco com dado real, mas tinham sido
+// removidos do schema. Sem eles o `prisma db push` do deploy.sh tenta
+// apagá-los e aborta o deploy. Os nomes de relação são os que a
+// introspecção gerou — batem exatamente com o banco.
+// ═══════════════════════════════════════════════════════════════════
+
+enum EventoPirelliBalanceamentoStatus {
+  INTERESSE
+  CONFIRMADO
+  PARTICIPOU
+}
+
+enum EventoPirelliCanecaStatus {
+  PENDENTE
+  EM_GRAVACAO
+  PRONTA
+  ENTREGUE
+  CANCELADA
+}
+
+enum EventoPirelliCompraCanecaStatus {
+  PENDENTE
+  EM_GRAVACAO
+  PRONTA
+  ENTREGUE
+  CANCELADA
+}
+
+enum EventoPirelliFotoStatus {
+  PENDENTE
+  FINALISTA
+  VENCEDOR
+  DESCARTADO
+}
+
+enum EventoPirelliOperadorValor {
+  MAIOR_QUE
+  MAIOR_OU_IGUAL
+}
+
+enum EventoPirelliOrigemCaneca {
+  QUIZ_PERFEITO
+  FOTO_VENCEDORA
+  COMPRA_PNEUS
+  MANUAL
+}
+
+enum ReembolsoStatus {
+  PENDENTE
+  CONCLUIDO
+  FALHOU
+}
+
+model EventoPirelli {
+  id                        String                      @id
+  slug                      String                      @unique @default("pirelli-forza")
+  titulo                    String                      @default("Evento Pirelli + Forza Motos")
+  descricao                 String?
+  dataInicio                DateTime?
+  dataFim                   DateTime?
+  local                     String?
+  logoForzaUrl              String?
+  logoPirelliUrl            String?
+  logoCampneusUrl           String?
+  ativo                     Boolean                     @default(true)
+  publicado                 Boolean                     @default(false)
+  limiteNomeGravacao        Int                         @default(20)
+  valorMinimoPneus          Decimal                     @default(899) @db.Decimal(10, 2)
+  operadorValorMinimoPneus  EventoPirelliOperadorValor  @default(MAIOR_QUE)
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime
+  EventoPirelliCompraCaneca EventoPirelliCompraCaneca[]
+  EventoPirelliQuizPergunta EventoPirelliQuizPergunta[]
+  EventoPirelliVisitante    EventoPirelliVisitante[]
+
+  @@index([ativo, publicado])
+}
+
+model EventoPirelliBalanceamento {
+  id                     String                           @id
+  visitanteId            String                           @unique
+  horarioPreferido       String?
+  status                 EventoPirelliBalanceamentoStatus @default(INTERESSE)
+  registradoEm           DateTime                         @default(now())
+  EventoPirelliVisitante EventoPirelliVisitante           @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
+}
+
+model EventoPirelliCaneca {
+  id                               String                             @id
+  visitanteId                      String                             @unique
+  nomeGravacaoSnapshot             String
+  status                           EventoPirelliCanecaStatus          @default(PENDENTE)
+  gravacaoIniciadaEm               DateTime?
+  gravadoPor                       String?
+  prontaEm                         DateTime?
+  entregueEm                       DateTime?
+  entreguePor                      String?
+  observacao                       String?
+  createdAt                        DateTime                           @default(now())
+  updatedAt                        DateTime
+  EventoPirelliVisitante           EventoPirelliVisitante             @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
+  EventoPirelliElegibilidadeCaneca EventoPirelliElegibilidadeCaneca[]
+
+  @@index([status, createdAt])
+}
+
+model EventoPirelliCompraCaneca {
+  id                     String                          @id
+  eventoId               String
+  visitanteId            String?
+  quantidade             Int                             @default(1)
+  nomeGravacaoSnapshot   String
+  referenciaVenda        String?
+  status                 EventoPirelliCompraCanecaStatus @default(PENDENTE)
+  registradoEm           DateTime                        @default(now())
+  entregueEm             DateTime?
+  entreguePor            String?
+  observacao             String?
+  chaveIdempotencia      String                          @unique
+  EventoPirelli          EventoPirelli                   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  EventoPirelliVisitante EventoPirelliVisitante?         @relation(fields: [visitanteId], references: [id])
+
+  @@index([eventoId, status, registradoEm])
+}
+
+model EventoPirelliElegibilidadeCaneca {
+  id                     String                    @id
+  visitanteId            String
+  origem                 EventoPirelliOrigemCaneca
+  canecaId               String?
+  valorPneus             Decimal?                  @db.Decimal(10, 2)
+  referenciaVenda        String?
+  observacao             String?
+  validadoEm             DateTime                  @default(now())
+  validadoPor            String?
+  revogadoEm             DateTime?
+  revogadoPor            String?
+  revogadoMotivo         String?
+  EventoPirelliCaneca    EventoPirelliCaneca?      @relation(fields: [canecaId], references: [id])
+  EventoPirelliVisitante EventoPirelliVisitante    @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
+
+  @@unique([visitanteId, origem])
+  @@index([origem, validadoEm])
+}
+
+model EventoPirelliParticipacaoFoto {
+  id                     String                  @id
+  visitanteId            String                  @unique
+  instagram              String
+  declarouPublicacaoEm   DateTime                @default(now())
+  declarouMarcacoes      Boolean                 @default(false)
+  status                 EventoPirelliFotoStatus @default(PENDENTE)
+  curtidasApuradas       Int?
+  apuradoEm              DateTime?
+  apuradoPor             String?
+  observacao             String?
+  EventoPirelliVisitante EventoPirelliVisitante  @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
+}
+
+model EventoPirelliQuizOpcao {
+  id                        String                      @id
+  perguntaId                String
+  texto                     String
+  correta                   Boolean                     @default(false)
+  ordem                     Int                         @default(0)
+  ativa                     Boolean                     @default(true)
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime
+  EventoPirelliQuizPergunta EventoPirelliQuizPergunta   @relation(fields: [perguntaId], references: [id], onDelete: Cascade)
+  EventoPirelliQuizResposta EventoPirelliQuizResposta[]
+
+  @@index([perguntaId, ordem])
+}
+
+model EventoPirelliQuizPergunta {
+  id                        String                      @id
+  eventoId                  String
+  enunciado                 String
+  explicacao                String?
+  ordem                     Int                         @default(0)
+  pontos                    Int                         @default(1)
+  ativa                     Boolean                     @default(true)
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime
+  EventoPirelliQuizOpcao    EventoPirelliQuizOpcao[]
+  EventoPirelli             EventoPirelli               @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  EventoPirelliQuizResposta EventoPirelliQuizResposta[]
+
+  @@index([eventoId, ativa, ordem])
+}
+
+model EventoPirelliQuizResposta {
+  id                         String                     @id
+  tentativaId                String
+  perguntaId                 String
+  opcaoId                    String
+  enunciadoSnapshot          String
+  opcaoSnapshot              String
+  corretaSnapshot            Boolean
+  pontosGanhos               Int
+  EventoPirelliQuizOpcao     EventoPirelliQuizOpcao     @relation(fields: [opcaoId], references: [id])
+  EventoPirelliQuizPergunta  EventoPirelliQuizPergunta  @relation(fields: [perguntaId], references: [id])
+  EventoPirelliQuizTentativa EventoPirelliQuizTentativa @relation(fields: [tentativaId], references: [id], onDelete: Cascade)
+
+  @@unique([tentativaId, perguntaId])
+}
+
+model EventoPirelliQuizTentativa {
+  id                        String                      @id
+  visitanteId               String                      @unique
+  pontuacao                 Int
+  pontuacaoMaxima           Int
+  acertouTodas              Boolean                     @default(false)
+  concluidaEm               DateTime                    @default(now())
+  EventoPirelliQuizResposta EventoPirelliQuizResposta[]
+  EventoPirelliVisitante    EventoPirelliVisitante      @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
+}
+
+model EventoPirelliVisitante {
+  id                               String                             @id
+  eventoId                         String
+  nomeCompleto                     String
+  nomeGravacao                     String
+  nomeGravacaoConfirmadoEm         DateTime
+  whatsapp                         String
+  email                            String?
+  instagram                        String?
+  consentimentoMarketingEm         DateTime?
+  chaveSubmissao                   String                             @unique
+  codigoQr                         String                             @unique
+  crmLeadId                        String?
+  createdAt                        DateTime                           @default(now())
+  updatedAt                        DateTime
+  EventoPirelliBalanceamento       EventoPirelliBalanceamento?
+  EventoPirelliCaneca              EventoPirelliCaneca?
+  EventoPirelliCompraCaneca        EventoPirelliCompraCaneca[]
+  EventoPirelliElegibilidadeCaneca EventoPirelliElegibilidadeCaneca[]
+  EventoPirelliParticipacaoFoto    EventoPirelliParticipacaoFoto?
+  EventoPirelliQuizTentativa       EventoPirelliQuizTentativa?
+  EventoPirelli                    EventoPirelli                      @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+
+  @@unique([eventoId, whatsapp])
+  @@index([eventoId, createdAt])
+}
+
+model PagamentoTentativa {
+  id        String   @id
+  orderId   String
+  paymentId String   @unique
+  status    String
+  metodo    String?
+  valor     Decimal? @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  Order     Order    @relation(fields: [orderId], references: [id])
+
+  @@index([orderId, status])
+}
+
+model ReembolsoPagamento {
+  id                 String          @id
+  orderId            String
+  paymentId          String          @unique
+  motivo             String
+  status             ReembolsoStatus @default(PENDENTE)
+  tentativas         Int             @default(0)
+  ultimoErro         String?
+  proximaTentativaEm DateTime?
+  concluidoEm        DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime
+  Order              Order           @relation(fields: [orderId], references: [id])
+
+  @@index([status, proximaTentativaEm])
 }

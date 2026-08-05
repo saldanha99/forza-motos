@@ -164,5 +164,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, count, pulados: idsComPedidos.length })
   }
 
+  if (tipo === 'preco_zero_count') {
+    // Só conta, não deleta — para mostrar preview antes da confirmação
+    const count = await prisma.product.count({ where: { preco: 0 } })
+    return NextResponse.json({ ok: true, count })
+  }
+
+  if (tipo === 'duplicados_count') {
+    // Só conta, não deleta — soma quantos registros seriam removidos por tinyId duplicado
+    const duplicados = await prisma.$queryRaw<{ tinyId: string; count: number }[]>`
+      SELECT "tinyId", COUNT(*)::int as count
+      FROM "Product"
+      WHERE "tinyId" IS NOT NULL
+      GROUP BY "tinyId"
+      HAVING COUNT(*) > 1
+    `
+    const count = duplicados.reduce((acc, d) => acc + (d.count - 1), 0)
+    return NextResponse.json({ ok: true, count })
+  }
+
   return NextResponse.json({ error: 'Tipo inválido' }, { status: 400 })
 }
