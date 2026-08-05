@@ -14,7 +14,6 @@ import {
   MapPin,
   Phone,
   Clock,
-  Mail,
   Award,
   Users,
   Wrench,

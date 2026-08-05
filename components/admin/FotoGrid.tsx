@@ -56,7 +56,9 @@ function ProdutoCard({ produto, onSaved }: { produto: Produto; onSaved: (id: str
     }
   }
 
-  async function uploadArquivo(file: File) {
+  // Estabilizada com useCallback (deps: produto.id, onSaved) para que handleDrop
+  // possa declarar a dependência sem recriar sua referência a cada render.
+  const uploadArquivo = useCallback(async (file: File) => {
     setUploading(true)
     try {
       const formData = new FormData()
@@ -79,7 +81,7 @@ function ProdutoCard({ produto, onSaved }: { produto: Produto; onSaved: (id: str
     } finally {
       setUploading(false)
     }
-  }
+  }, [produto.id, onSaved])
 
   async function removerFoto() {
     try {
@@ -98,7 +100,7 @@ function ProdutoCard({ produto, onSaved }: { produto: Produto; onSaved: (id: str
     setDragging(false)
     const file = e.dataTransfer.files?.[0]
     if (file && file.type.startsWith('image/')) uploadArquivo(file)
-  }, [])
+  }, [uploadArquivo])
 
   return (
     <Card
@@ -251,7 +253,7 @@ function ProdutoCard({ produto, onSaved }: { produto: Produto; onSaved: (id: str
   )
 }
 
-export function FotoGrid({ produtos: inicial, totalSemFoto, totalComFoto, total }: FotoGridProps) {
+export function FotoGrid({ produtos: inicial, totalComFoto, total }: FotoGridProps) {
   const [produtos, setProdutos] = useState(inicial)
   const [comFoto, setComFoto] = useState(totalComFoto)
   const [filtro, setFiltro] = useState<'todos' | 'semFoto' | 'comFoto'>('semFoto')

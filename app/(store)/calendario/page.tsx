@@ -1,6 +1,5 @@
 export const dynamic = 'force-dynamic'
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { Breadcrumb } from '@/components/store/Breadcrumb'
 import { CalendarioClient } from '@/components/store/CalendarioClient'

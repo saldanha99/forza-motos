@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { Upload, X, Plus, ImagePlus } from 'lucide-react'
@@ -297,6 +298,7 @@ export function EventoForm({ evento }: { evento?: Evento }) {
         <div className="space-y-5 p-5">
           {form.imagemUrl && (
             <div className="relative overflow-hidden rounded-xl border border-brand-border">
+              {/* eslint-disable-next-line @next/next/no-img-element -- altura variável (max-h sem contêiner com dimensão fixa); next/image exigiria fill com altura fixa, mudando o layout */}
               <img src={form.imagemUrl} alt="capa" className="max-h-56 w-full object-cover" />
               <button type="button" onClick={() => update('imagemUrl', '')} className={BOTAO_REMOVER_IMG}>
                 <X size={14} />
@@ -323,7 +325,7 @@ export function EventoForm({ evento }: { evento?: Evento }) {
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
               {form.galeria.map((url, idx) => (
                 <div key={url + idx} className="group/img relative aspect-square overflow-hidden rounded-xl border border-brand-border">
-                  <img src={url} alt={`Foto ${idx + 1}`} className="h-full w-full object-cover" />
+                  <Image src={url} alt={`Foto ${idx + 1}`} fill sizes="(max-width: 640px) 33vw, 25vw" className="object-cover" />
                   <button
                     type="button"
                     onClick={() => removerDaGaleria(idx)}

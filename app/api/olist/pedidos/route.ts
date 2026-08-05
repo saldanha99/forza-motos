@@ -30,7 +30,7 @@ const STATUS_MAP: Record<string, string> = {
   'canceled':          'CANCELADO',
 }
 
-export async function POST(req: Request) {
+export async function POST(_req: Request) {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })

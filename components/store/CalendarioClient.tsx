@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Calendar, MapPin, Tag, ChevronRight, Users } from 'lucide-react'
 
 interface Evento {
@@ -112,10 +113,12 @@ export function CalendarioClient({ eventos, categorias }: { eventos: Evento[]; c
                           {/* Imagem */}
                           <div className="relative h-44 bg-gradient-to-br from-[#1a1a2e] to-[#2a1a1a] overflow-hidden">
                             {evento.imagemUrl ? (
-                              <img
+                              <Image
                                 src={evento.imagemUrl}
                                 alt={evento.titulo}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                fill
+                                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                className="object-cover group-hover:scale-105 transition-transform duration-500"
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center">

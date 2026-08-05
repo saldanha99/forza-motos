@@ -93,6 +93,7 @@ export function BlogForm({ post }: { post?: Post }) {
         <Campo label="Imagem de capa">
           {form.capaUrl && (
             <div className="relative mb-3 max-h-48 w-full overflow-hidden rounded-xl border border-brand-border">
+              {/* eslint-disable-next-line @next/next/no-img-element -- altura variável (max-h sem contêiner com dimensão fixa); next/image exigiria fill com altura fixa, mudando o layout */}
               <img src={form.capaUrl} alt="capa" className="max-h-48 w-full object-cover" />
               <button
                 type="button"

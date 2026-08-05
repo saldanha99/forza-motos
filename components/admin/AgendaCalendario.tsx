@@ -106,7 +106,9 @@ export function AgendaCalendario({ agendamentos: initial }: Props) {
   async function alterarStatus(id: string, status: string) {
     setLoadingId(id)
     try {
-      const res = await fetch(`/api/agendamentos/${id}`, {
+      // Rota admin de propósito: é a que consome a reserva de estoque ao
+      // concluir e libera ao cancelar. A pública só trocaria o campo.
+      const res = await fetch(`/api/admin/agendamentos/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
@@ -114,6 +116,7 @@ export function AgendaCalendario({ agendamentos: initial }: Props) {
       if (!res.ok) throw new Error()
       setAgendamentos(prev => prev.map(a => a.id === id ? { ...a, status } : a))
       toast.success('Status atualizado')
+      router.refresh()
     } catch {
       toast.error('Erro ao atualizar')
     } finally {
@@ -133,6 +136,7 @@ export function AgendaCalendario({ agendamentos: initial }: Props) {
         if (remaining.length === 0) setDiaAberto(null)
       }
       toast.success('Excluído')
+      router.refresh()
     } catch {
       toast.error('Erro ao excluir')
     } finally {
@@ -159,6 +163,7 @@ export function AgendaCalendario({ agendamentos: initial }: Props) {
       setShowNovo(false)
       setNovoForm({ nome: '', telefone: '', servico: '', motoModelo: '', dataPreferida: '', horarioPreferido: '', notas: '', status: 'confirmado' })
       toast.success('Agendamento criado!')
+      router.refresh()
       const key = isoDate(new Date(novo.dataPreferida))
       setDiaAberto(key)
       // navegar para o mês do agendamento

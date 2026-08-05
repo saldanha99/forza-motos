@@ -65,7 +65,8 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
-function countWords(text: string): number {
+// ⚠️ Não usada por analyzeSEO() ainda — mantida por ser funcionalidade pela metade (contagem de palavras ignorando stopwords, nunca ligada ao stats.wordCount/densidade atual, que usa split() bruto). Renomeada com _ para não gerar warning; ver relato ao usuário.
+function _countWords(text: string): number {
   return text.split(/\s+/).filter((w) => w.length > 0 && !STOPWORDS.has(w.toLowerCase())).length
 }
 

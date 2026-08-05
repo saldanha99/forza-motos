@@ -93,7 +93,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!p) return { title: 'Produto não encontrado' }
 
   const imagens = Array.isArray(p.imagens) ? p.imagens : []
-  const preco = Number(p.precoPromocional ?? p.preco)
   const descricao = (p.descricao || p.nome).slice(0, 160)
   const url = `${BASE}/produtos/${p.slug}`
 

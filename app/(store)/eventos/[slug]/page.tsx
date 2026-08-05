@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
 import { Breadcrumb } from '@/components/store/Breadcrumb'
 import { SITE_URL } from '@/lib/schema'
@@ -36,11 +37,6 @@ function formatDataCompleta(d: Date) {
   }).format(d)
 }
 
-function precoLabel(preco: number) {
-  if (preco === 0) return 'Gratuito'
-  return `R$ ${preco.toFixed(2)}`
-}
-
 export default async function EventoDetailPage({ params }: Props) {
   const evento = await prisma.evento.findUnique({
     where: { slug: params.slug, publicado: true, ativo: true },
@@ -69,7 +65,7 @@ export default async function EventoDetailPage({ params }: Props) {
       <section className="relative overflow-hidden" style={{ minHeight: 320 }}>
         {evento.imagemUrl ? (
           <>
-            <img src={evento.imagemUrl} alt={evento.titulo} className="absolute inset-0 w-full h-full object-cover" />
+            <Image src={evento.imagemUrl} alt={evento.titulo} fill sizes="100vw" className="object-cover" priority />
             <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/80" />
           </>
         ) : (

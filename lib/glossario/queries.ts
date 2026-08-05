@@ -191,7 +191,6 @@ export async function criarJobEmMassa(
   }
 ) {
   const agora = new Date()
-  const proximaData = new Date(agora)
 
   const dados = termos.map((t, idx) => {
     let agendadoPara: Date | null = null

@@ -127,8 +127,8 @@ export function OlistSyncButton() {
   // ── Fase 2: Imagens ──────────────────────────────────────────────────────────
   const [loadingImagens, setLoadingImagens] = useState(false)
   const [imagensRestantes, setImagensRestantes] = useState<number | null>(null)
-  const [imagensNaoVerif, setImagensNaoVerif] = useState<number | null>(null)
   const [imagensAcum, setImagensAcum] = useState(0)
+  /** Produtos que sumiram do Tiny durante a carga de imagens. */
   const [imagensDesativ, setImagensDesativ] = useState(0)
   const [imagensError, setImagensError] = useState('')
   const [imagensDone, setImagensDone] = useState(false)
@@ -144,6 +144,7 @@ export function OlistSyncButton() {
   // ── Fase 3: Estoque ──────────────────────────────────────────────────────────
   const [loadingEstoque, setLoadingEstoque] = useState(false)
   const [estoqueAcum, setEstoqueAcum] = useState(0)
+  /** Itens que o Olist ainda não confirmou nesta rodada. */
   const [estoqueZerados, setEstoqueZerados] = useState<number | null>(null)
   const [estoqueTotal, setEstoqueTotal] = useState<number | null>(null)
   const [estoqueError, setEstoqueError] = useState('')
@@ -242,7 +243,6 @@ export function OlistSyncButton() {
         setImagensAcum(totalAcum)
         setImagensDesativ(desativAcum)
         setImagensRestantes(restantes)
-        setImagensNaoVerif(restantes)
 
         if (totalInicial === null) {
           totalInicial = restantes + totalAcum
@@ -720,6 +720,8 @@ export function OlistSyncButton() {
                 {!loadingImagens && (imagensDone || imagensError) && (
                   <ResultBanner erro={imagensError} className="max-w-md">
                     {`Concluído: ${imagensAcum} produtos com fotos anexadas importados com sucesso.`}
+                    {imagensDesativ > 0 &&
+                      ` ${imagensDesativ} não existem mais no Tiny e foram desativados.`}
                   </ResultBanner>
                 )}
 
@@ -776,6 +778,8 @@ export function OlistSyncButton() {
                 {!loadingEstoque && (estoqueDone || estoqueError) && (
                   <ResultBanner erro={estoqueError} className="max-w-md">
                     {`Estoque verificado com sucesso para ${estoqueAcum} produtos.`}
+                    {!!estoqueZerados && estoqueZerados > 0 &&
+                      ` ${estoqueZerados} ainda pendentes de confirmação.`}
                   </ResultBanner>
                 )}
               </div>
@@ -881,11 +885,16 @@ export function OlistSyncButton() {
                   <p className="text-center text-[11px] font-bold text-brand-warning">
                     ⚠️ {precoZeroCount} produtos com preço R$ 0,00 serão excluídos para sempre. Irreversível.
                   </p>
+                  {precoZeroPulados > 0 && (
+                    <p className="text-center text-[11px] text-brand-muted">
+                      {precoZeroPulados} não {precoZeroPulados === 1 ? 'será excluído' : 'serão excluídos'} por já {precoZeroPulados === 1 ? 'ter' : 'terem'} pedido vinculado.
+                    </p>
+                  )}
                   <div className="grid grid-cols-2 gap-2">
                     <Botao
                       variante="secundario"
                       tamanho="sm"
-                      onClick={() => { setPrecoZeroConfirming(false); setPrecoZeroCount(null) }}
+                      onClick={() => { setPrecoZeroConfirming(false); setPrecoZeroCount(null); setPrecoZeroPulados(0) }}
                     >
                       Cancelar
                     </Botao>
@@ -920,11 +929,16 @@ export function OlistSyncButton() {
                   <p className="text-center text-[11px] font-bold text-brand-warning">
                     ⚠️ {duplicadosCount} produtos duplicados serão excluídos para sempre (mantendo o mais recente de cada). Irreversível.
                   </p>
+                  {duplicadosPulados > 0 && (
+                    <p className="text-center text-[11px] text-brand-muted">
+                      {duplicadosPulados} duplicado{duplicadosPulados === 1 ? '' : 's'} não {duplicadosPulados === 1 ? 'será excluído' : 'serão excluídos'} por já {duplicadosPulados === 1 ? 'ter' : 'terem'} pedido vinculado.
+                    </p>
+                  )}
                   <div className="grid grid-cols-2 gap-2">
                     <Botao
                       variante="secundario"
                       tamanho="sm"
-                      onClick={() => { setDuplicadosConfirming(false); setDuplicadosCount(null) }}
+                      onClick={() => { setDuplicadosConfirming(false); setDuplicadosCount(null); setDuplicadosPulados(0) }}
                     >
                       Cancelar
                     </Botao>

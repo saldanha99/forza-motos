@@ -105,47 +105,6 @@ async function getHomeData() {
   }
 }
 
-// ── TireArt SVG ──────────────────────────────────────────────────────────────
-function TireArt() {
-  return (
-    <svg width="300" height="300" viewBox="0 0 300 300" fill="none">
-      <circle cx="150" cy="150" r="145" fill="rgba(212,43,43,0.04)"/>
-      <circle cx="150" cy="150" r="132" stroke="rgba(255,255,255,0.1)" strokeWidth="22"/>
-      {Array.from({ length: 24 }).map((_, i) => {
-        const a = (i / 24) * Math.PI * 2
-        return (
-          <line key={i}
-            x1={150 + 122 * Math.cos(a)} y1={150 + 122 * Math.sin(a)}
-            x2={150 + 138 * Math.cos(a)} y2={150 + 138 * Math.sin(a)}
-            stroke="#fff" strokeWidth="4" opacity="0.13" strokeLinecap="round"
-          />
-        )
-      })}
-      <circle cx="150" cy="150" r="132" stroke="#d42b2b" strokeWidth="2" strokeDasharray="20 10" opacity="0.4"/>
-      <circle cx="150" cy="150" r="95" stroke="rgba(255,255,255,0.18)" strokeWidth="14"/>
-      <circle cx="150" cy="150" r="95" stroke="rgba(255,255,255,0.06)" strokeWidth="1.5"/>
-      {Array.from({ length: 10 }).map((_, i) => {
-        const a = (i / 10) * Math.PI * 2
-        return (
-          <line key={i}
-            x1={150 + 52 * Math.cos(a)} y1={150 + 52 * Math.sin(a)}
-            x2={150 + 88 * Math.cos(a)} y2={150 + 88 * Math.sin(a)}
-            stroke="rgba(255,255,255,0.32)" strokeWidth="5" strokeLinecap="round"
-          />
-        )
-      })}
-      <circle cx="150" cy="150" r="52" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.18)" strokeWidth="5"/>
-      <circle cx="150" cy="150" r="32" fill="rgba(0,0,0,0.5)" stroke="#d42b2b" strokeWidth="2.5" opacity="0.85"/>
-      {Array.from({ length: 5 }).map((_, i) => {
-        const a = (i / 5) * Math.PI * 2 - Math.PI / 2
-        return <circle key={i} cx={150 + 20 * Math.cos(a)} cy={150 + 20 * Math.sin(a)} r="4.5" fill="#000" stroke="rgba(255,255,255,0.2)" strokeWidth="1"/>
-      })}
-      <circle cx="150" cy="150" r="9" fill="#d42b2b"/>
-      <circle cx="150" cy="150" r="4" fill="#fff" opacity="0.6"/>
-    </svg>
-  )
-}
-
 const POP_CATS = [
   { id: 'Pneus',         label: 'Pneus Premium',          sub: 'Pirelli · Metzeler · Michelin',    img: '/images/categories/pneus.jpg',       href: '/produtos?categoria=Pneus' },
   { id: 'Lubrificantes', label: 'Óleos e Lubrificantes',  sub: 'Motul · Castrol',                  img: '/images/categories/oleos.jpg',       href: '/produtos?categoria=Lubrificantes' },
@@ -604,8 +563,14 @@ export default async function HomePage() {
                     className="group flex flex-col bg-white/5 border border-white/10 hover:border-[#d42b2b]/50 rounded-2xl overflow-hidden transition-all duration-200 hover:bg-white/8"
                   >
                     {ev.imagemUrl ? (
-                      <div className="h-40 overflow-hidden">
-                        <img src={ev.imagemUrl} alt={ev.titulo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <div className="relative h-40 overflow-hidden">
+                        <Image
+                          src={ev.imagemUrl}
+                          alt={ev.titulo}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                          className="object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
                       </div>
                     ) : (
                       <div className="h-40 bg-gradient-to-br from-[#d42b2b]/20 to-[#1a1a2e] flex items-center justify-center">

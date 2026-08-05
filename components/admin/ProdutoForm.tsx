@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { Plus, X, Upload, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react'
@@ -234,7 +235,7 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
         <div className="flex flex-wrap gap-4">
           {imagens.map((img, i) => (
             <div key={i} className="group/img relative h-24 w-24 overflow-hidden rounded-xl border border-brand-border bg-brand-surface-2">
-              <img src={img} alt="" className="h-full w-full object-cover" />
+              <Image src={img} alt="" fill sizes="96px" className="object-cover" />
               <button
                 type="button"
                 onClick={() => setImagens((imgs) => imgs.filter((_, j) => j !== i))}

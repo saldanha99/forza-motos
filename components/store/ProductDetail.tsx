@@ -148,17 +148,17 @@ function Galeria({ imagens, disc }: { imagens: string[]; disc: number | null }) 
   const touchStartX = useRef<number | null>(null)
   const touchStartY = useRef<number | null>(null)
 
-  function changeIdx(next: number) {
+  const changeIdx = useCallback((next: number) => {
     if (imagens.length <= 1) return
     setTransitioning(true)
     setTimeout(() => {
       setImgIdx(next)
       setTransitioning(false)
     }, 120)
-  }
+  }, [imagens.length])
 
-  const prev = useCallback(() => changeIdx((imgIdx - 1 + imagens.length) % imagens.length), [imgIdx, imagens.length])
-  const next = useCallback(() => changeIdx((imgIdx + 1) % imagens.length), [imgIdx, imagens.length])
+  const prev = useCallback(() => changeIdx((imgIdx - 1 + imagens.length) % imagens.length), [changeIdx, imgIdx, imagens.length])
+  const next = useCallback(() => changeIdx((imgIdx + 1) % imagens.length), [changeIdx, imgIdx, imagens.length])
 
   function onTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX

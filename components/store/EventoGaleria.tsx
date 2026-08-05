@@ -4,6 +4,7 @@
  * Carrossel de fotos do evento — roteiro, passeios anteriores e pontos visitados.
  */
 import { useState } from 'react'
+import Image from 'next/image'
 import { ChevronLeft, ChevronRight, Images } from 'lucide-react'
 
 export function EventoGaleria({ fotos, titulo }: { fotos: string[]; titulo: string }) {
@@ -21,7 +22,13 @@ export function EventoGaleria({ fotos, titulo }: { fotos: string[]; titulo: stri
       </h2>
 
       <div className="relative rounded-2xl overflow-hidden bg-[#f5f5f5]" style={{ aspectRatio: '16/9' }}>
-        <img src={fotos[idx]} alt={`${titulo} — foto ${idx + 1}`} className="w-full h-full object-cover" />
+        <Image
+          src={fotos[idx]}
+          alt={`${titulo} — foto ${idx + 1}`}
+          fill
+          className="object-cover"
+          sizes="(max-width: 1024px) 100vw, 900px"
+        />
 
         {fotos.length > 1 && (
           <>
@@ -60,10 +67,10 @@ export function EventoGaleria({ fotos, titulo }: { fotos: string[]; titulo: stri
             <button
               key={i}
               onClick={() => setIdx(i)}
-              className="shrink-0 rounded-lg overflow-hidden border-2 transition-colors"
+              className="relative shrink-0 rounded-lg overflow-hidden border-2 transition-colors"
               style={{ borderColor: i === idx ? '#d42b2b' : 'transparent', width: 72, height: 54 }}
             >
-              <img src={f} alt="" className="w-full h-full object-cover" />
+              <Image src={f} alt="" fill className="object-cover" sizes="72px" />
             </button>
           ))}
         </div>

@@ -15,7 +15,7 @@ export const maxDuration = 30
 const ID_ANEXO_TESTE = '884630617'
 const NOME_ANEXO_TESTE = 'PAR_TOURANCE.jpg'
 
-export async function GET(req: Request) {
+export async function GET(_req: Request) {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })

@@ -57,7 +57,6 @@ function BarraProgresso({ status, freteServico }: { status: string; freteServico
       {steps.map(({ key, label, Icon }, i) => {
         const done    = !cancelado && i < idx
         const current = !cancelado && i === idx
-        const future  = cancelado || i > idx
 
         return (
           <div key={key} className="flex items-center" style={{ flex: i < steps.length - 1 ? '1' : 'none' }}>
