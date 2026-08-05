@@ -42,8 +42,25 @@ export function AdminThemeProvider({
   const [hidratado, setHidratado] = useState(false)
 
   const definir = useCallback((t: TemaAdmin) => {
+    // Transição em `background-color` cujo valor vem de `var()` faz o Chrome
+    // congelar a cor antiga quando a variável muda — o painel trocava de tema
+    // mas continuava pintado do jeito anterior até um reload. Desligar as
+    // transições durante o swap resolve, e ainda deixa a troca instantânea.
+    const desligar = document.createElement('style')
+    desligar.appendChild(
+      document.createTextNode('*,*::before,*::after{transition:none!important}'),
+    )
+    document.head.appendChild(desligar)
+
     setTema(t)
     document.cookie = `${COOKIE}=${t}; path=/; max-age=${UM_ANO}; SameSite=Lax`
+
+    requestAnimationFrame(() => {
+      // Força o recálculo com as transições ainda desligadas…
+      void getComputedStyle(document.body).transitionProperty
+      // …e só então religa, no quadro seguinte.
+      requestAnimationFrame(() => desligar.remove())
+    })
   }, [])
 
   const alternar = useCallback(
