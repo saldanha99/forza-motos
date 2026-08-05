@@ -861,214 +861,229 @@ enum ReembolsoStatus {
 }
 
 model EventoPirelli {
-  id                        String                      @id
-  slug                      String                      @unique @default("pirelli-forza")
-  titulo                    String                      @default("Evento Pirelli + Forza Motos")
-  descricao                 String?
-  dataInicio                DateTime?
-  dataFim                   DateTime?
-  local                     String?
-  logoForzaUrl              String?
-  logoPirelliUrl            String?
-  logoCampneusUrl           String?
-  ativo                     Boolean                     @default(true)
-  publicado                 Boolean                     @default(false)
-  limiteNomeGravacao        Int                         @default(20)
-  valorMinimoPneus          Decimal                     @default(899) @db.Decimal(10, 2)
-  operadorValorMinimoPneus  EventoPirelliOperadorValor  @default(MAIOR_QUE)
-  createdAt                 DateTime                    @default(now())
-  updatedAt                 DateTime
-  EventoPirelliCompraCaneca EventoPirelliCompraCaneca[]
-  EventoPirelliQuizPergunta EventoPirelliQuizPergunta[]
-  EventoPirelliVisitante    EventoPirelliVisitante[]
+  id                       String                     @id @default(cuid())
+  slug                     String                     @unique @default("pirelli-forza")
+  titulo                   String                     @default("Evento Pirelli + Forza Motos")
+  descricao                String?                    @db.Text
+  dataInicio               DateTime?
+  dataFim                  DateTime?
+  local                    String?
+  logoForzaUrl             String?
+  logoPirelliUrl           String?
+  logoCampneusUrl          String?
+  ativo                    Boolean                    @default(true)
+  publicado                Boolean                    @default(false)
+  limiteNomeGravacao       Int                        @default(20)
+  valorMinimoPneus         Decimal                    @default(899) @db.Decimal(10, 2)
+  operadorValorMinimoPneus EventoPirelliOperadorValor @default(MAIOR_QUE)
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime                   @updatedAt
+
+  visitantes    EventoPirelliVisitante[]
+  perguntasQuiz EventoPirelliQuizPergunta[]
+  comprasCaneca EventoPirelliCompraCaneca[]
 
   @@index([ativo, publicado])
 }
 
 model EventoPirelliBalanceamento {
-  id                     String                           @id
-  visitanteId            String                           @unique
-  horarioPreferido       String?
-  status                 EventoPirelliBalanceamentoStatus @default(INTERESSE)
-  registradoEm           DateTime                         @default(now())
-  EventoPirelliVisitante EventoPirelliVisitante           @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
+  id               String                           @id @default(cuid())
+  visitanteId      String                           @unique
+  visitante        EventoPirelliVisitante           @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
+  horarioPreferido String?
+  status           EventoPirelliBalanceamentoStatus @default(INTERESSE)
+  registradoEm     DateTime                         @default(now())
 }
 
 model EventoPirelliCaneca {
-  id                               String                             @id
-  visitanteId                      String                             @unique
-  nomeGravacaoSnapshot             String
-  status                           EventoPirelliCanecaStatus          @default(PENDENTE)
-  gravacaoIniciadaEm               DateTime?
-  gravadoPor                       String?
-  prontaEm                         DateTime?
-  entregueEm                       DateTime?
-  entreguePor                      String?
-  observacao                       String?
-  createdAt                        DateTime                           @default(now())
-  updatedAt                        DateTime
-  EventoPirelliVisitante           EventoPirelliVisitante             @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
-  EventoPirelliElegibilidadeCaneca EventoPirelliElegibilidadeCaneca[]
+  id                   String                    @id @default(cuid())
+  visitanteId          String                    @unique
+  visitante            EventoPirelliVisitante    @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
+  nomeGravacaoSnapshot String
+  status               EventoPirelliCanecaStatus @default(PENDENTE)
+  gravacaoIniciadaEm   DateTime?
+  gravadoPor           String?
+  prontaEm             DateTime?
+  entregueEm           DateTime?
+  entreguePor          String?
+  observacao           String?                   @db.Text
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+
+  elegibilidades EventoPirelliElegibilidadeCaneca[]
 
   @@index([status, createdAt])
 }
 
 model EventoPirelliCompraCaneca {
-  id                     String                          @id
-  eventoId               String
-  visitanteId            String?
-  quantidade             Int                             @default(1)
-  nomeGravacaoSnapshot   String
-  referenciaVenda        String?
-  status                 EventoPirelliCompraCanecaStatus @default(PENDENTE)
-  registradoEm           DateTime                        @default(now())
-  entregueEm             DateTime?
-  entreguePor            String?
-  observacao             String?
-  chaveIdempotencia      String                          @unique
-  EventoPirelli          EventoPirelli                   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  EventoPirelliVisitante EventoPirelliVisitante?         @relation(fields: [visitanteId], references: [id])
+  id                   String                          @id @default(cuid())
+  eventoId             String
+  evento               EventoPirelli                   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  visitanteId          String?
+  visitante            EventoPirelliVisitante?         @relation(fields: [visitanteId], references: [id], onDelete: SetNull)
+  quantidade           Int                             @default(1)
+  nomeGravacaoSnapshot String
+  referenciaVenda      String?
+  /// Gerada no cliente por venda; protege duplo clique/retry de criar duas vendas.
+  chaveIdempotencia    String                          @unique
+  status               EventoPirelliCompraCanecaStatus @default(PENDENTE)
+  registradoEm         DateTime                        @default(now())
+  entregueEm           DateTime?
+  entreguePor          String?
+  observacao           String?                         @db.Text
 
   @@index([eventoId, status, registradoEm])
 }
 
 model EventoPirelliElegibilidadeCaneca {
-  id                     String                    @id
-  visitanteId            String
-  origem                 EventoPirelliOrigemCaneca
-  canecaId               String?
-  valorPneus             Decimal?                  @db.Decimal(10, 2)
-  referenciaVenda        String?
-  observacao             String?
-  validadoEm             DateTime                  @default(now())
-  validadoPor            String?
-  revogadoEm             DateTime?
-  revogadoPor            String?
-  revogadoMotivo         String?
-  EventoPirelliCaneca    EventoPirelliCaneca?      @relation(fields: [canecaId], references: [id])
-  EventoPirelliVisitante EventoPirelliVisitante    @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
+  id              String                    @id @default(cuid())
+  visitanteId     String
+  visitante       EventoPirelliVisitante    @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
+  origem          EventoPirelliOrigemCaneca
+  canecaId        String?
+  caneca          EventoPirelliCaneca?      @relation(fields: [canecaId], references: [id], onDelete: SetNull)
+  valorPneus      Decimal?                  @db.Decimal(10, 2)
+  referenciaVenda String?
+  observacao      String?                   @db.Text
+  validadoEm      DateTime                  @default(now())
+  validadoPor     String?
+  /// Corrigir um vencedor de foto (ou outra origem) revoga sem apagar: quem questionar
+  /// depois precisa ver quem revogou e por quê.
+  revogadoEm      DateTime?
+  revogadoPor     String?
+  revogadoMotivo  String?                   @db.Text
 
   @@unique([visitanteId, origem])
   @@index([origem, validadoEm])
 }
 
 model EventoPirelliParticipacaoFoto {
-  id                     String                  @id
-  visitanteId            String                  @unique
-  instagram              String
-  declarouPublicacaoEm   DateTime                @default(now())
-  declarouMarcacoes      Boolean                 @default(false)
-  status                 EventoPirelliFotoStatus @default(PENDENTE)
-  curtidasApuradas       Int?
-  apuradoEm              DateTime?
-  apuradoPor             String?
-  observacao             String?
-  EventoPirelliVisitante EventoPirelliVisitante  @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
+  id                   String                  @id @default(cuid())
+  visitanteId          String                  @unique
+  visitante            EventoPirelliVisitante  @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
+  instagram            String
+  declarouPublicacaoEm DateTime                @default(now())
+  declarouMarcacoes    Boolean                 @default(false)
+  status               EventoPirelliFotoStatus @default(PENDENTE)
+  curtidasApuradas     Int?
+  apuradoEm            DateTime?
+  apuradoPor           String?
+  observacao           String?                 @db.Text
 }
 
 model EventoPirelliQuizOpcao {
-  id                        String                      @id
-  perguntaId                String
-  texto                     String
-  correta                   Boolean                     @default(false)
-  ordem                     Int                         @default(0)
-  ativa                     Boolean                     @default(true)
-  createdAt                 DateTime                    @default(now())
-  updatedAt                 DateTime
-  EventoPirelliQuizPergunta EventoPirelliQuizPergunta   @relation(fields: [perguntaId], references: [id], onDelete: Cascade)
-  EventoPirelliQuizResposta EventoPirelliQuizResposta[]
+  id         String                    @id @default(cuid())
+  perguntaId String
+  pergunta   EventoPirelliQuizPergunta @relation(fields: [perguntaId], references: [id], onDelete: Cascade)
+  texto      String
+  correta    Boolean                   @default(false)
+  ordem      Int                       @default(0)
+  ativa      Boolean                   @default(true)
+  createdAt  DateTime                  @default(now())
+  updatedAt  DateTime                  @updatedAt
+
+  respostas EventoPirelliQuizResposta[]
 
   @@index([perguntaId, ordem])
 }
 
 model EventoPirelliQuizPergunta {
-  id                        String                      @id
-  eventoId                  String
-  enunciado                 String
-  explicacao                String?
-  ordem                     Int                         @default(0)
-  pontos                    Int                         @default(1)
-  ativa                     Boolean                     @default(true)
-  createdAt                 DateTime                    @default(now())
-  updatedAt                 DateTime
-  EventoPirelliQuizOpcao    EventoPirelliQuizOpcao[]
-  EventoPirelli             EventoPirelli               @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  EventoPirelliQuizResposta EventoPirelliQuizResposta[]
+  id         String        @id @default(cuid())
+  eventoId   String
+  evento     EventoPirelli @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  enunciado  String        @db.Text
+  explicacao String?       @db.Text
+  ordem      Int           @default(0)
+  pontos     Int           @default(1)
+  ativa      Boolean       @default(true)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  opcoes    EventoPirelliQuizOpcao[]
+  respostas EventoPirelliQuizResposta[]
 
   @@index([eventoId, ativa, ordem])
 }
 
 model EventoPirelliQuizResposta {
-  id                         String                     @id
-  tentativaId                String
-  perguntaId                 String
-  opcaoId                    String
-  enunciadoSnapshot          String
-  opcaoSnapshot              String
-  corretaSnapshot            Boolean
-  pontosGanhos               Int
-  EventoPirelliQuizOpcao     EventoPirelliQuizOpcao     @relation(fields: [opcaoId], references: [id])
-  EventoPirelliQuizPergunta  EventoPirelliQuizPergunta  @relation(fields: [perguntaId], references: [id])
-  EventoPirelliQuizTentativa EventoPirelliQuizTentativa @relation(fields: [tentativaId], references: [id], onDelete: Cascade)
+  id                String                     @id @default(cuid())
+  tentativaId       String
+  tentativa         EventoPirelliQuizTentativa @relation(fields: [tentativaId], references: [id], onDelete: Cascade)
+  perguntaId        String
+  pergunta          EventoPirelliQuizPergunta  @relation(fields: [perguntaId], references: [id])
+  opcaoId           String
+  opcao             EventoPirelliQuizOpcao     @relation(fields: [opcaoId], references: [id])
+  enunciadoSnapshot String                     @db.Text
+  opcaoSnapshot     String
+  corretaSnapshot   Boolean
+  pontosGanhos      Int
 
   @@unique([tentativaId, perguntaId])
 }
 
 model EventoPirelliQuizTentativa {
-  id                        String                      @id
-  visitanteId               String                      @unique
-  pontuacao                 Int
-  pontuacaoMaxima           Int
-  acertouTodas              Boolean                     @default(false)
-  concluidaEm               DateTime                    @default(now())
-  EventoPirelliQuizResposta EventoPirelliQuizResposta[]
-  EventoPirelliVisitante    EventoPirelliVisitante      @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
+  id              String                 @id @default(cuid())
+  visitanteId     String                 @unique
+  visitante       EventoPirelliVisitante @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
+  pontuacao       Int
+  pontuacaoMaxima Int
+  acertouTodas    Boolean                @default(false)
+  concluidaEm     DateTime               @default(now())
+
+  respostas EventoPirelliQuizResposta[]
 }
 
 model EventoPirelliVisitante {
-  id                               String                             @id
-  eventoId                         String
-  nomeCompleto                     String
-  nomeGravacao                     String
-  nomeGravacaoConfirmadoEm         DateTime
-  whatsapp                         String
-  email                            String?
-  instagram                        String?
-  consentimentoMarketingEm         DateTime?
-  chaveSubmissao                   String                             @unique
-  codigoQr                         String                             @unique
-  crmLeadId                        String?
-  createdAt                        DateTime                           @default(now())
-  updatedAt                        DateTime
-  EventoPirelliBalanceamento       EventoPirelliBalanceamento?
-  EventoPirelliCaneca              EventoPirelliCaneca?
-  EventoPirelliCompraCaneca        EventoPirelliCompraCaneca[]
-  EventoPirelliElegibilidadeCaneca EventoPirelliElegibilidadeCaneca[]
-  EventoPirelliParticipacaoFoto    EventoPirelliParticipacaoFoto?
-  EventoPirelliQuizTentativa       EventoPirelliQuizTentativa?
-  EventoPirelli                    EventoPirelli                      @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  id                       String        @id @default(cuid())
+  eventoId                 String
+  evento                   EventoPirelli @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  nomeCompleto             String
+  /// Nome exatamente como o visitante confirmou para a gravação.
+  nomeGravacao             String
+  nomeGravacaoConfirmadoEm DateTime
+  whatsapp                 String
+  email                    String?
+  instagram                String?
+  consentimentoMarketingEm DateTime?
+  /// Evita dupla criação quando a rede cai após o POST chegar ao servidor.
+  chaveSubmissao           String        @unique
+  /// Token opaco que só aparece no QR; nunca é um dado pessoal.
+  codigoQr                 String        @unique
+  /// Referência solta, pois CrmLead não é alterado com uma relação reversa.
+  crmLeadId                String?
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
+
+  tentativaQuiz        EventoPirelliQuizTentativa?
+  participacaoFoto     EventoPirelliParticipacaoFoto?
+  balanceamento        EventoPirelliBalanceamento?
+  elegibilidadesCaneca EventoPirelliElegibilidadeCaneca[]
+  canecaBrinde         EventoPirelliCaneca?
+  comprasCaneca        EventoPirelliCompraCaneca[]
 
   @@unique([eventoId, whatsapp])
   @@index([eventoId, createdAt])
 }
 
 model PagamentoTentativa {
-  id        String   @id
+  id        String   @id @default(cuid())
   orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  /// ID do pagamento no Mercado Pago — único, garante idempotência do webhook.
   paymentId String   @unique
   status    String
   metodo    String?
   valor     Decimal? @db.Decimal(10, 2)
   createdAt DateTime @default(now())
-  updatedAt DateTime
-  Order     Order    @relation(fields: [orderId], references: [id])
+  updatedAt DateTime @updatedAt
 
   @@index([orderId, status])
 }
 
 model ReembolsoPagamento {
-  id                 String          @id
+  id                 String          @id @default(cuid())
   orderId            String
+  order              Order           @relation(fields: [orderId], references: [id])
   paymentId          String          @unique
   motivo             String
   status             ReembolsoStatus @default(PENDENTE)
@@ -1077,8 +1092,7 @@ model ReembolsoPagamento {
   proximaTentativaEm DateTime?
   concluidoEm        DateTime?
   createdAt          DateTime        @default(now())
-  updatedAt          DateTime
-  Order              Order           @relation(fields: [orderId], references: [id])
+  updatedAt          DateTime        @updatedAt
 
   @@index([status, proximaTentativaEm])
 }

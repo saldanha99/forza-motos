@@ -82,10 +82,20 @@ function gerarConteudo(tipo: MensagemTipo, nome: string, payload: Record<string,
 }
 
 /** Adiciona mensagem na fila */
-export async function enfileirarMensagem(params: EnfileirarParams) {
+/**
+ * Cliente do Prisma ou a transação em curso — permite enfileirar a mensagem
+ * dentro da mesma transação que criou o lead, para não sobrar mensagem
+ * apontando para um lead que acabou revertido.
+ */
+type ClientePrisma = Pick<typeof prisma, 'crmMensagem'>
+
+export async function enfileirarMensagem(
+  params: EnfileirarParams,
+  db: ClientePrisma = prisma,
+) {
   const conteudo = gerarConteudo(params.tipo, params.nome, params.payload ?? {})
 
-  return prisma.crmMensagem.create({
+  return db.crmMensagem.create({
     data: {
       whatsapp:    params.whatsapp,
       nome:        params.nome,

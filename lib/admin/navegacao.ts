@@ -1,6 +1,6 @@
 import {
   BookOpen, Bike, Calendar, FileText, ImagePlus, LayoutDashboard, ListChecks,
-  Megaphone, MessageCircle, Package, RefreshCw, Search, Settings, ShoppingBag,
+  Megaphone, MessageCircle, Package, PartyPopper, RefreshCw, Search, Settings, ShoppingBag,
   Ticket, TicketPercent, Users, type LucideIcon,
 } from 'lucide-react'
 
@@ -30,6 +30,7 @@ export const GRUPOS_NAV: GrupoNav[] = [
       { href: '/admin/pedidos',      label: 'Pedidos',      icon: ShoppingBag,    badge: 'pedidos', urgente: true },
       { href: '/admin/agendamentos', label: 'Agendamentos', icon: Calendar,       badge: 'agendamentos', urgente: true },
       { href: '/admin/eventos',      label: 'Eventos',      icon: Ticket },
+      { href: '/admin/evento-pirelli', label: 'Evento Pirelli', icon: PartyPopper },
       { href: '/admin/cupons',       label: 'Cupons',       icon: TicketPercent },
     ],
   },
@@ -82,6 +83,7 @@ export const TITULOS: Record<string, { titulo: string; subtitulo: string }> = {
   '/admin/pedidos':       { titulo: 'Pedidos',        subtitulo: 'Da confirmação do pagamento até a entrega — arraste o card para mudar a etapa' },
   '/admin/agendamentos':  { titulo: 'Agendamentos',   subtitulo: 'Serviços do box rápido: confirmar, executar e concluir' },
   '/admin/eventos':       { titulo: 'Eventos',        subtitulo: 'Encontros e passeios com venda de ingresso' },
+  '/admin/evento-pirelli': { titulo: 'Evento Pirelli',  subtitulo: 'Ação presencial: cadastro de visitante, quiz, brinde de caneca e fotos' },
   '/admin/cupons':        { titulo: 'Cupons',         subtitulo: 'Descontos ativos e regras de uso na loja' },
   '/admin/produtos':      { titulo: 'Produtos',       subtitulo: 'Catálogo sincronizado com o Olist' },
   '/admin/motos':         { titulo: 'Motos',          subtitulo: 'Modelos e as medidas de fábrica usadas na busca por placa' },
