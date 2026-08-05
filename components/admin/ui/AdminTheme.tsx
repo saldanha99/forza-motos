@@ -1,6 +1,8 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import {
+  createContext, useCallback, useContext, useEffect, useLayoutEffect, useState,
+} from 'react'
 import { Moon, Sun } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -19,6 +21,9 @@ const AdminThemeContext = createContext<Ctx>({
 
 export const useTemaAdmin = () => useContext(AdminThemeContext)
 
+/** `useLayoutEffect` avisa quando roda no server; no server não precisamos dele. */
+const useEfeitoDeLayout = typeof window === 'undefined' ? useEffect : useLayoutEffect
+
 /**
  * Tema do painel — independente do tema da loja.
  *
@@ -34,9 +39,8 @@ export function AdminThemeProvider({
   children: React.ReactNode
 }) {
   const [tema, setTema] = useState<TemaAdmin>(temaInicial)
+  const [hidratado, setHidratado] = useState(false)
 
-  // O color-scheme fica no próprio nó do shell (via CSS), não em <html>:
-  // a loja tem tema independente e não pode ser arrastada junto.
   const definir = useCallback((t: TemaAdmin) => {
     setTema(t)
     document.cookie = `${COOKIE}=${t}; path=/; max-age=${UM_ANO}; SameSite=Lax`
@@ -47,12 +51,24 @@ export function AdminThemeProvider({
     [tema, definir],
   )
 
-  // Espelha o tema no <body> para que o que é renderizado fora do shell
-  // (toasts do react-hot-toast, por exemplo) também siga o tema do painel.
-  useEffect(() => {
-    document.body.dataset.adminTheme = tema
+  /**
+   * Depois de hidratar, o atributo migra para o <html>.
+   *
+   * Num elemento aninhado o Chrome atualiza o *valor* da custom property, mas
+   * não invalida as declarações que a consomem no subtree: a troca de tema
+   * mudava `--brand-surface` e os cards continuavam pintados com a cor antiga
+   * até um reload. Na raiz a invalidação é confiável.
+   *
+   * É layout effect de propósito: roda depois do commit e antes da pintura, no
+   * mesmo quadro em que o `<div>` perde o atributo — assim não pisca.
+   */
+  useEfeitoDeLayout(() => {
+    const raiz = document.documentElement
+    raiz.dataset.adminTheme = tema
+    setHidratado(true)
     return () => {
-      delete document.body.dataset.adminTheme
+      // Ao sair do painel o atributo some, para não vazar na loja.
+      delete raiz.dataset.adminTheme
     }
   }, [tema])
 
@@ -76,7 +92,17 @@ export function AdminThemeProvider({
 
   return (
     <AdminThemeContext.Provider value={{ tema, alternar, definir }}>
-      <div data-admin-theme={tema}>{children}</div>
+      {/* Antes de hidratar o atributo vive aqui, para o primeiro paint já vir
+          pintado (o valor veio do cookie lido no server). Depois ele passa a
+          morar no <html> e este some, senão continuaria vencendo na cascata.
+          O color-scheme fica sempre aqui: assim a loja não é arrastada junto. */}
+      <div
+        data-admin-theme={hidratado ? undefined : temaInicial}
+        className="admin-shell"
+        style={{ colorScheme: tema }}
+      >
+        {children}
+      </div>
     </AdminThemeContext.Provider>
   )
 }

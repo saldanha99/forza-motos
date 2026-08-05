@@ -155,15 +155,17 @@
   --pill-neutro:  #6b6b74;  --pill-neutro-bg:  rgba(107, 107, 116, 0.12);
 }
 [data-theme='dark'],
-[data-admin-theme='dark'] {
+[data-admin-theme='dark'] .admin-shell {
   --pill-success: #34d399;  --pill-success-bg: rgba(52, 211, 153, 0.14);
   --pill-warning: #fbbf24;  --pill-warning-bg: rgba(251, 191, 36, 0.14);
   --pill-danger:  #f87171;  --pill-danger-bg:  rgba(248, 113, 113, 0.14);
   --pill-info:    #7fb2ff;  --pill-info-bg:    rgba(127, 178, 255, 0.14);
   --pill-neutro:  #a1a1aa;  --pill-neutro-bg:  rgba(161, 161, 170, 0.12);
 }
-/* Painel claro dentro de uma loja em modo escuro (e vice-versa) */
-[data-admin-theme='light'] {
+/* Painel claro dentro de uma loja em modo escuro (e vice-versa).
+   Escopado em `.admin-shell` porque o atributo de tema do painel vive no
+   <html>: sem isso, o tema do painel pintaria as pílulas da loja também. */
+[data-admin-theme='light'] .admin-shell {
   --pill-success: #0f8a5f;  --pill-success-bg: rgba(15, 138, 95, 0.12);
   --pill-warning: #a86a05;  --pill-warning-bg: rgba(168, 106, 5, 0.12);
   --pill-danger:  #c62828;  --pill-danger-bg:  rgba(198, 40, 40, 0.12);
@@ -235,9 +237,6 @@
   --brand-tint-2: rgba(255, 255, 255, 0.06);
   --brand-tint-3: rgba(255, 255, 255, 0.10);
 }
-/* color-scheme fica no elemento do shell, não em :root — senão o painel
-   arrastaria a loja junto (a loja tem tema próprio, independente). */
-[data-admin-theme='dark'] { color-scheme: dark; }
 
 [data-admin-theme='light'] {
   /* Branco puro nas superfícies de trabalho; o fundo é levemente
@@ -281,8 +280,6 @@
   --brand-tint-1: rgba(15, 15, 20, 0.02);
   --brand-tint-2: rgba(15, 15, 20, 0.045);
   --brand-tint-3: rgba(15, 15, 20, 0.08);
-
-  color-scheme: light;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
