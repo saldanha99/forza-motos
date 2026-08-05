@@ -7,7 +7,6 @@
  *   EVOLUTION_INSTANCE    → Nome da instância (sobrescrito pelo setting evolution_instance)
  */
 
-import { prisma } from '@/lib/prisma'
 import { getInstanciaAtiva } from './instancia'
 
 const BASE_URL = () => process.env.EVOLUTION_API_URL ?? ''
