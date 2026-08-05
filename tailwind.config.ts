@@ -37,6 +37,7 @@ const config: Config = {
         'brand-accent-soft':   'var(--brand-accent-soft)',
         'brand-on-accent':      'var(--brand-on-accent)',
         'brand-on-accent-soft': 'var(--brand-on-accent-soft)',
+        'brand-logo-bg':        'var(--brand-logo-bg)',
         'brand-success':       'var(--brand-success)',
         'brand-success-soft':  'var(--brand-success-soft)',
         'brand-warning':       'var(--brand-warning)',

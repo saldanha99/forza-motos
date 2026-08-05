@@ -182,11 +182,13 @@ export function OlistSyncButton() {
   // ── Confirmação: Remover Preço Zerado ────────────────────────────────────────
   const [loadingPrecoZeroCount, setLoadingPrecoZeroCount] = useState(false)
   const [precoZeroCount, setPrecoZeroCount] = useState<number | null>(null)
+  const [precoZeroPulados, setPrecoZeroPulados] = useState(0)
   const [precoZeroConfirming, setPrecoZeroConfirming] = useState(false)
 
   // ── Confirmação: Corrigir Duplicados ─────────────────────────────────────────
   const [loadingDuplicadosCount, setLoadingDuplicadosCount] = useState(false)
   const [duplicadosCount, setDuplicadosCount] = useState<number | null>(null)
+  const [duplicadosPulados, setDuplicadosPulados] = useState(0)
   const [duplicadosConfirming, setDuplicadosConfirming] = useState(false)
 
   // ── Excluir sem imagem ────────────────────────────────────────────────────────
@@ -194,10 +196,6 @@ export function OlistSyncButton() {
   const [semImagemCount, setSemImagemCount] = useState<number | null>(null)
   const [semImagemResult, setSemImagemResult] = useState<any>(null)
   const [semImagemConfirming, setSemImagemConfirming] = useState(false)
-
-  // ── Reconciliação ────────────────────────────────────────────────────────────
-  const [loadingRecon, setLoadingRecon] = useState(false)
-  const [reconResult, setReconResult] = useState<any>(null)
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -395,7 +393,14 @@ export function OlistSyncButton() {
         body: JSON.stringify({ tipo: 'preco_zero_count' }),
       })
       const data = await res.json()
+      // Sem checar o status, um 403 de sessão expirada viraria “0 serão
+      // excluídos” com o botão de confirmar liberado.
+      if (!res.ok || data.error) {
+        setCleanupResult({ error: data.error || 'Não consegui contar os produtos.' })
+        return
+      }
       setPrecoZeroCount(data.count ?? 0)
+      setPrecoZeroPulados(data.pulados ?? 0)
       setPrecoZeroConfirming(true)
     } catch { setCleanupResult({ error: 'Erro de conexão' }) }
     finally { setLoadingPrecoZeroCount(false) }
@@ -415,7 +420,12 @@ export function OlistSyncButton() {
         body: JSON.stringify({ tipo: 'duplicados_count' }),
       })
       const data = await res.json()
+      if (!res.ok || data.error) {
+        setCleanupResult({ error: data.error || 'Não consegui contar os duplicados.' })
+        return
+      }
       setDuplicadosCount(data.count ?? 0)
+      setDuplicadosPulados(data.pulados ?? 0)
       setDuplicadosConfirming(true)
     } catch { setCleanupResult({ error: 'Erro de conexão' }) }
     finally { setLoadingDuplicadosCount(false) }
@@ -434,6 +444,10 @@ export function OlistSyncButton() {
         body: JSON.stringify({ tipo: 'sem_imagem_count' }),
       })
       const data = await res.json()
+      if (!res.ok || data.error) {
+        setSemImagemResult({ error: data.error || 'Não consegui contar os produtos.' })
+        return
+      }
       setSemImagemCount(data.count ?? 0)
       setSemImagemConfirming(true)
     } catch { setSemImagemResult({ error: 'Erro de conexão' }) }
@@ -452,25 +466,13 @@ export function OlistSyncButton() {
     finally { setLoadingSemImagem(false); fetchDiag() }
   }
 
-  async function handleReconciliar() {
-    setLoadingRecon(true); setReconResult(null)
-    try {
-      const res = await fetch('/api/olist/reconciliar', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ minutosAtras: 90 }),
-      })
-      setReconResult(await res.json())
-    } catch { setReconResult({ error: 'Erro de conexão' }) }
-    finally { setLoadingRecon(false); fetchDiag() }
-  }
-
   const pctSync = syncTotal > 0 ? Math.round((syncPagina / syncTotal) * 100) : 0
   const pctImagens = imagensTotal && imagensTotal > 0
     ? Math.min(100, Math.round((imagensAcum / imagensTotal) * 100)) : 0
   const pctFantasmas = fantasmasProgresso.totalPaginas > 0
     ? Math.round((fantasmasProgresso.pagina / fantasmasProgresso.totalPaginas) * 100) : 0
 
-  const isAnyRunning = loadingSync || loadingImagens || loadingEstoque || loadingFantasmas || loadingCleanup || loadingSemImagem || loadingDelta || loadingRecon || loadingResetImgs || loadingPrecoZeroCount || loadingDuplicadosCount
+  const isAnyRunning = loadingSync || loadingImagens || loadingEstoque || loadingFantasmas || loadingCleanup || loadingSemImagem || loadingDelta || loadingResetImgs || loadingPrecoZeroCount || loadingDuplicadosCount
 
   return (
     <div className="relative space-y-6 overflow-hidden rounded-3xl border border-brand-border bg-brand-surface p-6 shadow-pop transition duration-300 md:p-8">

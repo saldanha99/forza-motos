@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { AlertTriangle, CheckCircle2, Upload } from 'lucide-react'
 import { ModeloSelector } from './ModeloSelector'
+import { obterModelo } from '@/lib/glossario/ai-models'
 import { Card, SectionTitle, Botao } from '@/components/admin/ui/primitives'
 import { Campo, Input, Textarea, Select, AcoesFormulario } from '@/components/admin/ui/form'
 
@@ -58,8 +59,8 @@ export function ImportarCSVForm() {
     setResultado(null)
     setEnviando(true)
 
-    // Identifica provider a partir do modelo selecionado
-    const providerEnum = modeloId.startsWith('gpt') ? 'AI_OPENAI' : 'AI_GEMINI'
+    // Identifica provider a partir do catálogo de modelos (não do prefixo do id)
+    const providerEnum = obterModelo(modeloId)?.provider === 'openai' ? 'AI_OPENAI' : 'AI_GEMINI'
 
     const fd = new FormData()
     fd.append('csv', arquivo)

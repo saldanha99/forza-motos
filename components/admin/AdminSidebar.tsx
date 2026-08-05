@@ -237,7 +237,7 @@ export function AdminSidebar({ user, badges = {} }: { user: any; badges?: Badges
       >
         <div className={cn('flex items-center gap-2 border-b border-brand-hair px-3 py-3', recolhida && 'justify-center px-2')}>
           {!recolhida && (
-            <Link href="/admin/dashboard" className="rounded-xl bg-white px-2 py-1">
+            <Link href="/admin/dashboard" className="rounded-xl bg-brand-logo-bg px-2 py-1">
               <Image
                 src="/images/logo-forza.png"
                 alt="Forza Motos"
@@ -274,7 +274,7 @@ export function AdminSidebar({ user, badges = {} }: { user: any; badges?: Badges
           <div className="absolute inset-0 bg-[color:var(--brand-overlay)] backdrop-blur-sm" />
           <aside className="absolute left-0 top-0 flex h-full w-[268px] flex-col border-r border-brand-border bg-brand-sidebar">
             <div className="flex items-center justify-between border-b border-brand-hair px-3 py-3">
-              <div className="rounded-xl bg-white px-2 py-1">
+              <div className="rounded-xl bg-brand-logo-bg px-2 py-1">
                 <Image
                   src="/images/logo-forza.png"
                   alt="Forza Motos"

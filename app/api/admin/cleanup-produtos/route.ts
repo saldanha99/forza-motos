@@ -33,16 +33,23 @@ export async function POST(req: Request) {
   }
 
   if (tipo === 'preco_zero') {
-    // Remove produtos com preco=0 E sem estoque
+    // Produto com pedido não pode ser apagado: OrderItem.product não tem
+    // onDelete: Cascade, então o delete estouraria violação de FK no meio da
+    // operação. `orderItems: { none: {} }` é a mesma condição usada na
+    // contagem — o número confirmado é o número apagado.
     const r = await prisma.product.deleteMany({
-      where: { preco: 0 },
+      where: { preco: 0, orderItems: { none: {} } },
+    })
+    const pulados = await prisma.product.count({
+      where: { preco: 0, orderItems: { some: {} } },
     })
     removidos = r.count
-    return NextResponse.json({ ok: true, removidos, tipo: 'preco_zero' })
+    return NextResponse.json({ ok: true, removidos, pulados, tipo: 'preco_zero' })
   }
 
   if (tipo === 'duplicados') {
     // Remove tinyIds duplicados — mantém o com updatedAt mais recente
+    let pulados = 0
     const duplicados = await prisma.$queryRaw<{ tinyId: string; count: number }[]>`
       SELECT "tinyId", COUNT(*)::int as count
       FROM "Product"
@@ -55,16 +62,21 @@ export async function POST(req: Request) {
       const todos = await prisma.product.findMany({
         where: { tinyId: dup.tinyId },
         orderBy: { updatedAt: 'desc' },
-        select: { id: true },
+        select: { id: true, _count: { select: { orderItems: true } } },
       })
-      // Mantém o primeiro (mais recente), deleta o restante
-      const idsParaDeletar = todos.slice(1).map((p) => p.id)
+      // Mantém o mais recente e descarta os que têm pedido: apagá-los
+      // estouraria violação de FK (OrderItem.product não é cascade).
+      const idsParaDeletar = todos
+        .slice(1)
+        .filter((p) => p._count.orderItems === 0)
+        .map((p) => p.id)
+      pulados += todos.slice(1).length - idsParaDeletar.length
       if (idsParaDeletar.length > 0) {
         await prisma.product.deleteMany({ where: { id: { in: idsParaDeletar } } })
         removidos += idsParaDeletar.length
       }
     }
-    return NextResponse.json({ ok: true, removidos, tipo: 'duplicados' })
+    return NextResponse.json({ ok: true, removidos, pulados, tipo: 'duplicados' })
   }
 
   if (tipo === 'sync_tiny') {
@@ -166,8 +178,14 @@ export async function POST(req: Request) {
 
   if (tipo === 'preco_zero_count') {
     // Só conta, não deleta — para mostrar preview antes da confirmação
-    const count = await prisma.product.count({ where: { preco: 0 } })
-    return NextResponse.json({ ok: true, count })
+    // Mesma condição do delete, senão o preview mentiria
+    const count = await prisma.product.count({
+      where: { preco: 0, orderItems: { none: {} } },
+    })
+    const pulados = await prisma.product.count({
+      where: { preco: 0, orderItems: { some: {} } },
+    })
+    return NextResponse.json({ ok: true, count, pulados })
   }
 
   if (tipo === 'duplicados_count') {
@@ -179,8 +197,21 @@ export async function POST(req: Request) {
       GROUP BY "tinyId"
       HAVING COUNT(*) > 1
     `
-    const count = duplicados.reduce((acc, d) => acc + (d.count - 1), 0)
-    return NextResponse.json({ ok: true, count })
+    // Conta só o que é de fato apagável — mesma regra do delete
+    let count = 0
+    let pulados = 0
+    for (const dup of duplicados) {
+      const todos = await prisma.product.findMany({
+        where: { tinyId: dup.tinyId },
+        orderBy: { updatedAt: 'desc' },
+        select: { _count: { select: { orderItems: true } } },
+      })
+      const candidatos = todos.slice(1)
+      const apagaveis = candidatos.filter((p) => p._count.orderItems === 0).length
+      count += apagaveis
+      pulados += candidatos.length - apagaveis
+    }
+    return NextResponse.json({ ok: true, count, pulados })
   }
 
   return NextResponse.json({ error: 'Tipo inválido' }, { status: 400 })

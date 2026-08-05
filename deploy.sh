@@ -7,6 +7,9 @@ set -euo pipefail
 VPS="root@187.127.46.251"
 APP_DIR="/opt/forza/app"
 
+echo "→ Verificando fronteira server/client e cor fixa/tema no painel admin…"
+node scripts/verificar-painel.mjs
+
 echo "→ Enviando código para a VPS…"
 rsync -az --delete \
   --exclude node_modules --exclude .next --exclude .git --exclude .vercel \

@@ -214,6 +214,9 @@
   /* Sombreado usado *sobre* o accent (contador dentro de um chip vermelho).
      É o mesmo nos dois temas: o fundo abaixo dele já é vermelho. */
   --brand-on-accent-soft: rgba(0, 0, 0, 0.22);
+  /* A logo é escura sobre fundo transparente: no escuro precisa de um chip
+     claro atrás. No tema claro a sidebar já é branca, então fica transparente. */
+  --brand-logo-bg:        #ffffff;
 
   /* ── Semânticas de status ── */
   --brand-success:      #2fbf88;
@@ -261,6 +264,7 @@
   --brand-accent-ring:  rgba(212, 43, 43, 0.28);
   --brand-on-accent:    #ffffff;
   --brand-on-accent-soft: rgba(0, 0, 0, 0.22);
+  --brand-logo-bg:        transparent;
 
   --brand-success:      #12885d;
   --brand-success-soft: rgba(18, 136, 93, 0.10);
