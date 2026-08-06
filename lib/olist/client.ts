@@ -57,6 +57,12 @@ export async function tinyFetch(
 
   if (data.retorno?.status === 'Erro') {
     const msg = data.retorno.erro || JSON.stringify(data.retorno.erros)
+    // "A consulta não retornou registros" é como o Tiny responde fila/listagem
+    // vazia — não é falha. Tratar como erro fazia o cron de 5 em 5 min reportar
+    // um erro falso e mascarar erro de verdade no meio do ruído.
+    if (/não retornou registros/i.test(msg)) {
+      return { retorno: { status: 'OK' } } as TinyResponse
+    }
     throw new Error(`Tiny API: ${msg}`)
   }
 

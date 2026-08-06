@@ -62,6 +62,14 @@ export async function POST(req: Request) {
     const evento = body.evento || body.event || ''
     const tipo = body.tipo || ''
 
+    // Loga TODA chamada recebida, antes de qualquer roteamento. Sem isso um
+    // evento com formato inesperado saía pelo `ok: true` do final sem deixar
+    // rastro, e ficava impossível distinguir "Olist não chama" de "Olist chama
+    // e a gente ignora" (investigação de 06/08/2026).
+    console.log(
+      `[webhook] recebido evento="${evento}" tipo="${tipo}" chaves=${Object.keys(body).join(',')}`,
+    )
+
     // ── Atualização de estoque ─────────────────────────────────────────────
     // Tiny dispara quando estoque muda no depósito
     if (
@@ -262,7 +270,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true })
     }
 
-    // Evento desconhecido — retorna 200 para não reprocessar
+    // Evento desconhecido — retorna 200 para não reprocessar, mas grita no log
+    // com o payload inteiro: é o que permite descobrir o formato real que o
+    // Olist manda e passar a tratá-lo.
+    console.warn(
+      `[webhook] EVENTO NÃO TRATADO evento="${evento}" tipo="${tipo}" payload=${JSON.stringify(body).slice(0, 800)}`,
+    )
     return NextResponse.json({ ok: true, evento_ignorado: evento })
   } catch (e) {
     console.error('[webhook] Erro:', e)
