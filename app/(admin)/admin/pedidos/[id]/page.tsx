@@ -5,6 +5,7 @@ import { formatDate, formatPrice } from '@/lib/utils'
 import { PageHeader, StatusPill, Card, CardHeader, EmptyState } from '@/components/admin/ui/primitives'
 import { AlterarStatusPedido } from '@/components/admin/AlterarStatusPedido'
 import { PedidoStepper } from '@/components/admin/PedidoStepper'
+import { EtiquetaMelhorEnvio } from '@/components/admin/EtiquetaMelhorEnvio'
 
 export default async function PedidoDetalhePage({ params }: { params: { id: string } }) {
   const pedido = await prisma.order.findUnique({
@@ -95,6 +96,17 @@ export default async function PedidoDetalhePage({ params }: { params: { id: stri
         <div className="space-y-6">
           {/* Ações de status */}
           <AlterarStatusPedido pedidoId={pedido.id} statusAtual={pedido.status} freteServico={pedido.freteServico} />
+
+          {/* Envio pelo Melhor Envio — comprar etiqueta é clique manual */}
+          <EtiquetaMelhorEnvio
+            pedidoId={pedido.id}
+            freteServico={pedido.freteServico}
+            freteTransportadora={pedido.freteTransportadora}
+            melhorEnvioId={pedido.melhorEnvioId}
+            melhorEnvioStatus={pedido.melhorEnvioStatus}
+            melhorEnvioEtiqueta={pedido.melhorEnvioEtiqueta}
+            trackingCode={pedido.trackingCode}
+          />
 
           {/* Cliente */}
           {pedido.user && (

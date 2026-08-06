@@ -212,3 +212,62 @@ export async function adicionarAoCarrinhoME(input: {
 
   return res.json()
 }
+
+/**
+ * Chamada autenticada genérica ao Melhor Envio — usada pelos passos de envio
+ * (checkout/generate/print/tracking), que compartilham headers e tratamento de erro.
+ */
+async function meFetch(caminho: string, body: unknown): Promise<any> {
+  const token = process.env.MELHOR_ENVIO_TOKEN
+  if (!token) throw new Error('MELHOR_ENVIO_TOKEN não configurado')
+
+  const res = await fetch(`${getMeBaseUrl()}${caminho}`, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      'User-Agent': getMeUserAgent(),
+    },
+    body: JSON.stringify(body),
+  })
+
+  const texto = await res.text()
+  if (!res.ok) {
+    throw new Error(`Melhor Envio (${caminho}) ${res.status}: ${texto.slice(0, 300)}`)
+  }
+  try {
+    return JSON.parse(texto)
+  } catch {
+    return {}
+  }
+}
+
+/**
+ * Passo 2 de 4: COMPRA as etiquetas do carrinho — debita o saldo da conta ME.
+ *
+ * Esta é a única função do fluxo que gasta dinheiro. Por isso ela só é chamada
+ * a partir do endpoint de admin (clique manual), nunca automaticamente quando
+ * o pedido é pago. Saldo insuficiente faz a API devolver erro.
+ */
+export async function comprarEtiquetasME(ids: string[]): Promise<any> {
+  return meFetch('/me/shipment/checkout', { orders: ids })
+}
+
+/** Passo 3 de 4: gera a etiqueta (vira PDF imprimível). */
+export async function gerarEtiquetasME(ids: string[]): Promise<any> {
+  return meFetch('/me/shipment/generate', { orders: ids })
+}
+
+/** Passo 4 de 4: devolve a URL do PDF da etiqueta. */
+export async function imprimirEtiquetasME(ids: string[]): Promise<{ url?: string }> {
+  return meFetch('/me/shipment/print', { mode: 'private', orders: ids })
+}
+
+/**
+ * Consulta rastreio das etiquetas. Devolve um mapa id → dados, do jeito que a
+ * API responde (chaveado pelo id do envio).
+ */
+export async function rastrearEtiquetasME(ids: string[]): Promise<Record<string, any>> {
+  return meFetch('/me/shipment/tracking', { orders: ids })
+}

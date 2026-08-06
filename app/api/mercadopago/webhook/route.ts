@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { replicarPedidoOlist } from '@/lib/olist/sync-orders'
+import { adicionarPedidoAoCarrinho } from '@/lib/frete/envio-me'
 import { triggerIndexing } from '@/lib/seo/indexing'
 import { SEO_CONFIG } from '@/lib/seo/config'
 import { verificarEstoqueTiny, restaurarEstoquePedido } from '@/lib/tiny/verificar-estoque'
@@ -292,6 +293,21 @@ export async function POST(req: Request) {
         }
       }
 
+      // 4.1) Prepara o envio no Melhor Envio — SÓ coloca no carrinho, não compra
+      // etiqueta (isso é clique do admin). Falha aqui não pode derrubar o
+      // pagamento: o pedido está pago e o envio pode ser refeito no painel.
+      let envioMe = 'sem envio ME'
+      try {
+        const r = await adicionarPedidoAoCarrinho(orderId)
+        envioMe = r.melhorEnvioId
+          ? `📮 Envio no carrinho do Melhor Envio (${r.melhorEnvioId}) — falta comprar a etiqueta.`
+          : `📮 Sem envio ME: ${r.motivo}`
+        console.log(`[mp-webhook] ${order.orderNumber}: ${envioMe}`)
+      } catch (e) {
+        envioMe = `⚠️ Falha ao preparar envio no Melhor Envio: ${String(e).slice(0, 150)}`
+        console.error('[mp-webhook] Falha ao preparar envio ME:', e)
+      }
+
       // 5) Notifica admin via WhatsApp — com o status verdadeiro da replicação
       const adminPhone = process.env.ADMIN_WHATSAPP ?? '5519974049445'
       const itensTexto = order.items
@@ -316,7 +332,7 @@ export async function POST(req: Request) {
             `💳 Forma: ${payment.payment_method_id}\n` +
             `💰 Total: ${totalFmt}\n\n` +
             `Itens:\n${itensTexto}\n\n` +
-            statusOlist,
+            statusOlist + `\n\n${envioMe}`,
         },
       }).catch((e) => console.error('[mp-webhook] Falha ao notificar admin:', e))
 

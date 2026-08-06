@@ -193,6 +193,14 @@ model Order {
   fretePrazo          Int?
   /// Código de rastreamento informado pela transportadora (preenchido após envio)
   trackingCode        String?
+  /// ID do envio no carrinho do Melhor Envio. Criado automaticamente quando o
+  /// pagamento é aprovado — ainda SEM comprar etiqueta (não gasta saldo).
+  melhorEnvioId       String?
+  /// Etapa do envio no ME: CARRINHO → COMPRADA → GERADA. Null = não usa ME
+  /// (retirada na loja, ou pedido anterior à integração).
+  melhorEnvioStatus   String?
+  /// URL do PDF da etiqueta, preenchida depois da compra pelo admin
+  melhorEnvioEtiqueta String?
   /// Canal de origem do pedido
   canal               CanalVenda  @default(ECOMMERCE)
   createdAt           DateTime    @default(now())
