@@ -150,11 +150,24 @@ export async function adicionarAoCarrinhoME(input: {
   const token = process.env.MELHOR_ENVIO_TOKEN
   if (!token) throw new Error('MELHOR_ENVIO_TOKEN não configurado')
 
-  // Documentação completa: https://docs.melhorenvio.com.br/reference/inserir-frete-no-carrinho
-  // Implementação real fica a cargo do admin — esta é só a estrutura base.
+  // Documentação: https://docs.melhorenvio.com.br/reference/inserir-frete-no-carrinho
+  //
+  // O remetente NÃO pode vir só com o CEP: a API recusa com
+  // "O campo from.name é obrigatório" (+ from.address e from.city). Testado
+  // contra a API real em 06/08/2026 — antes disso esta função nunca tinha sido
+  // executada e não funcionava.
   const body = {
     service: input.servicoId,
     from: {
+      name: process.env.LOJA_NOME || 'Forza Motos',
+      phone: (process.env.LOJA_TELEFONE || '19974049445').replace(/\D/g, ''),
+      email: process.env.LOJA_EMAIL || 'caio@forzamotos.com.br',
+      address: process.env.LOJA_RUA || 'Rua Funilense',
+      number: process.env.LOJA_NUMERO || '110',
+      complement: process.env.LOJA_COMPLEMENTO || '',
+      district: process.env.LOJA_BAIRRO || 'Guanabara',
+      city: process.env.LOJA_CIDADE || 'Campinas',
+      state_abbr: process.env.LOJA_UF || 'SP',
       postal_code: limparCEP(process.env.MELHOR_ENVIO_CEP_ORIGEM || ''),
     },
     to: {

@@ -92,8 +92,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, ignorado: 'pedido não encontrado' })
     }
 
-    const rastreio =
-      dados?.tracking ?? dados?.melhorenvio_tracking ?? dados?.protocol ?? null
+    // `protocol` NÃO entra aqui: é o número do pedido no ME ("ORD-2026…"),
+    // não rastreio. Usá-lo mandaria um código inválido no e-mail do cliente.
+    const rastreio = dados?.tracking ?? dados?.melhorenvio_tracking ?? null
     const novoStatus = STATUS_POR_EVENTO[evento] ?? STATUS_POR_EVENTO[String(dados?.status ?? '')]
 
     // Só avança o status. Cancelar etiqueta não é cancelar pedido, e um evento

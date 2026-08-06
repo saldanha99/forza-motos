@@ -163,7 +163,10 @@ export async function comprarEtiquetaDoPedido(orderId: string): Promise<{
   const impressao = await imprimirEtiquetasME(ids)
   const etiquetaUrl = impressao?.url ?? null
 
-  // Rastreio pode ainda não existir no instante da compra — não é motivo de falha
+  // Rastreio pode ainda não existir no instante da compra — não é motivo de falha.
+  // NÃO usar `protocol` como alternativa: ele é o número do pedido no ME
+  // ("ORD-202608140866163"), não um código de rastreio, e iria parar no e-mail
+  // do cliente como se fosse.
   let rastreio: string | null = null
   try {
     const tracking = await rastrearEtiquetasME(ids)
