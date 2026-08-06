@@ -15,7 +15,7 @@
  * se comportam melhor com scroll nativo.
  */
 
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { ReactLenis, useLenis } from 'lenis/react'
 
 /** Barra de progresso vermelha no topo da página */
@@ -94,6 +94,38 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
       {children}
     </ReactLenis>
   )
+}
+
+/**
+ * Trava o scroll do fundo enquanto um modal/drawer estiver aberto.
+ *
+ * São dois freios porque um só não segura:
+ *   - `overflow: hidden` no body segura o scroll nativo;
+ *   - `lenis.stop()` segura o scroll suave, que roda por JS e passa por cima
+ *     do overflow — era por isso que a página de trás rolava com o modal aberto.
+ *
+ * O conteúdo do overlay ainda precisa de `data-lenis-prevent` no elemento, senão
+ * o Lenis engole a roda do mouse e nem o scroll interno do modal funciona
+ * (só sobrava arrastar a barra de rolagem na mão).
+ *
+ * Restaura o valor anterior do overflow em vez de limpar: dois overlays abertos
+ * ao mesmo tempo (drawer + modal) não derrubam a trava um do outro.
+ */
+export function useTravarScrollDeFundo(ativo: boolean) {
+  const lenis = useLenis()
+
+  useEffect(() => {
+    if (!ativo) return
+
+    const overflowAnterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    lenis?.stop()
+
+    return () => {
+      document.body.style.overflow = overflowAnterior
+      lenis?.start()
+    }
+  }, [ativo, lenis])
 }
 
 /**

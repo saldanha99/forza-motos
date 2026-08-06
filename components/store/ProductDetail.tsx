@@ -406,9 +406,10 @@ export function ProductDetail({
             </div>
           )}
 
-          {/* Calcular frete */}
+          {/* Calcular frete — acompanha a quantidade escolhida, senão a cotação
+              sairia sempre pelo valor de uma unidade só */}
           <div className="mb-6">
-            <CalculadorFrete subtotal={precoPromo ?? preco} compact />
+            <CalculadorFrete subtotal={(precoPromo ?? preco) * quantidade} compact />
           </div>
 
           {/* Quantidade — limitada ao estoque (pré-venda: até 10) */}

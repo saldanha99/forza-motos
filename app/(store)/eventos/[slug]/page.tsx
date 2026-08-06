@@ -37,6 +37,100 @@ function formatDataCompleta(d: Date) {
   }).format(d)
 }
 
+function formatarConteudoEvento(conteudo: string): string {
+  if (!conteudo) return ''
+
+  // Se já for HTML com tags como <h3>, <div>, <p>, <ul>, etc.
+  if (/<(h[1-6]|div|p|ul|ol|table|section|article)[\s>]/i.test(conteudo)) {
+    return conteudo
+  }
+
+  // Texto simples sem HTML: transforma em estrutura rica (cards, timelines, badges)
+  const linhas = conteudo.split('\n').map((l) => l.trim()).filter(Boolean)
+  let result = ''
+  let emTimeline = false
+
+  for (let i = 0; i < linhas.length; i++) {
+    const linha = linhas[i]
+
+    // Apresentação Principal (ex: FORZA MOTOS apresenta:)
+    if (/apresenta:/i.test(linha) || (/^FORZA MOTOS/i.test(linha) && i === 0)) {
+      if (emTimeline) { result += '</div></div>'; emTimeline = false }
+      result += `
+        <div class="mb-6 p-4 rounded-2xl bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-[#d42b2b]">
+          <span class="text-[11px] font-bold uppercase tracking-widest text-[#d42b2b] block mb-1">Passeio Oficial Forza Motos</span>
+          <h2 class="text-xl font-barlow font-bold text-gray-900">${linha}</h2>
+        </div>
+      `
+      continue
+    }
+
+    // Bloco de Local de Partida e Concentração
+    if (/Local de Partida|Concentração|Ponto de Encontro/i.test(linha)) {
+      if (emTimeline) { result += '</div></div>'; emTimeline = false }
+      let localHtml = `<div class="my-6 p-5 rounded-2xl bg-gray-50 border border-gray-200 shadow-sm">`
+      localHtml += `<div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#d42b2b] mb-2">📍 ${linha}</div>`
+
+      while (i + 1 < linhas.length && !/HORÁRIOS|PROGRAMAÇÃO|CRONOGRAMA|REGRAS|ATENÇÃO/i.test(linhas[i + 1]) && !/^(\d{2}:\d{2}|\d{2}h)/i.test(linhas[i + 1])) {
+        i++
+        localHtml += `<p class="text-sm font-semibold text-gray-800 leading-snug">${linhas[i]}</p>`
+      }
+      localHtml += `</div>`
+      result += localHtml
+      continue
+    }
+
+    // Bloco de Horários / Programação
+    if (/HORÁRIOS|PROGRAMAÇÃO|CRONOGRAMA|AGENDA/i.test(linha)) {
+      if (emTimeline) { result += '</div></div>'; emTimeline = false }
+      result += `
+        <div class="my-6">
+          <div class="flex items-center gap-2 text-sm font-barlow font-bold uppercase tracking-wider text-gray-900 mb-4 border-b border-gray-200 pb-2">
+            <span>⏰</span> ${linha}
+          </div>
+          <div class="space-y-2.5">
+      `
+      emTimeline = true
+      continue
+    }
+
+    // Linha de Horário (ex: 08:30h - Concentração / Coffee Break)
+    const matchHora = linha.match(/^(\d{2}:\d{2}h?|\d{2}h\d{2}?|\d{2}h)\s*[-–—:]?\s*(.*)$/i)
+    if (matchHora) {
+      if (!emTimeline) {
+        result += `<div class="my-6"><div class="space-y-2.5">`
+        emTimeline = true
+      }
+      const hora = matchHora[1]
+      const desc = matchHora[2]
+      result += `
+        <div class="flex items-center gap-3 p-3.5 bg-white rounded-xl border border-gray-100 shadow-xs hover:border-red-200 transition-colors">
+          <span class="px-2.5 py-1 bg-[#1a1a2e] text-white text-xs font-bold rounded-lg shrink-0 font-mono">${hora}</span>
+          <span class="text-sm font-medium text-gray-800">${desc}</span>
+        </div>
+      `
+      continue
+    }
+
+    // Título em Caixas Altas (ex: REGRAS:, OBSERVAÇÕES:)
+    if (/^[A-ZÁÉÍÓÚÀÂÊÔÃÕÇ\s]{4,}:?$/.test(linha)) {
+      if (emTimeline) { result += '</div></div>'; emTimeline = false }
+      result += `<h3 class="text-lg font-barlow font-bold text-gray-900 mt-6 mb-3 uppercase tracking-wide border-b pb-1 border-gray-100">${linha}</h3>`
+      continue
+    }
+
+    // Parágrafo Normal
+    if (emTimeline) { result += '</div></div>'; emTimeline = false }
+    result += `<p class="text-base text-gray-700 leading-relaxed mb-4 font-inter">${linha}</p>`
+  }
+
+  if (emTimeline) {
+    result += '</div></div>'
+  }
+
+  return result
+}
+
 export default async function EventoDetailPage({ params }: Props) {
   const evento = await prisma.evento.findUnique({
     where: { slug: params.slug, publicado: true, ativo: true },
@@ -105,15 +199,9 @@ export default async function EventoDetailPage({ params }: Props) {
 
             {evento.conteudo ? (
               <div
-                className="prose prose-gray max-w-none text-[#333] font-inter"
-                // Texto colado sem HTML no admin: preserva quebras de linha e parágrafos
+                className="prose prose-gray max-w-none text-[#333] font-inter leading-relaxed"
                 dangerouslySetInnerHTML={{
-                  __html: /<[a-z][\s\S]*>/i.test(evento.conteudo)
-                    ? evento.conteudo
-                    : evento.conteudo
-                        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-                        .replace(/\n/g, '<br />')
-                        .replace(/(<br\s*\/>){3,}/gi, '<br /><br />'),
+                  __html: formatarConteudoEvento(evento.conteudo),
                 }}
               />
             ) : (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Truck, Gift, Zap, ChevronDown, ChevronUp, Loader2, ExternalLink } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 
@@ -28,6 +28,24 @@ export function CalculadorFrete({ subtotal, compact = false }: Props) {
   const [aberto,  setAberto]  = useState(!compact)
 
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Recotação quando o subtotal muda com um CEP já informado (mudou a
+  // quantidade no produto, ou entrou/saiu item do carrinho). Sem isso a
+  // cotação ficava velha — inclusive a faixa de frete grátis.
+  const primeiraRenderizacao = useRef(true)
+  useEffect(() => {
+    if (primeiraRenderizacao.current) {
+      primeiraRenderizacao.current = false
+      return
+    }
+    const cepLimpo = cep.replace(/\D/g, '')
+    if (cepLimpo.length !== 8) return
+
+    const t = setTimeout(() => calcular(cepLimpo), 400)
+    return () => clearTimeout(t)
+    // `cep` fora das deps de propósito: digitar o CEP já dispara handleChange
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtotal])
 
   async function calcular(cepLimpo: string) {
     setLoading(true)

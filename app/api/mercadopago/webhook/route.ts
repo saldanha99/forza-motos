@@ -122,6 +122,9 @@ export async function POST(req: Request) {
 
         // Notifica admin
         const adminPhone = process.env.ADMIN_WHATSAPP ?? '5519974049445'
+        const garupaTxt = inscricao.temGarupa ? `Sim (${inscricao.nomeGarupa || 'Nome não informado'})` : 'Não (Solo)'
+        const motoTxt = inscricao.motoModelo ? `🏍️ Moto: ${inscricao.motoModelo}\n` : ''
+        const acomodacaoTxt = inscricao.tipoAcomodacao ? `🛏️ Quarto: ${inscricao.tipoAcomodacao}\n` : ''
         await enfileirarMensagem({
           whatsapp: adminPhone,
           nome: 'Admin',
@@ -133,6 +136,9 @@ export async function POST(req: Request) {
               `👤 Nome: ${inscricao.nome}\n` +
               `📧 E-mail: ${inscricao.email}\n` +
               `📱 Tel: ${inscricao.telefone}\n` +
+              motoTxt +
+              `👥 Garupa: ${garupaTxt}\n` +
+              acomodacaoTxt +
               `🎟️ Ingressos: ${inscricao.quantidade}\n` +
               `💰 Total: ${totalFmt}`,
           },

@@ -1,13 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, MessageCircle } from 'lucide-react'
+import { useTravarScrollDeFundo } from '@/components/SmoothScroll'
 
 const STORAGE_KEY = 'forza_lead_captured'
 const DELAY_MS = 30_000 // aparece após 30s
 
 export function LeadCaptureModal() {
   const [open, setOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const [nome, setNome] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
   const [loading, setLoading] = useState(false)
@@ -15,6 +18,8 @@ export function LeadCaptureModal() {
   const [erro, setErro] = useState('')
 
   useEffect(() => {
+    setMounted(true)
+
     // Não mostra se já capturou antes
     if (typeof window !== 'undefined' && localStorage.getItem(STORAGE_KEY)) return
 
@@ -34,6 +39,9 @@ export function LeadCaptureModal() {
       document.removeEventListener('mouseleave', handleMouseLeave)
     }
   }, [])
+
+  // Trava o scroll do fundo (nativo + Lenis) enquanto o popup está aberto
+  useTravarScrollDeFundo(open)
 
   function fechar() {
     setOpen(false)
@@ -80,26 +88,20 @@ export function LeadCaptureModal() {
     }
   }
 
-  if (!open) return null
+  if (!open || !mounted) return null
 
-  return (
-    <>
+  const popupJSX = (
+    // data-lenis-prevent: trava a roda do mouse no popup, senão o scroll suave
+    // (Lenis) rola a página por trás do overlay
+    <div data-lenis-prevent className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
       {/* Overlay */}
       <div
-        className="fixed inset-0 z-50"
-        style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
+        className="fixed inset-0 z-[99999] bg-black/65 backdrop-blur-sm transition-opacity"
         onClick={fechar}
       />
 
       {/* Modal */}
-      <div
-        className="fixed z-50 w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
-        style={{
-          bottom: '50%',
-          left: '50%',
-          transform: 'translate(-50%, 50%)',
-        }}
-      >
+      <div className="relative z-[100000] w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-2xl my-auto border border-gray-100">
         {/* Header vermelho */}
         <div
           className="relative px-6 pt-6 pb-5 text-white"
@@ -107,22 +109,22 @@ export function LeadCaptureModal() {
         >
           <button
             onClick={fechar}
-            className="absolute top-4 right-4 p-1 rounded-full"
-            style={{ background: 'rgba(255,255,255,0.15)' }}
+            className="absolute top-4 right-4 p-1.5 rounded-full bg-white/15 hover:bg-white/25 transition-colors text-white"
+            aria-label="Fechar"
           >
             <X size={16} />
           </button>
 
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
               <MessageCircle size={20} />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest opacity-80">Forza Motos</p>
+              <p className="text-[10px] font-semibold uppercase tracking-widest opacity-80">Forza Motos</p>
               <p className="font-bold text-lg leading-tight">Frete grátis acima de R$499!</p>
             </div>
           </div>
-          <p className="text-sm opacity-90">
+          <p className="text-xs opacity-90 leading-relaxed">
             Frete grátis para SP em compras acima de R$499. Deixe seu WhatsApp e receba ofertas exclusivas e dicas de manutenção. 🏍️
           </p>
         </div>
@@ -146,10 +148,7 @@ export function LeadCaptureModal() {
                   value={nome}
                   onChange={e => setNome(e.target.value)}
                   required
-                  className="w-full px-4 py-2.5 rounded-xl border text-sm outline-none transition-colors"
-                  style={{ borderColor: '#ddd', color: '#111' }}
-                  onFocus={e => { e.currentTarget.style.borderColor = '#d42b2b' }}
-                  onBlur={e => { e.currentTarget.style.borderColor = '#ddd' }}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-[#111] outline-none transition-colors focus:border-[#d42b2b]"
                 />
               </div>
               <div>
@@ -160,20 +159,16 @@ export function LeadCaptureModal() {
                   onChange={e => setWhatsapp(formatarWhatsApp(e.target.value))}
                   required
                   minLength={14}
-                  className="w-full px-4 py-2.5 rounded-xl border text-sm outline-none transition-colors"
-                  style={{ borderColor: '#ddd', color: '#111' }}
-                  onFocus={e => { e.currentTarget.style.borderColor = '#d42b2b' }}
-                  onBlur={e => { e.currentTarget.style.borderColor = '#ddd' }}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-[#111] outline-none transition-colors focus:border-[#d42b2b]"
                 />
               </div>
 
-              {erro && <p className="text-xs text-red-600">{erro}</p>}
+              {erro && <p className="text-xs text-red-600 font-medium">{erro}</p>}
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 rounded-xl font-bold text-sm text-white transition-opacity"
-                style={{ background: '#d42b2b', opacity: loading ? 0.7 : 1 }}
+                className="w-full py-3 rounded-xl font-bold text-sm text-white transition-opacity bg-[#d42b2b] hover:bg-red-700 disabled:opacity-70 shadow-md"
               >
                 {loading ? 'Enviando...' : '🎉 Quero frete grátis!'}
               </button>
@@ -185,6 +180,8 @@ export function LeadCaptureModal() {
           )}
         </div>
       </div>
-    </>
+    </div>
   )
+
+  return createPortal(popupJSX, document.body)
 }

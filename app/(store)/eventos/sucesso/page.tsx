@@ -43,8 +43,26 @@ export default async function EventoSucessoPage({
             <span className="text-[#888]">Participante</span>
             <span className="font-semibold text-[#333]">{inscricao.nome}</span>
           </div>
+          {inscricao.motoModelo && (
+            <div className="flex justify-between text-sm font-inter mt-1">
+              <span className="text-[#888]">Moto</span>
+              <span className="font-semibold text-[#333]">{inscricao.motoModelo}</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm font-inter mt-1">
-            <span className="text-[#888]">Ingressos</span>
+            <span className="text-[#888]">Garupa</span>
+            <span className="font-semibold text-[#333]">
+              {inscricao.temGarupa ? `Sim (${inscricao.nomeGarupa})` : 'Não (Solo)'}
+            </span>
+          </div>
+          {inscricao.tipoAcomodacao && (
+            <div className="flex justify-between text-sm font-inter mt-1">
+              <span className="text-[#888]">Quarto / Acomodação</span>
+              <span className="font-semibold text-[#333]">{inscricao.tipoAcomodacao}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-sm font-inter mt-1">
+            <span className="text-[#888]">Vagas</span>
             <span className="font-semibold text-[#333]">{inscricao.quantidade}x</span>
           </div>
           {Number(inscricao.total) > 0 && (

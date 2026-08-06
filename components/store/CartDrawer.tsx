@@ -11,6 +11,8 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useCartStore } from '@/store/cart'
 import { formatPrice } from '@/lib/utils'
+import { CalculadorFrete } from './CalculadorFrete'
+import { useTravarScrollDeFundo } from '@/components/SmoothScroll'
 import { X, Minus, Plus, ShoppingCart, Trash2, ArrowRight, Truck } from 'lucide-react'
 
 const FRETE_GRATIS_SP = 499
@@ -25,16 +27,15 @@ export function CartDrawer() {
   const total = subtotal()
   const qtd = items.reduce((acc, i) => acc + i.quantidade, 0)
 
-  // Trava o scroll do body com o drawer aberto + fecha no Esc
+  // Trava o scroll do fundo (nativo + Lenis) com o drawer aberto
+  useTravarScrollDeFundo(drawerAberto)
+
+  // Fecha no Esc
   useEffect(() => {
     if (!drawerAberto) return
-    document.body.style.overflow = 'hidden'
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && fecharDrawer()
     window.addEventListener('keydown', esc)
-    return () => {
-      document.body.style.overflow = ''
-      window.removeEventListener('keydown', esc)
-    }
+    return () => window.removeEventListener('keydown', esc)
   }, [drawerAberto, fecharDrawer])
 
   // Fecha ao navegar (ex.: clicou num produto dentro do drawer)
@@ -80,7 +81,10 @@ export function CartDrawer() {
       />
 
       {/* ── Drawer ── */}
+      {/* data-lenis-prevent: sem isso o scroll suave (Lenis) rolava a página de
+          trás quando a roda do mouse estava sobre o drawer */}
       <aside
+        data-lenis-prevent
         className={`fixed top-0 right-0 z-[80] h-full w-full max-w-[420px] bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-out ${
           drawerAberto ? 'translate-x-0' : 'translate-x-full'
         }`}
@@ -192,13 +196,15 @@ export function CartDrawer() {
               ))}
             </div>
 
-            {/* Rodapé: subtotal + CTAs */}
+            {/* Rodapé: subtotal + frete + CTAs */}
             <div className="border-t border-[#eee] px-5 py-4 space-y-3 bg-white">
               <div className="flex items-center justify-between">
                 <span className="font-inter text-sm text-[#666]">Subtotal</span>
                 <span className="font-barlow font-black text-2xl text-[#111]">{formatPrice(total)}</span>
               </div>
-              <p className="text-[11px] text-[#999] font-inter -mt-2">Frete calculado no checkout</p>
+              {/* Frete cotado aqui mesmo: o cliente vê o valor antes de ir para
+                  o checkout, já com todos os itens do carrinho no cálculo */}
+              <CalculadorFrete subtotal={total} compact />
               <Link
                 href="/checkout"
                 className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#d42b2b] hover:bg-red-700 text-white font-barlow font-bold uppercase text-sm tracking-wider transition-colors"

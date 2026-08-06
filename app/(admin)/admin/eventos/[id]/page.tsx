@@ -34,17 +34,25 @@ export default async function EditarEventoPage({ params }: { params: { id: strin
             titulo={
               <span className="flex items-center gap-2">
                 <Users size={16} className="text-brand-accent" />
-                Inscrições
+                Inscrições ({evento.inscricoes.length})
               </span>
             }
             acao={
-              <div className="flex gap-4 text-xs text-brand-muted">
-                <span>
+              <div className="flex items-center gap-4 text-xs">
+                <span className="text-brand-muted">
                   {totalPagos} participante{totalPagos !== 1 ? 's' : ''} confirmado{totalPagos !== 1 ? 's' : ''}
                 </span>
                 {receitaTotal > 0 && (
                   <span className="font-semibold text-brand-success">{formatPrice(receitaTotal)} arrecadado</span>
                 )}
+                <a
+                  href={`/api/admin/eventos/${evento.id}/export`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg border border-brand-border bg-brand-surface-2 px-3 py-1.5 font-semibold text-brand-text transition hover:border-brand-border-strong hover:bg-brand-elevated"
+                >
+                  📥 Exportar CSV
+                </a>
               </div>
             }
           />
@@ -52,8 +60,10 @@ export default async function EditarEventoPage({ params }: { params: { id: strin
             <table className="w-full text-sm">
               <thead className="border-b border-brand-hair bg-brand-surface-2">
                 <tr className="text-[11px] uppercase tracking-[0.12em] text-brand-dim">
-                  <th className={THEAD_TH}>Nome</th>
-                  <th className={THEAD_TH}>E-mail / WhatsApp</th>
+                  <th className={THEAD_TH}>Piloto / Moto</th>
+                  <th className={THEAD_TH}>Contato</th>
+                  <th className={THEAD_TH}>Garupa</th>
+                  <th className={THEAD_TH}>Acomodação (Hotel)</th>
                   <th className={THEAD_TH}>Qtd</th>
                   <th className={THEAD_TH}>Total</th>
                   <th className={THEAD_TH}>Status</th>
@@ -62,10 +72,25 @@ export default async function EditarEventoPage({ params }: { params: { id: strin
               <tbody>
                 {evento.inscricoes.map((ins) => (
                   <tr key={ins.id} className={TR_LINHA}>
-                    <td className={cn(TD_CELULA, 'font-medium text-brand-text')}>{ins.nome}</td>
+                    <td className={cn(TD_CELULA, 'font-medium text-brand-text')}>
+                      <div>{ins.nome}</div>
+                      {ins.motoModelo && <div className="text-xs text-brand-muted font-normal">🏍️ {ins.motoModelo}</div>}
+                    </td>
                     <td className={cn(TD_CELULA, 'text-xs text-brand-muted')}>
                       <div>{ins.email}</div>
                       <div>{ins.telefone}</div>
+                      {ins.cpf && <div className="text-[11px] text-brand-dim">CPF: {ins.cpf}</div>}
+                      {ins.cep && <div className="text-[11px] text-brand-dim">CEP: {ins.cep} Nº {ins.numeroResidencia}</div>}
+                    </td>
+                    <td className={cn(TD_CELULA, 'text-xs text-brand-muted')}>
+                      {ins.temGarupa ? (
+                        <span className="text-brand-accent font-semibold">👥 {ins.nomeGarupa || 'Sim'}</span>
+                      ) : (
+                        <span>Solo</span>
+                      )}
+                    </td>
+                    <td className={cn(TD_CELULA, 'text-xs text-brand-muted')}>
+                      {ins.tipoAcomodacao ? <span>{ins.tipoAcomodacao}</span> : <span className="opacity-40">-</span>}
                     </td>
                     <td className={cn(TD_CELULA, 'text-brand-muted')}>{ins.quantidade}</td>
                     <td className={cn(TD_CELULA, 'text-brand-muted')}>

@@ -670,6 +670,20 @@ model EventoInscricao {
   email           String
   telefone        String
   quantidade      Int                   @default(1)
+  /// Se o participante vai acompanhado de garupa
+  temGarupa       Boolean               @default(false)
+  /// Nome completo da garupa (se temGarupa = true)
+  nomeGarupa      String?
+  /// Preferência de quarto/acomodação: "Quarto Casal", "Quarto Single / Compartilhado"
+  tipoAcomodacao  String?
+  /// Modelo da moto do participante (ex: BMW R1250 GS, Tiger 900)
+  motoModelo      String?
+  /// CPF do participante (obrigatório em eventos pagos para hotel/seguro)
+  cpf             String?
+  /// CEP do participante
+  cep             String?
+  /// Número residencial do participante
+  numeroResidencia String?
   /// Rótulo da opção de vaga escolhida (ex: "Com garupa") — snapshot no momento da compra
   opcaoVagaLabel  String?
   /// Preço unitário da opção escolhida — snapshot (preço do evento pode mudar depois)
