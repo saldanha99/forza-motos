@@ -6,7 +6,8 @@ import { consumirReservasDoAgendamento, cancelarReservasDoAgendamento } from '@/
 
 export const dynamic = 'force-dynamic'
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -38,7 +39,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 const STATUS_VALIDOS = ['pendente', 'confirmado', 'concluido', 'cancelado']
 
 /** Muda só o status — usado pelo arraste do quadro Kanban. */
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -63,7 +65,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   return NextResponse.json(agendamento)
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })

@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { Breadcrumb } from '@/components/store/Breadcrumb'
 import { CalendarioClient } from '@/components/store/CalendarioClient'
 import { SITE_URL } from '@/lib/schema'
+import { EVENTO_PIRELLI_SLUG } from '@/lib/evento-pirelli'
+import { eventoPirelliParaListagem } from '@/lib/eventos/listagem-pirelli'
 import { Calendar } from 'lucide-react'
 
 export const metadata: Metadata = {
@@ -21,20 +23,31 @@ export const metadata: Metadata = {
 }
 
 export default async function CalendarioPage() {
-  const eventos = await prisma.evento.findMany({
-    where: { publicado: true, ativo: true },
-    orderBy: { dataInicio: 'asc' },
-  })
+  const [eventosComuns, eventoPirelli] = await Promise.all([
+    prisma.evento.findMany({
+      where: { publicado: true, ativo: true, ocultoListagem: false },
+      orderBy: { dataInicio: 'asc' },
+    }),
+    prisma.eventoPirelli.findUnique({ where: { slug: EVENTO_PIRELLI_SLUG } }),
+  ])
+
+  const itemPirelli = eventoPirelliParaListagem(eventoPirelli, 'eventos')
+  const eventos = [
+    ...eventosComuns.map((evento) => ({
+      ...evento,
+      preco: Number(evento.preco),
+      etiquetaPreco: null,
+      href: `/eventos/${evento.slug}`,
+    })),
+    ...(itemPirelli ? [itemPirelli] : []),
+  ].sort((a, b) => a.dataInicio.getTime() - b.dataInicio.getTime())
 
   const categorias = Array.from(new Set(eventos.map((e) => e.categoria))).sort()
 
   const serialized = eventos.map((e) => ({
     ...e,
-    preco: Number(e.preco),
     dataInicio: e.dataInicio.toISOString(),
     dataFim: e.dataFim?.toISOString() ?? null,
-    createdAt: e.createdAt.toISOString(),
-    updatedAt: e.updatedAt.toISOString(),
   }))
 
   return (

@@ -16,7 +16,8 @@ async function exigirAdmin() {
   return session && session.user.role === 'ADMIN'
 }
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   if (!(await exigirAdmin())) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const reservas = await prisma.reservaEstoque.findMany({
@@ -37,7 +38,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   return NextResponse.json(comDisponivel)
 }
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   if (!(await exigirAdmin())) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const body = await req.json().catch(() => ({}))
