@@ -29,8 +29,61 @@ Seu agendamento na *Forza Motos* está confirmado!
 Qualquer dúvida é só responder aqui. Te esperamos! 🏁`
 }
 
-export function msgPedidoConfirmado(nome: string, numeroPedido: string): string {
+export interface OpcoesPedidoConfirmado {
+  preVenda?: boolean
+  prazoPreVendaDias?: number | null
+  prazoTotalDias?: number | null
+  retirada?: boolean
+  nomeCampanha?: string | null
+  canecaEventoPirelli?: boolean
+  nomeGravacao?: string | null
+  quantidadeCanecas?: number | null
+  linkConfirmacaoCaneca?: string | null
+}
+
+export function msgPedidoConfirmado(
+  nome: string,
+  numeroPedido: string,
+  opcoes: OpcoesPedidoConfirmado = {},
+): string {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://forzamotos.com.br'
+  if (opcoes.canecaEventoPirelli) {
+    const quantidade = Math.max(1, opcoes.quantidadeCanecas ?? 1)
+    const gravacao = opcoes.nomeGravacao
+      ? `\n✍️ Nome para gravação: *${opcoes.nomeGravacao}*.`
+      : ''
+    return `Oi *${nome}*! ✅ O pagamento da sua caneca foi aprovado!
+
+🧾 Pedido: *#${numeroPedido}*
+☕ Quantidade: *${quantidade} ${quantidade === 1 ? 'caneca' : 'canecas'}*.${gravacao}
+
+Sua compra já está vinculada ao seu cadastro da experiência Pirelli. A equipe verá a confirmação automaticamente.
+
+Confira sua compra e acompanhe a gravação:
+👉 ${opcoes.linkConfirmacaoCaneca || `${baseUrl}/evento-pirelli`}
+
+Obrigado por participar com a *Forza Motos*! 🏁`
+  }
+  if (opcoes.preVenda) {
+    const campanha = opcoes.nomeCampanha ? ` da campanha *${opcoes.nomeCampanha}*` : ''
+    const disponibilidade = opcoes.prazoPreVendaDias
+      ? `\n⏳ Disponibilidade: até *${opcoes.prazoPreVendaDias} dias úteis*.`
+      : ''
+    const prazoTotal = opcoes.prazoTotalDias
+      ? `\n🚚 Prazo total estimado no checkout: até *${opcoes.prazoTotalDias} dias úteis*.`
+      : ''
+    const retirada = opcoes.retirada
+      ? '\n📍 Aguarde nosso aviso de pedido pronto antes de ir à loja.'
+      : ''
+    return `Oi *${nome}*! ✅ Seu pedido *#${numeroPedido}* foi confirmado!
+
+Seu pagamento foi aprovado e sua *pré-venda*${campanha} está reservada. Os produtos não estão disponíveis para envio ou retirada imediata.${disponibilidade}${prazoTotal}${retirada}
+
+Você pode acompanhar o status em:
+👉 ${baseUrl}/rastrear?pedido=${numeroPedido}
+
+Obrigado por escolher a *Forza Motos*! 🏍️`
+  }
   return `Oi *${nome}*! ✅ Seu pedido *#${numeroPedido}* foi confirmado!
 
 Estamos separando seus produtos com cuidado. 📦
@@ -42,14 +95,28 @@ Obrigado por escolher a *Forza Motos*! 🏍️`
 }
 
 export function msgPedidoEnviado(nome: string, numeroPedido: string, rastreio: string, transportadora: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://forzamotos.com.br'
   return `🚀 *${nome}*, seu pedido *#${numeroPedido}* foi enviado!
 
 📦 Código de rastreio: *${rastreio}*
 🚚 Transportadora: ${transportadora}
 
-Acompanhe pelo site da transportadora ou nos chame aqui para ajudar.
+Acompanhe o andamento em:
+👉 ${baseUrl}/rastrear?pedido=${numeroPedido}
 
 *Forza Motos* — obrigado pela preferência! 🏍️`
+}
+
+export function msgPedidoEntregue(nome: string, numeroPedido: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://forzamotos.com.br'
+  return `📦 *${nome}*, seu pedido *#${numeroPedido}* foi entregue!
+
+Esperamos que tenha chegado tudo certinho. Se precisar de ajuda com o produto ou com o pedido, responda esta mensagem e fale com a equipe da *Forza Motos*.
+
+Detalhes do pedido:
+👉 ${baseUrl}/rastrear?pedido=${numeroPedido}
+
+Obrigado pela confiança! 🏍️`
 }
 
 export function msgCarrinhoAbandonado(nome: string, produtos: string[]): string {

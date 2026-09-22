@@ -84,11 +84,12 @@ function CardEstatistica({
   )
 }
 
-export default async function CrmPage({
-  searchParams,
-}: {
-  searchParams: { vista?: string }
-}) {
+export default async function CrmPage(
+  props: {
+    searchParams: Promise<{ vista?: string }>
+  }
+) {
+  const searchParams = await props.searchParams;
   const vista = searchParams.vista === 'lista' ? 'lista' : 'funil'
 
   const [totalLeads, responderam, convertidos, pendentes, falhas, enviadas] = await Promise.all([
