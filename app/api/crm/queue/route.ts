@@ -1,6 +1,6 @@
 /**
  * GET /api/crm/queue — Processa fila de mensagens WhatsApp
- * Chamado pelo cron do Vercel a cada 5 minutos
+ * Chamado pelo cron da VPS (crontab → cron-forza.sh) a cada minuto
  */
 
 import { NextResponse } from 'next/server'

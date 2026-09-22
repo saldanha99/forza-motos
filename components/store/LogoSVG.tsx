@@ -1,39 +1,25 @@
 import Image from 'next/image'
 
 interface LogoSVGProps {
-  /** true = contexto escuro (adiciona fundo branco arredondado atrás do logo) */
+  /**
+   * true = contexto escuro (cabeçalho e rodapé pretos).
+   * O PNG tem fundo transparente e traz branco e vermelho no desenho, então
+   * ele aparece direto sobre o preto — sem a plaquinha branca que encolhia a
+   * marca e a deixava com cara de selo colado.
+   */
   dark?: boolean
   height?: number
   className?: string
 }
 
-/**
- * Logo real da Forza Motos (PNG).
- * - dark=true  → contexto escuro: exibe o logo com fundo branco arredondado
- * - dark=false → contexto claro: exibe direto (fundo da imagem é branco)
- */
-export function LogoSVG({ dark = false, height = 40, className = '' }: LogoSVGProps) {
-  // Proporção original do logo: 1200×900 ≈ 4:3 → largura = height * 1.55 (sem o texto abaixo seria 1.33)
-  // Com o texto "FORZAMOTOS" abaixo a proporção real é ~1200x900 = 4:3
-  const width = Math.round(height * (4 / 3))
+// Proporção real do arquivo: 1200×795. Usar 4/3 aqui reservava menos largura
+// do que a marca precisa e, com objectFit "contain", o logo saía menor que a
+// altura pedida — era parte do "logo pequeno demais".
+const PROPORCAO = 1200 / 795
 
-  if (dark) {
-    return (
-      <div
-        className={`inline-flex items-center justify-center bg-white rounded-xl px-2 ${className}`}
-        style={{ height: height + 8, width: width + 16 }}
-      >
-        <Image
-          src="/images/logo-forza.png"
-          alt="Forza Motos"
-          width={width}
-          height={height}
-          style={{ objectFit: 'contain', height, width }}
-          priority
-        />
-      </div>
-    )
-  }
+/** Logo oficial da Forza Motos (PNG com transparência). */
+export function LogoSVG({ dark = false, height = 40, className = '' }: LogoSVGProps) {
+  const width = Math.round(height * PROPORCAO)
 
   return (
     <Image
@@ -42,7 +28,7 @@ export function LogoSVG({ dark = false, height = 40, className = '' }: LogoSVGPr
       width={width}
       height={height}
       style={{ objectFit: 'contain', height, width }}
-      className={className}
+      className={`${dark ? 'drop-shadow-[0_1px_6px_rgba(0,0,0,0.55)]' : ''} ${className}`.trim()}
       priority
     />
   )

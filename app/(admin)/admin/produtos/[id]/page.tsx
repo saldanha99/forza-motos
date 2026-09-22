@@ -6,7 +6,14 @@ import { PageHeader } from '@/components/admin/ui/primitives'
 
 export default async function EditarProdutoPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  const produto = await prisma.product.findUnique({ where: { id: params.id } })
+  const [produto, segmentosPneu] = await Promise.all([
+    prisma.product.findUnique({ where: { id: params.id } }),
+    prisma.pneuSegmento.findMany({
+      where: { ativo: true },
+      orderBy: [{ ordem: 'asc' }, { nome: 'asc' }],
+      select: { id: true, nome: true },
+    }).catch(() => []),
+  ])
   if (!produto) notFound()
   if (produto.eventoPirelliId) redirect('/admin/evento-pirelli/produtos')
 
@@ -16,7 +23,7 @@ export default async function EditarProdutoPage(props: { params: Promise<{ id: s
         titulo="Editar produto"
         descricao="Alterações aqui refletem na loja assim que salvas. Use “Sync agora” para trazer preço, estoque e dados atuais do Tiny."
       />
-      <ProdutoForm produto={produto as any} />
+      <ProdutoForm produto={produto as any} segmentosPneu={segmentosPneu} />
     </div>
   )
 }

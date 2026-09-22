@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Forza Motos
 
-## Getting Started
+Loja, painel administrativo e integrações da Forza Motos (Sorocaba/SP) — Next.js 16 (App Router), TypeScript, Tailwind, Prisma e PostgreSQL.
 
-First, run the development server:
+## Onde isso roda
+
+Tudo na VPS própria (`/opt/forza`), em Docker: app Next.js em modo `standalone`, PostgreSQL (`forza-db`), worker de sincronização com o Olist, nginx das imagens (`/imagens`) e Traefik na frente. **Não há nada em Vercel, Neon ou storage gerenciado** — imagens ficam no volume `/imagens` e o banco é o PostgreSQL da própria VPS.
+
+## Desenvolvimento
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Copie `.env.example` para `.env.local` e preencha. O banco local é um PostgreSQL local — nunca aponte a `DATABASE_URL` de desenvolvimento para a produção.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+./deploy.sh          # app
+./deploy.sh worker   # app + worker de sync
+```
 
-## Learn More
+`git push` **não** faz deploy: ele só versiona. O `deploy.sh` faz rsync do working tree para a VPS, builda a imagem, testa as migrations contra uma cópia do banco, tira backup e só então aplica `prisma migrate deploy` e sobe o container.
 
-To learn more about Next.js, take a look at the following resources:
+## Testes
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run test:security   # suíte de checkout, eventos, logística e Pirelli
+npm run lint
+npm run verificar        # fronteira server/client e tema do painel admin
+```

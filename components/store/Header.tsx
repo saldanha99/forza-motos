@@ -149,8 +149,8 @@ export function Header() {
 
         {/* Logo */}
         <Link href="/" className="shrink-0">
-          <LogoSVG dark height={40} className="hidden md:block" />
-          <LogoSVG dark height={32} className="md:hidden" />
+          <LogoSVG dark height={74} className="hidden md:block" />
+          <LogoSVG dark height={46} className="md:hidden" />
         </Link>
 
         {/* Search */}

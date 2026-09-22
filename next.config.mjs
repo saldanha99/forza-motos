@@ -10,8 +10,6 @@ const nextConfig = {
       // Imagens de produto servidas pela própria VPS (nginx em /imagens)
       { protocol: 'https', hostname: 'www.forzamotos.com.br' },
       { protocol: 'https', hostname: 'forzamotos.com.br' },
-      { protocol: 'https', hostname: '**.vercel-storage.com' },
-      { protocol: 'https', hostname: '**.blob.vercel-storage.com' },
       { protocol: 'https', hostname: 'olist.com' },
       { protocol: 'https', hostname: '**.olist.com' },
       // Tiny ERP CDN domains
@@ -31,8 +29,6 @@ const nextConfig = {
         'localhost:3000',
         'forzamotos.com.br',
         'www.forzamotos.com.br',
-        'forza-motos-app.vercel.app',
-        '*.vercel.app',
       ],
     },
   },

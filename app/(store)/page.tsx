@@ -14,7 +14,6 @@ import { getLocalBusinessSchema } from '@/lib/schema'
 import { getBannerUrls } from '@/lib/marketing'
 import { ReviewsSection } from '@/components/store/ReviewsSection'
 import { TrustBar } from '@/components/store/TrustBar'
-import { BrandMarquee } from '@/components/store/BrandMarquee'
 import { BuscaCombinada } from '@/components/store/BuscaCombinada'
 import { getIndiceMedidas } from '@/lib/indice-medidas'
 import { EVENTO_PIRELLI_SLUG } from '@/lib/evento-pirelli'
@@ -123,11 +122,12 @@ async function getHomeData() {
   }
 }
 
+// `banner` é a chave no módulo de marketing — a imagem sai de /admin/marketing.
 const POP_CATS = [
-  { id: 'Pneus',         label: 'Pneus Premium',          sub: 'Pirelli · Metzeler · Michelin',    img: '/images/categories/pneus.jpg',       href: '/produtos?categoria=Pneus' },
-  { id: 'Lubrificantes', label: 'Óleos e Lubrificantes',  sub: 'Motul · Castrol',                  img: '/images/categories/oleos.jpg',       href: '/produtos?categoria=Lubrificantes' },
-  { id: 'Freios',        label: 'Freios e Segurança',     sub: 'EBC · Brembo · ATE',              img: '/images/categories/freios.jpg',      href: '/produtos?categoria=Freios' },
-  { id: 'Transmissão',   label: 'Kit Transmissão',        sub: 'DID · RK · Regina',               img: '/images/categories/transmissao.jpg', href: '/produtos?categoria=Transmissão' },
+  { id: 'Pneus',         label: 'Pneus Premium',          sub: 'Pirelli · Metzeler · Michelin',    banner: 'home-categoria-pneus',       href: '/produtos?categoria=Pneus' },
+  { id: 'Lubrificantes', label: 'Óleos e Lubrificantes',  sub: 'Motul · Castrol',                  banner: 'home-categoria-oleos',       href: '/produtos?categoria=Lubrificantes' },
+  { id: 'Freios',        label: 'Freios e Segurança',     sub: 'EBC · Brembo · ATE',              banner: 'home-categoria-freios',      href: '/produtos?categoria=Freios' },
+  { id: 'Transmissão',   label: 'Kit Transmissão',        sub: 'DID · RK · Regina',               banner: 'home-categoria-transmissao', href: '/produtos?categoria=Transmissão' },
 ]
 
 // Serviços do box rápido (extraído do áudio do Vinícius)
@@ -136,28 +136,28 @@ const SERVICOS = [
     titulo: 'Troca de Pneu',
     sub: 'Instalação e balanceamento inclusos',
     tempo: '~30 min',
-    img: '/images/services/pneu.jpg',
+    banner: 'home-servico-pneu',
     cor: '#d42b2b',
   },
   {
     titulo: 'Pastilha de Freio',
     sub: 'Peças originais e homologadas',
     tempo: '~30 min',
-    img: '/images/services/freio.jpg',
+    banner: 'home-servico-freio',
     cor: '#e05a00',
   },
   {
     titulo: 'Troca de Óleo',
     sub: 'Óleos certificados para motos',
     tempo: '~30 min',
-    img: '/images/services/oleo.jpg',
+    banner: 'home-servico-oleo',
     cor: '#0077cc',
   },
   {
     titulo: 'Kit Transmissão',
     sub: 'Corrente · Pinhão · Coroa',
     tempo: '~1h',
-    img: '/images/services/transmissao.jpg',
+    banner: 'home-servico-transmissao',
     cor: '#1a7a2e',
   },
 ]
@@ -179,6 +179,12 @@ export default async function HomePage() {
           pneus: banners['home-slide-pneus'],
           servicos: banners['home-slide-servicos'],
           entrega: banners['home-slide-entrega'],
+        }}
+        atalhos={{
+          pneu: banners['home-atalho-pneu'],
+          freio: banners['home-atalho-freio'],
+          oleo: banners['home-atalho-oleo'],
+          transmissao: banners['home-atalho-transmissao'],
         }}
       />
 
@@ -306,7 +312,7 @@ export default async function HomePage() {
                     {/* Imagem de fundo */}
                     <div className="relative w-full" style={{ aspectRatio: '1/1' }}>
                       <Image
-                        src={s.img}
+                        src={banners[s.banner]}
                         alt={s.titulo}
                         fill
                         sizes="(max-width: 768px) 50vw, 25vw"
@@ -404,9 +410,9 @@ export default async function HomePage() {
                       boxShadow: '0 2px 20px rgba(0,0,0,0.3)',
                     }}
                   >
-                    {/* Imagem de fundo gerada por IA */}
+                    {/* Imagem trocável em /admin/marketing */}
                     <Image
-                      src={cat.img}
+                      src={banners[cat.banner]}
                       alt={cat.label}
                       fill
                       sizes="(max-width: 768px) 50vw, 20vw"
@@ -452,7 +458,7 @@ export default async function HomePage() {
       <div className="relative overflow-hidden" style={{ minHeight: 220 }}>
         {/* Imagem de fundo */}
         <Image
-          src="/images/cta-banner.jpg"
+          src={banners['home-cta-banner']}
           alt=""
           fill
           sizes="100vw"
@@ -482,9 +488,6 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {/* ── Marcas Parceiras — Carrossel Vertical ──────────────────────── */}
-      <BrandMarquee />
-
       {/* ── Nossa Loja em Ação ───────────────────────────────────────────── */}
       <section className="py-16 bg-[#fafafa] border-t border-[#eee]">
         <div className="max-w-[1280px] mx-auto px-6 md:px-12">
@@ -505,28 +508,28 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
               {
-                src: '/images/loja-fachada.jpg',
+                src: banners['home-loja-fachada'],
                 alt: 'Fachada Forza Motos — Moto Service Campinas',
                 label: 'Nossa Loja',
                 sub: 'Campinas, SP',
                 pos: 'object-top',
               },
               {
-                src: '/images/loja-servico-1.jpg',
+                src: banners['home-loja-box'],
                 alt: 'Troca de pneu na Forza Motos',
                 label: 'Box Rápido',
                 sub: 'Troca em 30 min',
                 pos: 'object-center',
               },
               {
-                src: '/images/loja-servico-2.jpg',
+                src: banners['home-loja-equipe'],
                 alt: 'Mecânico especializado Forza Motos',
                 label: 'Mão de Obra',
                 sub: 'Equipe especializada',
                 pos: 'object-top',
               },
             ].map((item) => (
-              <div key={item.src} className="relative rounded-2xl overflow-hidden shadow-md group" style={{ aspectRatio: '3/4' }}>
+              <div key={item.label} className="relative rounded-2xl overflow-hidden shadow-md group" style={{ aspectRatio: '3/4' }}>
                 <Image
                   src={item.src}
                   alt={item.alt}

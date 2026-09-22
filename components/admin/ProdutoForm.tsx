@@ -7,7 +7,7 @@ import toast from 'react-hot-toast'
 import { Plus, X, Upload, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react'
 import { gerarSlug } from '@/lib/utils'
 import { Card, SectionTitle, Botao } from '@/components/admin/ui/primitives'
-import { Campo, Input, Textarea, Switch, AcoesFormulario } from '@/components/admin/ui/form'
+import { Campo, Input, Textarea, Select, Switch, AcoesFormulario } from '@/components/admin/ui/form'
 
 interface Produto {
   id?: string
@@ -27,9 +27,23 @@ interface Produto {
   preVenda?: boolean
   prazoEntregaDias?: number | null
   ocultoManual?: boolean
+  pneuSegmentoId?: string | null
+  pneuLinha?: string | null
 }
 
-export function ProdutoForm({ produto }: { produto?: Produto }) {
+export interface SegmentoOpcao {
+  id: string
+  nome: string
+}
+
+export function ProdutoForm({
+  produto,
+  segmentosPneu = [],
+}: {
+  produto?: Produto
+  /** Categorias de pneu cadastradas em /admin/pneus-segmentos */
+  segmentosPneu?: SegmentoOpcao[]
+}) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [uploadLoading, setUploadLoading] = useState(false)
@@ -48,6 +62,8 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
     destaque: produto?.destaque ?? false,
     preVenda: produto?.preVenda ?? false,
     prazoEntregaDias: produto?.prazoEntregaDias ?? '',
+    pneuSegmentoId: produto?.pneuSegmentoId ?? '',
+    pneuLinha: produto?.pneuLinha ?? '',
   })
   const [compatibilidade, setCompatibilidade] = useState<string[]>(produto?.compatibilidadeMotos ?? [])
   const [imagens, setImagens] = useState<string[]>(produto?.imagens ?? [])
@@ -113,7 +129,15 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, compatibilidadeMotos: compatibilidade, imagens }),
+        body: JSON.stringify({
+          ...form,
+          // Campo vazio quer dizer "sem classificação"; string vazia quebraria
+          // a chave estrangeira de PneuSegmento.
+          pneuSegmentoId: form.pneuSegmentoId || null,
+          pneuLinha: String(form.pneuLinha).trim() || null,
+          compatibilidadeMotos: compatibilidade,
+          imagens,
+        }),
       })
       if (!res.ok) {
         const d = await res.json()
@@ -193,6 +217,43 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
             <Input id="produto-marca" value={form.marca} onChange={(e) => update('marca', e.target.value)} placeholder="Pirelli, Michelin..." />
           </Campo>
         </div>
+
+        {/* Classificação de pneu — o Olist só manda "Pneu >> <marca>", que não
+            diz nada sobre o uso da moto, então quem define é a loja. */}
+        {segmentosPneu.length > 0 && (
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <Campo
+              label="Categoria de pneu"
+              htmlFor="produto-pneu-segmento"
+              dica="Define em qual aba de /pneus o produto aparece. Deixe em branco se não for pneu."
+            >
+              <Select
+                id="produto-pneu-segmento"
+                value={form.pneuSegmentoId}
+                onChange={(e) => update('pneuSegmentoId', e.target.value)}
+              >
+                <option value="">— não classificar —</option>
+                {segmentosPneu.map((seg) => (
+                  <option key={seg.id} value={seg.id}>
+                    {seg.nome}
+                  </option>
+                ))}
+              </Select>
+            </Campo>
+            <Campo
+              label="Modelo do pneu"
+              htmlFor="produto-pneu-linha"
+              dica="Vira a subcategoria dentro da categoria. Escreva igual nos pneus da mesma linha."
+            >
+              <Input
+                id="produto-pneu-linha"
+                value={form.pneuLinha}
+                onChange={(e) => update('pneuLinha', e.target.value)}
+                placeholder="Angel GT, Sportmax, Anakee Adventure..."
+              />
+            </Campo>
+          </div>
+        )}
       </Card>
 
       {/* Preços e estoque */}

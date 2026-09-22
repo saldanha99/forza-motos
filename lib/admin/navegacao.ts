@@ -1,5 +1,5 @@
 import {
-  BookOpen, Bike, Calendar, FileText, ImagePlus, LayoutDashboard, ListChecks,
+  BookOpen, Bike, Calendar, FileText, ImagePlus, Layers, LayoutDashboard, ListChecks,
   Megaphone, MessageCircle, Package, PartyPopper, RefreshCw, Search, Settings, ShoppingBag,
   Ticket, TicketPercent, Users, type LucideIcon,
 } from 'lucide-react'
@@ -39,6 +39,7 @@ export const GRUPOS_NAV: GrupoNav[] = [
     itens: [
       { href: '/admin/produtos',      label: 'Produtos',      icon: Package },
       { href: '/admin/motos',         label: 'Motos',         icon: Bike },
+      { href: '/admin/pneus-segmentos', label: 'Categorias de pneu', icon: Layers },
       { href: '/admin/curadoria',     label: 'Curadoria',     icon: ListChecks, badge: 'curadoria' },
       { href: '/admin/fotos',         label: 'Fotos',         icon: ImagePlus },
       { href: '/admin/sincronizacao', label: 'Sincronização', icon: RefreshCw },
@@ -88,6 +89,7 @@ export const TITULOS: Record<string, { titulo: string; subtitulo: string }> = {
   '/admin/produtos':      { titulo: 'Produtos',       subtitulo: 'Catálogo sincronizado com o Olist' },
   '/admin/motos':         { titulo: 'Motos',          subtitulo: 'Modelos e as medidas de fábrica usadas na busca por placa' },
   '/admin/curadoria':     { titulo: 'Curadoria',      subtitulo: 'Decide o que aparece na loja — arraste entre na loja e oculto' },
+  '/admin/pneus-segmentos': { titulo: 'Categorias de pneu', subtitulo: 'Custom, Big Trail, Esportivo/Street, Scooter — o menu de /pneus' },
   '/admin/fotos':         { titulo: 'Fotos',          subtitulo: 'Imagens dos produtos vindas do ERP e enviadas à mão' },
   '/admin/sincronizacao': { titulo: 'Sincronização',  subtitulo: 'Estado das cargas de produto, estoque e imagem vindas do Olist' },
   '/admin/crm':           { titulo: 'Funil de leads', subtitulo: 'Quem chegou pelo WhatsApp — arraste o card conforme o contato evolui' },

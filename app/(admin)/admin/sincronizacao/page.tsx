@@ -49,7 +49,7 @@ function tempoRelativo(iso: string | null): string {
 }
 
 export default async function SincronizacaoPage() {
-  const [statusRow, total, ativos, dropship999, imgPendentes, semFotoNoTiny, espelhadasRaw] =
+  const [statusRow, total, ativos, dropship999, imgPendentes, semFotoNoTiny, noStorageProprioRaw] =
     await Promise.all([
       prisma.setting.findUnique({ where: { key: 'sync_worker_status' } }),
       prisma.product.count(),
@@ -59,11 +59,11 @@ export default async function SincronizacaoPage() {
       prisma.product.count({ where: { temImagem: false, imagensVerificadas: true, tinyId: { not: null } } }),
       prisma.$queryRaw<[{ n: bigint }]>`
         SELECT COUNT(*)::bigint AS n FROM "Product"
-        WHERE "temImagem" = true AND imagens::text LIKE '%blob.vercel-storage.com%'
+        WHERE "temImagem" = true AND imagens::text LIKE '%/imagens/%'
       `,
     ])
 
-  const espelhadas = Number(espelhadasRaw[0]?.n ?? 0)
+  const noStorageProprio = Number(noStorageProprioRaw[0]?.n ?? 0)
   const comImagem = await prisma.product.count({ where: { temImagem: true } })
 
   let status: WorkerStatus | null = null
@@ -127,7 +127,7 @@ export default async function SincronizacaoPage() {
             { v: ativos, l: 'ativos (à venda)' },
             { v: dropship999, l: 'dropship (999)' },
             { v: imgPendentes, l: 'aguardando verificação de foto' },
-            { v: `${espelhadas}/${comImagem}`, l: 'fotos no storage próprio' },
+            { v: `${noStorageProprio}/${comImagem}`, l: 'fotos no storage próprio' },
           ].map((k) => (
             <Card key={k.l} className="px-4 py-4">
               <p className="font-barlow text-2xl font-black text-brand-text">{k.v}</p>

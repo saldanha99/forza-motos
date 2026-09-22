@@ -20,8 +20,8 @@ export interface OpcaoFrete {
   gratis?: boolean
 }
 
-const FRETE_GRATIS_MIN = 499          // R$ 499,00
-const ESTADO_FRETE_GRATIS = 'SP'
+export const FRETE_GRATIS_MIN = 499   // R$ 499,00
+export const ESTADO_FRETE_GRATIS = 'SP'
 
 export function calcularRegrasFrete(estado: string, subtotal: number): OpcaoFrete[] {
   const uf = estado.toUpperCase().trim()

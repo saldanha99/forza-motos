@@ -42,3 +42,6 @@ next-env.d.ts
 # 2time SEO
 .2time-license.json
 _backup_glossario_antes_plugin/
+
+# anotações locais do Caio/Vinícius, fora do deploy
+/forza eventos.txt
