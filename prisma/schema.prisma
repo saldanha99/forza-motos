@@ -83,59 +83,67 @@ enum OrigemCliente {
 }
 
 model Product {
-  id                   String   @id @default(cuid())
-  sku                  String   @unique
-  nome                 String
-  slug                 String   @unique
-  descricao            String   @db.Text
-  preco                Decimal  @db.Decimal(10, 2)
-  precoPromocional     Decimal? @db.Decimal(10, 2)
-  estoque              Int      @default(0)
-  categoria            String
-  marca                String
-  compatibilidadeMotos Json     @default("[]")
-  imagens              Json     @default("[]")
-  ativo                Boolean  @default(true)
-  destaque             Boolean  @default(false)
+  id                    String         @id @default(cuid())
+  sku                   String         @unique
+  nome                  String
+  slug                  String         @unique
+  descricao             String         @db.Text
+  preco                 Decimal        @db.Decimal(10, 2)
+  precoPromocional      Decimal?       @db.Decimal(10, 2)
+  estoque               Int            @default(0)
+  categoria             String
+  marca                 String
+  compatibilidadeMotos  Json           @default("[]")
+  imagens               Json           @default("[]")
+  ativo                 Boolean        @default(true)
+  destaque              Boolean        @default(false)
   /// Pré-venda: pode ser comprado mesmo com estoque 0 (ex.: produtos Pirelli do evento de Sorocaba)
-  preVenda             Boolean  @default(false)
+  preVenda              Boolean        @default(false)
   /// Prazo de postagem prometido na pré-venda, em dias úteis (exibido no card/página)
-  prazoEntregaDias     Int?
+  prazoEntregaDias      Int?
+  /// Campanha Pirelli à qual este produto de pré-venda pertence.
+  /// Null identifica o catálogo regular do e-commerce.
+  eventoPirelliId       String?
+  eventoPirelli         EventoPirelli? @relation(fields: [eventoPirelliId], references: [id], onDelete: Restrict)
+  /// Ordena a vitrine exclusiva da landing page do evento.
+  ordemEvento           Int            @default(0)
+  /// Limite comercial por pedido. A pré-venda não usa estoque físico.
+  limitePorPedidoEvento Int?
   /// ID do produto no Tiny ERP
-  tinyId               String?
+  tinyId                String?
   /// Marca true após verificar imagens no Tiny (mesmo que não tenha nenhuma)
-  imagensVerificadas   Boolean  @default(false)
+  imagensVerificadas    Boolean        @default(false)
   /// True quando o produto tem pelo menos 1 imagem — usado para filtrar exibição
-  temImagem            Boolean  @default(false)
+  temImagem             Boolean        @default(false)
   /// SKU do produto-pai quando este é uma variação de tamanho (filho some das listagens)
-  variacaoDe           String?
+  variacaoDe            String?
   /// True para produto-pai de variações (_PAI do Tiny) — card vira "escolher tamanho"
-  ehPai                Boolean  @default(false)
+  ehPai                 Boolean        @default(false)
   /// Depósito de origem no Olist: loja | f_drop | eurolaqui | outro (populado pelo worker)
-  fornecedor           String?
+  fornecedor            String?
   /// Admin marcou p/ MANTER na loja mesmo sendo de fornecedor bloqueado (Eurolaqui)
-  mantidoManual        Boolean  @default(false)
+  mantidoManual         Boolean        @default(false)
   /// Admin OCULTOU manualmente da loja (mesmo ativo no Olist) — sync respeita
-  ocultoManual         Boolean  @default(false)
+  ocultoManual          Boolean        @default(false)
   /// Peso em kg (para cotação de frete)
-  peso                 Decimal? @db.Decimal(8, 3)
+  peso                  Decimal?       @db.Decimal(8, 3)
   /// Altura em cm
-  altura               Decimal? @db.Decimal(8, 2)
+  altura                Decimal?       @db.Decimal(8, 2)
   /// Largura em cm
-  largura              Decimal? @db.Decimal(8, 2)
+  largura               Decimal?       @db.Decimal(8, 2)
   /// Comprimento em cm
-  comprimento          Decimal? @db.Decimal(8, 2)
+  comprimento           Decimal?       @db.Decimal(8, 2)
   /// Medida do pneu decomposta a partir do nome — o Olist mistura as grafias
   /// ("150/60-17", "150/60 R17", "150/60ZR17"), então a busca usa estes 3
   /// inteiros em vez de texto. Null = produto não é pneu. Ver lib/medida-pneu.ts
-  medidaLargura        Int?
-  medidaPerfil         Int?
-  medidaAro            Int?
+  medidaLargura         Int?
+  medidaPerfil          Int?
+  medidaAro             Int?
   /// Construção do pneu: "radial" (150/70R17) ou "diagonal" (150/70-17).
   /// Não é estilo de escrita — são pneus diferentes e não intercambiáveis.
-  medidaConstrucao     String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  medidaConstrucao      String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
 
   orderItems OrderItem[]
   reviews    Review[]
@@ -148,6 +156,7 @@ model Product {
   @@index([variacaoDe])
   @@index([medidaLargura, medidaPerfil, medidaAro])
   @@index([estoqueReservado])
+  @@index([eventoPirelliId, ativo, ordemEvento])
 }
 
 model Review {
@@ -170,41 +179,61 @@ model Review {
 }
 
 model Order {
-  id                  String      @id @default(cuid())
-  orderNumber         String      @unique
-  userId              String?
-  user                User?       @relation(fields: [userId], references: [id])
-  status              OrderStatus @default(AGUARDANDO_PAGAMENTO)
-  subtotal            Decimal     @db.Decimal(10, 2)
-  frete               Decimal     @db.Decimal(10, 2)
-  desconto            Decimal     @default(0) @db.Decimal(10, 2)
-  /// Código do cupom aplicado no pedido (o valor do desconto vai em `desconto`)
-  cupomCodigo         String?
-  total               Decimal     @db.Decimal(10, 2)
-  enderecoEntrega     Json
-  pagamentoMetodo     String?
-  pagamentoIdExterno  String?
-  olistOrderId        String?
+  id                        String                     @id @default(cuid())
+  orderNumber               String                     @unique
+  userId                    String?
+  user                      User?                      @relation(fields: [userId], references: [id])
+  status                    OrderStatus                @default(AGUARDANDO_PAGAMENTO)
+  subtotal                  Decimal                    @db.Decimal(10, 2)
+  frete                     Decimal                    @db.Decimal(10, 2)
+  desconto                  Decimal                    @default(0) @db.Decimal(10, 2)
+  /// Código do cupom aplicado; `desconto` guarda cupom + eventual desconto à vista.
+  cupomCodigo               String?
+  total                     Decimal                    @db.Decimal(10, 2)
+  enderecoEntrega           Json
+  /// Modalidade escolhida antes do redirecionamento; protege descontos condicionais.
+  meioPagamentoCheckout     MeioPagamentoCheckout?
+  pagamentoMetodo           String?
+  pagamentoIdExterno        String?
+  olistOrderId              String?
+  /// Lease local que impede duas chamadas concorrentes de criarem o mesmo pedido no Olist.
+  olistSyncStatus           String?
+  olistSyncExpiraEm         DateTime?
   /// Serviço de frete escolhido pelo cliente (ex: "pac", "sedex", "jadlog", "jet")
-  freteServico        String?
+  freteServico              String?
   /// Nome da transportadora exibido ao cliente (ex: "Correios PAC", "Jadlog Package")
-  freteTransportadora String?
+  freteTransportadora       String?
   /// Prazo estimado em dias úteis informado na cotação
-  fretePrazo          Int?
+  fretePrazo                Int?
   /// Código de rastreamento informado pela transportadora (preenchido após envio)
-  trackingCode        String?
-  /// ID do envio no carrinho do Melhor Envio. Criado automaticamente quando o
-  /// pagamento é aprovado — ainda SEM comprar etiqueta (não gasta saldo).
-  melhorEnvioId       String?
-  /// Etapa do envio no ME: CARRINHO → COMPRADA → GERADA. Null = não usa ME
+  trackingCode              String?
+  /// Chave fiscal importada da NF-e autorizada na Olist (com fallback manual).
+  /// O envio comercial não pode ser preparado no Melhor Envio sem ela.
+  nfeChave                  String?                    @unique
+  nfeRegistradaEm           DateTime?
+  /// ID do envio no carrinho do Melhor Envio. Criado automaticamente depois
+  /// da NF-e autorizada — ainda SEM comprar etiqueta (não gasta saldo).
+  melhorEnvioId             String?
+  /// Etapa do envio no ME: CARRINHO → COMPRA_INCERTA | COMPRADA → GERADA | CANCELADA. Null = não usa ME
   /// (retirada na loja, ou pedido anterior à integração).
-  melhorEnvioStatus   String?
+  melhorEnvioStatus         String?
+  /// Lease local para preparar/comprar uma etiqueta uma única vez.
+  melhorEnvioSyncStatus     String?
+  melhorEnvioSyncExpiraEm   DateTime?
   /// URL do PDF da etiqueta, preenchida depois da compra pelo admin
-  melhorEnvioEtiqueta String?
+  melhorEnvioEtiqueta       String?
   /// Canal de origem do pedido
-  canal               CanalVenda  @default(ECOMMERCE)
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  canal                     CanalVenda                 @default(ECOMMERCE)
+  /// Campanha de origem, derivada no servidor a partir dos produtos.
+  eventoPirelliId           String?
+  eventoPirelli             EventoPirelli?             @relation(fields: [eventoPirelliId], references: [id], onDelete: Restrict)
+  /// Participante identificado por um token opaco na jornada do evento. Permite liberar
+  /// brindes automaticamente depois que o Mercado Pago confirma o pedido.
+  eventoPirelliVisitanteId  String?
+  eventoPirelliVisitante    EventoPirelliVisitante?    @relation(fields: [eventoPirelliVisitanteId], references: [id], onDelete: Restrict)
+  compraCanecaEventoPirelli EventoPirelliCompraCaneca?
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
 
   items    OrderItem[]
   tracking OrderTracking[]
@@ -215,15 +244,29 @@ model Order {
   cupomConsumido            Boolean              @default(false)
   reservaExpiraEm           DateTime?
   reservaLiberadaEm         DateTime?
+  /// Momento em que as obrigações duráveis de e-mail/WhatsApp da compra
+  /// foram gravadas. Null em pedido pago exige reparo pela reconciliação.
+  notificacoesAgendadasEm   DateTime?
   PagamentoTentativa        PagamentoTentativa[]
   ReembolsoPagamento        ReembolsoPagamento[]
 
   @@index([status, reservaExpiraEm])
+  @@index([olistSyncStatus, olistSyncExpiraEm])
+  @@index([melhorEnvioSyncStatus, melhorEnvioSyncExpiraEm])
+  @@index([eventoPirelliId, status, createdAt])
+  @@index([eventoPirelliVisitanteId, status, createdAt])
 }
 
 enum CanalVenda {
   ECOMMERCE
   MERCADOLIVRE
+  EVENTO_PIRELLI
+}
+
+enum MeioPagamentoCheckout {
+  PIX
+  BOLETO
+  CARTAO
 }
 
 enum OrderStatus {
@@ -245,7 +288,13 @@ model OrderItem {
   precoUnitario Decimal @db.Decimal(10, 2)
 
   // Reintroduzidos por introspecção: existiam no banco e não no schema
-  estoqueReservado Boolean @default(true)
+  estoqueReservado         Boolean @default(true)
+  /// Snapshots: editar o produto depois da compra não muda a promessa feita.
+  preVendaSnapshot         Boolean @default(false)
+  prazoEntregaDiasSnapshot Int?
+
+  @@index([orderId])
+  @@index([productId])
 }
 
 model OrderTracking {
@@ -255,6 +304,8 @@ model OrderTracking {
   status    String
   descricao String
   createdAt DateTime @default(now())
+
+  @@index([orderId, createdAt])
 }
 
 model CustomerCRM {
@@ -335,6 +386,8 @@ model CrmLead {
 
   // Reintroduzidos por introspecção: existiam no banco e não no schema
   consentimentoMarketingEm DateTime?
+  /// Supressão global de automações WhatsApp após PARE/SAIR.
+  whatsappOptOutEm         DateTime?
 
   @@index([whatsapp])
   @@index([etapa, createdAt])
@@ -359,37 +412,43 @@ enum LeadEtapa {
 
 /// Fila de mensagens WhatsApp via Evolution API
 model CrmMensagem {
-  id           String         @id @default(cuid())
+  id                String         @id @default(cuid())
+  /// Chave funcional opcional. Mensagens transacionais sempre a usam para
+  /// impedir duplicidade entre webhook, retorno e cron.
+  chaveIdempotencia String?        @unique
   /// Lead relacionado (opcional — mensagens de pedido têm userId)
-  leadId       String?
-  lead         CrmLead?       @relation(fields: [leadId], references: [id])
+  leadId            String?
+  lead              CrmLead?       @relation(fields: [leadId], references: [id])
   /// Usuário relacionado (opcional)
-  userId       String?
+  userId            String?
   /// Número WhatsApp destino (com DDI, ex: 5519999999999)
-  whatsapp     String
-  nome         String
+  whatsapp          String
+  nome              String
   /// Tipo da mensagem para saber qual template usar
-  tipo         MensagemTipo
+  tipo              MensagemTipo
   /// Conteúdo final da mensagem (já com variáveis substituídas)
-  conteudo     String         @db.Text
+  conteudo          String         @db.Text
   /// Status do envio
-  status       MensagemStatus @default(PENDENTE)
+  status            MensagemStatus @default(PENDENTE)
   /// Payload com dados extras (número pedido, rastreio, etc.)
-  payload      Json           @default("{}")
+  payload           Json           @default("{}")
   /// ID retornado pela Evolution API
-  evolutionId  String?
+  evolutionId       String?
   /// Quantidade de tentativas de envio
-  tentativas   Int            @default(0)
+  tentativas        Int            @default(0)
   /// Erro da última tentativa
-  erro         String?        @db.Text
+  erro              String?        @db.Text
   /// Quando enviar (suporte a envio agendado)
-  agendadoPara DateTime       @default(now())
+  agendadoPara      DateTime       @default(now())
+  /// Lease curta: se o worker cair, outro worker retoma a linha.
+  leaseExpiraEm     DateTime?
   /// Quando foi efetivamente enviada
-  enviadaEm    DateTime?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  enviadaEm         DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   @@index([status, agendadoPara])
+  @@index([status, leaseExpiraEm])
   @@index([whatsapp])
   @@index([createdAt])
 }
@@ -399,6 +458,7 @@ enum MensagemTipo {
   AGENDAMENTO // Agendamento confirmado
   PEDIDO_CONFIRMADO // Pagamento aprovado
   PEDIDO_ENVIADO // Código de rastreio disponível
+  PEDIDO_ENTREGUE // Entrega confirmada pela transportadora
   CARRINHO_ABANDONADO // Carrinho abandonado (2h)
   POS_VENDA // Pós-venda D+7
   REATIVACAO // Cliente inativo 60 dias
@@ -414,6 +474,43 @@ enum MensagemStatus {
   LIDA // Cliente leu a mensagem
   FALHA // Falhou após max tentativas
   CANCELADA // Cancelada manualmente
+}
+
+/// Outbox durável de e-mails transacionais. O pagamento cria a obrigação;
+/// o worker faz a chamada externa com lease, idempotência e retentativas.
+model EmailOutbox {
+  id                 String            @id @default(cuid())
+  chaveIdempotencia  String            @unique
+  tipo               EmailOutboxTipo
+  destinatario       String
+  payload            Json
+  status             EmailOutboxStatus @default(PENDENTE)
+  tentativas         Int               @default(0)
+  erro               String?           @db.Text
+  proximaTentativaEm DateTime          @default(now())
+  leaseExpiraEm      DateTime?
+  providerId         String?
+  enviadaEm          DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@index([status, proximaTentativaEm])
+  @@index([status, leaseExpiraEm])
+}
+
+enum EmailOutboxTipo {
+  PEDIDO_CONFIRMADO
+  INGRESSO_CONFIRMADO
+  NFE_AUTORIZADA
+  PEDIDO_ENVIADO
+  PEDIDO_ENTREGUE
+}
+
+enum EmailOutboxStatus {
+  PENDENTE
+  PROCESSANDO
+  ENVIADO
+  FALHA
 }
 
 model BlogPost {
@@ -639,30 +736,32 @@ model PlacaConsulta {
 // ============================================================
 
 model Evento {
-  id          String    @id @default(cuid())
-  titulo      String
-  slug        String    @unique
-  descricao   String    @db.Text
-  conteudo    String    @db.Text
-  dataInicio  DateTime
-  dataFim     DateTime?
-  local       String
-  endereco    String?
-  imagemUrl   String?
+  id             String    @id @default(cuid())
+  titulo         String
+  slug           String    @unique
+  descricao      String    @db.Text
+  conteudo       String    @db.Text
+  dataInicio     DateTime
+  dataFim        DateTime?
+  local          String
+  endereco       String?
+  imagemUrl      String?
   /// Galeria de fotos do evento — carrossel (roteiro, passeios anteriores, pontos visitados)
-  galeria     Json      @default("[]")
+  galeria        Json      @default("[]")
   /// Opções de vaga p/ evento pago: [{label, preco}] — ex: Sozinho, Com garupa, Quarto p/ 4
-  opcoesVaga  Json      @default("[]")
+  opcoesVaga     Json      @default("[]")
   /// 0 = gratuito
-  preco       Decimal   @default(0) @db.Decimal(10, 2)
-  categoria   String    @default("Evento")
-  vagas       Int?
-  linkExterno String?
-  ativo       Boolean   @default(true)
-  publicado   Boolean   @default(false)
-  destaque    Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  preco          Decimal   @default(0) @db.Decimal(10, 2)
+  categoria      String    @default("Evento")
+  vagas          Int?
+  linkExterno    String?
+  ativo          Boolean   @default(true)
+  publicado      Boolean   @default(false)
+  /// Mantém o evento acessível por link direto, sem exibi-lo na home/calendário.
+  ocultoListagem Boolean   @default(false)
+  destaque       Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   inscricoes EventoInscricao[]
 
@@ -671,48 +770,97 @@ model Evento {
 }
 
 model EventoInscricao {
-  id              String                @id @default(cuid())
-  eventoId        String
-  evento          Evento                @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  nome            String
-  email           String
-  telefone        String
-  quantidade      Int                   @default(1)
+  id                        String                @id @default(cuid())
+  eventoId                  String
+  evento                    Evento                @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  nome                      String
+  email                     String
+  telefone                  String
+  quantidade                Int                   @default(1)
   /// Se o participante vai acompanhado de garupa
-  temGarupa       Boolean               @default(false)
+  temGarupa                 Boolean               @default(false)
   /// Nome completo da garupa (se temGarupa = true)
-  nomeGarupa      String?
+  nomeGarupa                String?
   /// Preferência de quarto/acomodação: "Quarto Casal", "Quarto Single / Compartilhado"
-  tipoAcomodacao  String?
+  tipoAcomodacao            String?
   /// Modelo da moto do participante (ex: BMW R1250 GS, Tiger 900)
-  motoModelo      String?
+  motoModelo                String?
   /// CPF do participante (obrigatório em eventos pagos para hotel/seguro)
-  cpf             String?
+  cpf                       String?
   /// CEP do participante
-  cep             String?
+  cep                       String?
   /// Número residencial do participante
-  numeroResidencia String?
+  numeroResidencia          String?
   /// Rótulo da opção de vaga escolhida (ex: "Com garupa") — snapshot no momento da compra
-  opcaoVagaLabel  String?
+  opcaoVagaLabel            String?
   /// Preço unitário da opção escolhida — snapshot (preço do evento pode mudar depois)
-  opcaoVagaPreco  Decimal?              @db.Decimal(10, 2)
-  total           Decimal               @db.Decimal(10, 2)
-  status          EventoInscricaoStatus @default(PENDENTE)
+  opcaoVagaPreco            Decimal?              @db.Decimal(10, 2)
+  total                     Decimal               @db.Decimal(10, 2)
+  status                    EventoInscricaoStatus @default(PENDENTE)
   /// ID da preferência no Mercado Pago
-  mpPreferenciaId String?
+  mpPreferenciaId           String?
   /// ID do pagamento aprovado no Mercado Pago
-  mpPagamentoId   String?
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
+  mpPagamentoId             String?               @unique
+  /// Chave enviada pelo navegador para tornar retries do checkout idempotentes.
+  checkoutTentativaId       String?               @unique
+  /// Token opaco usado na página pública de acompanhamento da inscrição.
+  consultaToken             String?               @unique
+  /// Prazo durante o qual uma inscrição pendente ocupa uma vaga.
+  reservaExpiraEm           DateTime?
+  /// Último status observado no Mercado Pago.
+  mpStatus                  String?
+  /// Indica que a preferência pode ter sido criada, mas a resposta foi inconclusiva.
+  pagamentoResultadoIncerto Boolean               @default(false)
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+
+  tentativasPagamento EventoPagamentoTentativa[]
+  reembolsos          EventoReembolsoPagamento[]
 
   @@index([eventoId, status])
   @@index([email])
+  @@index([status, reservaExpiraEm])
 }
 
 enum EventoInscricaoStatus {
   PENDENTE
   PAGO
   CANCELADO
+}
+
+/// Cada pagamento observado para uma inscrição. Uma preferência pode receber
+/// várias tentativas; uma rejeição não pode invalidar uma aprovação posterior.
+model EventoPagamentoTentativa {
+  id          String          @id @default(cuid())
+  inscricaoId String
+  inscricao   EventoInscricao @relation(fields: [inscricaoId], references: [id], onDelete: Restrict)
+  paymentId   String          @unique
+  status      String
+  metodo      String?
+  valor       Decimal?        @db.Decimal(10, 2)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([inscricaoId, status])
+}
+
+/// Outbox durável para estornos de pagamentos de eventos.
+model EventoReembolsoPagamento {
+  id                 String          @id @default(cuid())
+  inscricaoId        String
+  inscricao          EventoInscricao @relation(fields: [inscricaoId], references: [id], onDelete: Restrict)
+  paymentId          String          @unique
+  motivo             String
+  status             ReembolsoStatus @default(PENDENTE)
+  tentativas         Int             @default(0)
+  ultimoErro         String?
+  proximaTentativaEm DateTime?
+  concluidoEm        DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@index([status, proximaTentativaEm])
+  @@index([inscricaoId])
 }
 
 // ============================================================
@@ -857,6 +1005,32 @@ enum EventoPirelliCompraCanecaStatus {
   CANCELADA
 }
 
+enum EventoPirelliFormaPagamento {
+  PIX_MERCADO_PAGO
+  MERCADO_PAGO
+  PIX_EXTERNO
+  DINHEIRO
+  CARTAO_CREDITO_MAQUININHA
+  CARTAO_DEBITO_MAQUININHA
+  OUTRO
+}
+
+enum EventoPirelliLancamentoCaixaTipo {
+  VENDA_CANECA
+  COMPRA_PNEUS
+}
+
+enum EventoPirelliLancamentoCaixaOrigem {
+  CHECKOUT_MERCADO_PAGO
+  ADMIN_PRESENCIAL
+}
+
+enum EventoPirelliVendaPresencialStatus {
+  AGUARDANDO_PAGAMENTO
+  PAGO
+  CANCELADO
+}
+
 enum EventoPirelliFotoStatus {
   PENDENTE
   FINALISTA
@@ -867,6 +1041,11 @@ enum EventoPirelliFotoStatus {
 enum EventoPirelliOperadorValor {
   MAIOR_QUE
   MAIOR_OU_IGUAL
+}
+
+enum EventoPirelliQuizTipo {
+  MULTIPLA_ESCOLHA
+  TEXTO
 }
 
 enum EventoPirelliOrigemCaneca {
@@ -883,27 +1062,46 @@ enum ReembolsoStatus {
 }
 
 model EventoPirelli {
-  id                       String                     @id @default(cuid())
-  slug                     String                     @unique @default("pirelli-forza")
-  titulo                   String                     @default("Evento Pirelli + Forza Motos")
-  descricao                String?                    @db.Text
-  dataInicio               DateTime?
-  dataFim                  DateTime?
-  local                    String?
-  logoForzaUrl             String?
-  logoPirelliUrl           String?
-  logoCampneusUrl          String?
-  ativo                    Boolean                    @default(true)
-  publicado                Boolean                    @default(false)
-  limiteNomeGravacao       Int                        @default(20)
-  valorMinimoPneus         Decimal                    @default(899) @db.Decimal(10, 2)
-  operadorValorMinimoPneus EventoPirelliOperadorValor @default(MAIOR_QUE)
-  createdAt                DateTime                   @default(now())
-  updatedAt                DateTime                   @updatedAt
+  id                           String                      @id @default(cuid())
+  slug                         String                      @unique @default("pirelli-forza")
+  titulo                       String                      @default("Evento Pirelli + Forza Motos")
+  descricao                    String?                     @db.Text
+  dataInicio                   DateTime?
+  dataFim                      DateTime?
+  local                        String?
+  logoForzaUrl                 String?
+  logoPirelliUrl               String?
+  logoCampneusUrl              String?
+  ativo                        Boolean                     @default(true)
+  publicado                    Boolean                     @default(false)
+  /// Exibe a campanha na seção de próximos eventos da home.
+  exibirNaHome                 Boolean                     @default(false)
+  /// Exibe a campanha na listagem pública /eventos (calendário).
+  exibirEmEventos              Boolean                     @default(false)
+  /// Libera cadastro, quiz, foto e balanceamento antes da data física.
+  /// O fim configurado continua fechando toda a experiência automaticamente.
+  inscricoesAntecipadasAbertas Boolean                     @default(false)
+  /// Libera ofertas e caneca antes da data física do evento.
+  vendasAntecipadasAbertas     Boolean                     @default(false)
+  /// A apuração do quiz fecha novas tentativas e congela o vencedor.
+  quizEncerradoEm              DateTime?
+  quizEncerradoPor             String?
+  quizVencedorTentativaId      String?                     @unique
+  quizVencedorTentativa        EventoPirelliQuizTentativa? @relation("EventoPirelliVencedorQuiz", fields: [quizVencedorTentativaId], references: [id], onDelete: SetNull)
+  limiteNomeGravacao           Int                         @default(20)
+  valorMinimoPneus             Decimal                     @default(899) @db.Decimal(10, 2)
+  valorCanecaAvulsa            Decimal                     @default(89) @db.Decimal(10, 2)
+  operadorValorMinimoPneus     EventoPirelliOperadorValor  @default(MAIOR_QUE)
+  createdAt                    DateTime                    @default(now())
+  updatedAt                    DateTime                    @updatedAt
 
-  visitantes    EventoPirelliVisitante[]
-  perguntasQuiz EventoPirelliQuizPergunta[]
-  comprasCaneca EventoPirelliCompraCaneca[]
+  visitantes        EventoPirelliVisitante[]
+  perguntasQuiz     EventoPirelliQuizPergunta[]
+  comprasCaneca     EventoPirelliCompraCaneca[]
+  lancamentosCaixa  EventoPirelliLancamentoCaixa[]
+  vendasPresenciais EventoPirelliVendaPresencial[]
+  produtos          Product[]
+  pedidos           Order[]
 
   @@index([ativo, publicado])
 }
@@ -915,6 +1113,9 @@ model EventoPirelliBalanceamento {
   horarioPreferido String?
   status           EventoPirelliBalanceamentoStatus @default(INTERESSE)
   registradoEm     DateTime                         @default(now())
+  confirmadoEm     DateTime?
+  participouEm     DateTime?
+  atualizadoPor    String?
 }
 
 model EventoPirelliCaneca {
@@ -938,59 +1139,135 @@ model EventoPirelliCaneca {
 }
 
 model EventoPirelliCompraCaneca {
-  id                   String                          @id @default(cuid())
-  eventoId             String
-  evento               EventoPirelli                   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  visitanteId          String?
-  visitante            EventoPirelliVisitante?         @relation(fields: [visitanteId], references: [id], onDelete: SetNull)
-  quantidade           Int                             @default(1)
-  nomeGravacaoSnapshot String
-  referenciaVenda      String?
+  id                     String                          @id @default(cuid())
+  eventoId               String
+  evento                 EventoPirelli                   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  visitanteId            String?
+  visitante              EventoPirelliVisitante?         @relation(fields: [visitanteId], references: [id], onDelete: SetNull)
+  /// Pedido pago no checkout próprio. Null preserva vendas presenciais antigas.
+  orderId                String?                         @unique
+  order                  Order?                          @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  quantidade             Int                             @default(1)
+  /// Vendas presenciais podem aguardar a confirmação do nome pelo WhatsApp.
+  nomeGravacaoSnapshot   String?
+  referenciaVenda        String?
+  formaPagamento         EventoPirelliFormaPagamento?
+  valorUnitarioSnapshot  Decimal?                        @db.Decimal(10, 2)
+  valorPago              Decimal?                        @db.Decimal(10, 2)
+  pagamentoConfirmadoEm  DateTime?
+  pagamentoConfirmadoPor String?
+  referenciaPagamento    String?
   /// Gerada no cliente por venda; protege duplo clique/retry de criar duas vendas.
-  chaveIdempotencia    String                          @unique
-  status               EventoPirelliCompraCanecaStatus @default(PENDENTE)
-  registradoEm         DateTime                        @default(now())
-  entregueEm           DateTime?
-  entreguePor          String?
-  observacao           String?                         @db.Text
+  chaveIdempotencia      String                          @unique
+  status                 EventoPirelliCompraCanecaStatus @default(PENDENTE)
+  registradoEm           DateTime                        @default(now())
+  entregueEm             DateTime?
+  entreguePor            String?
+  observacao             String?                         @db.Text
 
   @@index([eventoId, status, registradoEm])
+  @@index([visitanteId])
+}
+
+model EventoPirelliLancamentoCaixa {
+  id                  String                             @id @default(cuid())
+  eventoId            String
+  evento              EventoPirelli                      @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  visitanteId         String
+  visitante           EventoPirelliVisitante             @relation(fields: [visitanteId], references: [id], onDelete: Restrict)
+  tipo                EventoPirelliLancamentoCaixaTipo
+  origem              EventoPirelliLancamentoCaixaOrigem
+  quantidade          Int?
+  valorUnitario       Decimal?                           @db.Decimal(10, 2)
+  valorTotal          Decimal                            @db.Decimal(10, 2)
+  formaPagamento      EventoPirelliFormaPagamento
+  referenciaPagamento String?
+  referenciaVenda     String?
+  confirmadoEm        DateTime
+  confirmadoPor       String
+  chaveIdempotencia   String                             @unique
+  observacao          String?                            @db.Text
+  estornadoEm         DateTime?
+  estornadoPor        String?
+  estornoMotivo       String?                            @db.Text
+  createdAt           DateTime                           @default(now())
+
+  @@index([eventoId, confirmadoEm])
+  @@index([visitanteId, confirmadoEm])
+  @@index([eventoId, formaPagamento, confirmadoEm])
+}
+
+/// Pré-lançamento auditável do PDV. Só vira lançamento financeiro, compra ou
+/// benefício depois que um operador confirma a aprovação da maquininha.
+model EventoPirelliVendaPresencial {
+  id                     String                             @id @default(cuid())
+  eventoId               String
+  evento                 EventoPirelli                      @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  visitanteId            String
+  visitante              EventoPirelliVisitante             @relation(fields: [visitanteId], references: [id], onDelete: Restrict)
+  tipo                   EventoPirelliLancamentoCaixaTipo
+  status                 EventoPirelliVendaPresencialStatus @default(AGUARDANDO_PAGAMENTO)
+  quantidade             Int?
+  valorUnitario          Decimal?                           @db.Decimal(10, 2)
+  valorTotal             Decimal                            @db.Decimal(10, 2)
+  formaPagamento         EventoPirelliFormaPagamento
+  referenciaPagamento    String?
+  referenciaVenda        String?
+  criadoPor              String
+  pagamentoConfirmadoEm  DateTime?
+  pagamentoConfirmadoPor String?
+  canceladoEm            DateTime?
+  canceladoPor           String?
+  cancelamentoMotivo     String?                            @db.Text
+  chaveIdempotencia      String                             @unique
+  createdAt              DateTime                           @default(now())
+  updatedAt              DateTime                           @updatedAt
+
+  @@index([eventoId, status, createdAt])
+  @@index([visitanteId, status, createdAt])
 }
 
 model EventoPirelliElegibilidadeCaneca {
-  id              String                    @id @default(cuid())
-  visitanteId     String
-  visitante       EventoPirelliVisitante    @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
-  origem          EventoPirelliOrigemCaneca
-  canecaId        String?
-  caneca          EventoPirelliCaneca?      @relation(fields: [canecaId], references: [id], onDelete: SetNull)
-  valorPneus      Decimal?                  @db.Decimal(10, 2)
-  referenciaVenda String?
-  observacao      String?                   @db.Text
-  validadoEm      DateTime                  @default(now())
-  validadoPor     String?
+  id                     String                       @id @default(cuid())
+  visitanteId            String
+  visitante              EventoPirelliVisitante       @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
+  origem                 EventoPirelliOrigemCaneca
+  canecaId               String?
+  caneca                 EventoPirelliCaneca?         @relation(fields: [canecaId], references: [id], onDelete: SetNull)
+  valorPneus             Decimal?                     @db.Decimal(10, 2)
+  referenciaVenda        String?
+  formaPagamento         EventoPirelliFormaPagamento?
+  pagamentoConfirmadoEm  DateTime?
+  pagamentoConfirmadoPor String?
+  referenciaPagamento    String?
+  observacao             String?                      @db.Text
+  validadoEm             DateTime                     @default(now())
+  validadoPor            String?
   /// Corrigir um vencedor de foto (ou outra origem) revoga sem apagar: quem questionar
   /// depois precisa ver quem revogou e por quê.
-  revogadoEm      DateTime?
-  revogadoPor     String?
-  revogadoMotivo  String?                   @db.Text
+  revogadoEm             DateTime?
+  revogadoPor            String?
+  revogadoMotivo         String?                      @db.Text
 
   @@unique([visitanteId, origem])
   @@index([origem, validadoEm])
+  @@index([canecaId])
 }
 
 model EventoPirelliParticipacaoFoto {
-  id                   String                  @id @default(cuid())
-  visitanteId          String                  @unique
-  visitante            EventoPirelliVisitante  @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
-  instagram            String
-  declarouPublicacaoEm DateTime                @default(now())
-  declarouMarcacoes    Boolean                 @default(false)
-  status               EventoPirelliFotoStatus @default(PENDENTE)
-  curtidasApuradas     Int?
-  apuradoEm            DateTime?
-  apuradoPor           String?
-  observacao           String?                 @db.Text
+  id                    String                  @id @default(cuid())
+  visitanteId           String                  @unique
+  visitante             EventoPirelliVisitante  @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
+  instagram             String
+  declarouPublicacaoEm  DateTime                @default(now())
+  declarouMarcacoes     Boolean                 @default(false)
+  declarouHashtag       Boolean                 @default(false)
+  declarouPerfilPublico Boolean                 @default(false)
+  status                EventoPirelliFotoStatus @default(PENDENTE)
+  curtidasApuradas      Int?
+  apuradoEm             DateTime?
+  apuradoPor            String?
+  observacao            String?                 @db.Text
 }
 
 model EventoPirelliQuizOpcao {
@@ -1010,16 +1287,18 @@ model EventoPirelliQuizOpcao {
 }
 
 model EventoPirelliQuizPergunta {
-  id         String        @id @default(cuid())
-  eventoId   String
-  evento     EventoPirelli @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  enunciado  String        @db.Text
-  explicacao String?       @db.Text
-  ordem      Int           @default(0)
-  pontos     Int           @default(1)
-  ativa      Boolean       @default(true)
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  id                   String                @id @default(cuid())
+  eventoId             String
+  evento               EventoPirelli         @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  enunciado            String                @db.Text
+  explicacao           String?               @db.Text
+  tipo                 EventoPirelliQuizTipo @default(MULTIPLA_ESCOLHA)
+  respostaCorretaTexto String?               @db.Text
+  ordem                Int                   @default(0)
+  pontos               Int                   @default(1)
+  ativa                Boolean               @default(true)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
 
   opcoes    EventoPirelliQuizOpcao[]
   respostas EventoPirelliQuizResposta[]
@@ -1033,48 +1312,76 @@ model EventoPirelliQuizResposta {
   tentativa         EventoPirelliQuizTentativa @relation(fields: [tentativaId], references: [id], onDelete: Cascade)
   perguntaId        String
   pergunta          EventoPirelliQuizPergunta  @relation(fields: [perguntaId], references: [id])
-  opcaoId           String
-  opcao             EventoPirelliQuizOpcao     @relation(fields: [opcaoId], references: [id])
+  opcaoId           String?
+  opcao             EventoPirelliQuizOpcao?    @relation(fields: [opcaoId], references: [id])
+  respostaTexto     String?                    @db.Text
   enunciadoSnapshot String                     @db.Text
   opcaoSnapshot     String
   corretaSnapshot   Boolean
   pontosGanhos      Int
 
   @@unique([tentativaId, perguntaId])
+  @@index([perguntaId])
+  @@index([opcaoId])
 }
 
 model EventoPirelliQuizTentativa {
   id              String                 @id @default(cuid())
   visitanteId     String                 @unique
   visitante       EventoPirelliVisitante @relation(fields: [visitanteId], references: [id], onDelete: Cascade)
-  pontuacao       Int
-  pontuacaoMaxima Int
+  pontuacao       Int                    @default(0)
+  pontuacaoMaxima Int                    @default(0)
   acertouTodas    Boolean                @default(false)
-  concluidaEm     DateTime               @default(now())
+  /// O cronômetro oficial começa no servidor quando as perguntas são liberadas.
+  iniciadaEm      DateTime               @default(now())
+  concluidaEm     DateTime?
+  /// Duração oficial do quiz, usada como primeiro critério de desempate.
+  duracaoMs       Int?
+  /// Ordem sorteada e persistida para que atualizar a página não gere outro quiz.
+  ordemPerguntas  Json                   @default("[]")
+  ordemOpcoes     Json                   @default("{}")
 
-  respostas EventoPirelliQuizResposta[]
+  respostas          EventoPirelliQuizResposta[]
+  eventoComoVencedor EventoPirelli?              @relation("EventoPirelliVencedorQuiz")
+
+  @@index([acertouTodas, duracaoMs, concluidaEm, id])
 }
 
 model EventoPirelliVisitante {
-  id                       String        @id @default(cuid())
-  eventoId                 String
-  evento                   EventoPirelli @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  nomeCompleto             String
-  /// Nome exatamente como o visitante confirmou para a gravação.
-  nomeGravacao             String
-  nomeGravacaoConfirmadoEm DateTime
-  whatsapp                 String
-  email                    String?
-  instagram                String?
-  consentimentoMarketingEm DateTime?
+  id                         String        @id @default(cuid())
+  eventoId                   String
+  evento                     EventoPirelli @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  nomeCompleto               String
+  /// Só é preenchido quando o visitante efetivamente compra ou ganha uma caneca.
+  nomeGravacao               String?
+  nomeGravacaoConfirmadoEm   DateTime?
+  /// Auditoria da confirmação: operador do PDV, cliente pelo link ou sistema.
+  nomeGravacaoConfirmadoPor  String?
+  whatsapp                   String
+  email                      String?
+  instagram                  String?
+  enderecoCep                String?
+  enderecoRua                String?
+  enderecoNumero             String?
+  enderecoComplemento        String?
+  enderecoBairro             String?
+  enderecoCidade             String?
+  enderecoEstado             String?
+  motoMarca                  String?
+  motoModelo                 String?
+  motoAno                    Int?
+  consentimentoMarketingEm   DateTime?
   /// Evita dupla criação quando a rede cai após o POST chegar ao servidor.
-  chaveSubmissao           String        @unique
-  /// Token opaco que só aparece no QR; nunca é um dado pessoal.
-  codigoQr                 String        @unique
+  chaveSubmissao             String        @unique
+  /// Token opaco de acesso; nunca é um dado pessoal nem é exibido isoladamente.
+  codigoQr                   String        @unique
   /// Referência solta, pois CrmLead não é alterado com uma relação reversa.
-  crmLeadId                String?
-  createdAt                DateTime      @default(now())
-  updatedAt                DateTime      @updatedAt
+  crmLeadId                  String?
+  /// Kit operacional entregue após o cadastro: um chaveiro e um adesivo.
+  kitParticipacaoEntregueEm  DateTime?
+  kitParticipacaoEntreguePor String?
+  createdAt                  DateTime      @default(now())
+  updatedAt                  DateTime      @updatedAt
 
   tentativaQuiz        EventoPirelliQuizTentativa?
   participacaoFoto     EventoPirelliParticipacaoFoto?
@@ -1082,6 +1389,9 @@ model EventoPirelliVisitante {
   elegibilidadesCaneca EventoPirelliElegibilidadeCaneca[]
   canecaBrinde         EventoPirelliCaneca?
   comprasCaneca        EventoPirelliCompraCaneca[]
+  lancamentosCaixa     EventoPirelliLancamentoCaixa[]
+  vendasPresenciais    EventoPirelliVendaPresencial[]
+  pedidos              Order[]
 
   @@unique([eventoId, whatsapp])
   @@index([eventoId, createdAt])
