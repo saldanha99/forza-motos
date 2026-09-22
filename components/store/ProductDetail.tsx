@@ -4,6 +4,8 @@ import Image from 'next/image'
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { ShoppingCart, MessageCircle, ChevronLeft, ChevronRight, ZoomIn, X, CalendarClock, PackageCheck } from 'lucide-react'
 import { formatPrice, whatsappLink } from '@/lib/utils'
+import { calcularPrecoVitrine } from '@/lib/checkout/vitrine-preco'
+import { FRETE_GRATIS_MIN, ESTADO_FRETE_GRATIS } from '@/lib/frete/regras'
 import { useCartStore } from '@/store/cart'
 import { ProductReviews } from './ProductReviews'
 import { CalculadorFrete } from './CalculadorFrete'
@@ -321,6 +323,9 @@ export function ProductDetail({
   const preco = Number(produto.preco)
   const precoPromo = produto.precoPromocional ? Number(produto.precoPromocional) : null
   const disc = precoPromo ? Math.round((1 - precoPromo / preco) * 100) : null
+  // O preço que o cliente paga de fato é o promocional quando existe.
+  const precoVitrine = calcularPrecoVitrine(precoPromo ?? preco)
+  const temFreteGratisSP = (precoPromo ?? preco) >= FRETE_GRATIS_MIN
 
   const compatibilidade = Array.isArray(produto.compatibilidadeMotos)
     ? produto.compatibilidadeMotos
@@ -400,30 +405,46 @@ export function ProductDetail({
           {/* Seletor de tamanho (variações da família) */}
           {seletorTamanho}
 
-          {/* Preço */}
+          {/* Preço — o número grande é o que o cliente paga no Pix, que é o
+              único meio do checkout hoje. O preço cheio fica riscado ao lado,
+              junto do parcelamento quando o cartão estiver no ar. */}
           <div className="mb-6">
-            {precoPromo ? (
-              <>
-                <div className="font-inter text-[13px] text-[#bbb] line-through mb-1">
-                  {formatPrice(preco)}
-                </div>
-                <div className="flex items-baseline gap-3">
-                  <span className="font-barlow font-black text-[44px] leading-none tracking-[-1px]" style={{ color: '#d42b2b' }}>
-                    {formatPrice(precoPromo)}
-                  </span>
-                  <span className="font-barlow font-bold text-[14px] text-white px-2.5 py-1" style={{ background: '#d42b2b', borderRadius: 3 }}>
-                    -{disc}%
-                  </span>
-                </div>
-                <p className="font-inter text-[12px] font-medium text-green-700 mt-1">5% de desconto no Pix</p>
-              </>
-            ) : (
-              <>
-                <div className="font-barlow font-black text-[44px] leading-none tracking-[-1px] text-[#111]">
-                  {formatPrice(preco)}
-                </div>
-                <p className="font-inter text-[12px] font-medium text-green-700 mt-1">5% de desconto no Pix</p>
-              </>
+            <div className="flex items-baseline gap-3 flex-wrap">
+              <div className="font-inter text-[13px] text-[#bbb] line-through">
+                {formatPrice(precoPromo ? preco : precoVitrine.cheio)}
+              </div>
+              {precoPromo && disc ? (
+                <span className="font-barlow font-bold text-[13px] text-white px-2 py-0.5" style={{ background: '#d42b2b', borderRadius: 3 }}>
+                  -{disc}%
+                </span>
+              ) : null}
+            </div>
+
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="font-barlow font-black text-[44px] leading-none tracking-[-1px]" style={{ color: '#d42b2b' }}>
+                {formatPrice(precoVitrine.pix)}
+              </span>
+              <span className="font-barlow font-bold text-[16px] text-[#111] uppercase">no Pix</span>
+            </div>
+
+            <p className="font-inter text-[12px] font-medium text-green-700 mt-1">
+              Economia de {formatPrice(precoVitrine.economiaPix)} pagando no Pix
+            </p>
+
+            {precoVitrine.mostrarParcelamento && (
+              <p className="font-inter text-[13px] text-[#555] mt-1.5">
+                ou {formatPrice(precoVitrine.cheio)} em até{' '}
+                <strong className="text-[#111]">
+                  {precoVitrine.parcelas}x de {formatPrice(precoVitrine.valorParcela)}
+                </strong>{' '}
+                no cartão
+              </p>
+            )}
+
+            {temFreteGratisSP && (
+              <p className="font-inter text-[12.5px] font-semibold text-green-700 mt-2">
+                🎉 Frete grátis para {ESTADO_FRETE_GRATIS}
+              </p>
             )}
           </div>
 
