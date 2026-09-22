@@ -1,13 +1,17 @@
 'use client'
 
 /**
- * Grade de slots de banner do site — o responsável pelo marketing troca a
- * imagem de cada slot sem mexer em código. Upload vai pro storage da VPS
- * via /api/upload (pasta "banners") e a URL é salva em /api/admin/marketing.
+ * Grade de imagens do site — o responsável pelo marketing troca cada uma sem
+ * mexer em código. Upload vai pro storage da VPS via /api/upload (pasta
+ * "banners") e a URL é salva em /api/admin/marketing.
+ *
+ * Os slots vêm agrupados por região da loja e cada card mostra o tamanho
+ * recomendado, porque o recorte do site é fixo: mandar a imagem fora da
+ * proporção significa ver o corte só depois de publicar.
  */
 import { useState } from 'react'
 import toast from 'react-hot-toast'
-import { ImagePlus, RotateCcw, Loader2, ExternalLink } from 'lucide-react'
+import { ImagePlus, RotateCcw, Loader2, ExternalLink, Ruler } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   Card, Badge, Botao, BOTAO_BASE, BOTAO_VARIANTE, BOTAO_TAMANHO,
@@ -20,12 +24,21 @@ const BASE_BOTAO_LABEL = BOTAO_BASE
 interface Slot {
   chave: string
   nome: string
+  grupo: string
   dica: string
+  dimensao: string
+  proporcao: string
   fallback: string
   imagemUrl: string | null
 }
 
-export function MarketingBanners({ slots: slotsIniciais }: { slots: Slot[] }) {
+export function MarketingBanners({
+  slots: slotsIniciais,
+  grupos,
+}: {
+  slots: Slot[]
+  grupos: string[]
+}) {
   const [slots, setSlots] = useState(slotsIniciais)
   const [salvando, setSalvando] = useState<string | null>(null)
 
@@ -78,9 +91,22 @@ export function MarketingBanners({ slots: slotsIniciais }: { slots: Slot[] }) {
     }
   }
 
+  // Um grupo só aparece se tiver slot — assim acrescentar/remover slot no
+  // lib/marketing.ts não deixa cabeçalho órfão na tela.
+  const porGrupo = grupos
+    .map((grupo) => ({ grupo, itens: slots.filter((s) => s.grupo === grupo) }))
+    .filter((g) => g.itens.length > 0)
+
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-      {slots.map((slot) => {
+    <div className="space-y-10">
+      {porGrupo.map(({ grupo, itens }) => (
+        <section key={grupo}>
+          <h2 className="mb-1 font-barlow text-[17px] font-bold text-brand-text">{grupo}</h2>
+          <p className="mb-4 text-xs text-brand-muted">
+            {itens.length} {itens.length === 1 ? 'imagem' : 'imagens'}
+          </p>
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      {itens.map((slot) => {
         const urlAtual = slot.imagemUrl ?? slot.fallback
         const customizado = Boolean(slot.imagemUrl)
         const ocupado = salvando === slot.chave
@@ -90,7 +116,7 @@ export function MarketingBanners({ slots: slotsIniciais }: { slots: Slot[] }) {
                 sobre o hero do site, então o preview usa sempre o mesmo fundo
                 (não um token que troca de tema) para representar fielmente
                 como a arte aparece na loja. */}
-            <div className="relative bg-brand-sidebar" style={{ aspectRatio: '21/9' }}>
+            <div className="relative bg-brand-sidebar" style={{ aspectRatio: slot.proporcao }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- URL dinâmica do storage próprio */}
               <img
                 src={urlAtual}
@@ -112,7 +138,11 @@ export function MarketingBanners({ slots: slotsIniciais }: { slots: Slot[] }) {
             {/* Infos + ações */}
             <div className="p-4">
               <p className="font-barlow text-[15px] font-bold leading-tight text-brand-text">{slot.nome}</p>
-              <p className="mt-1 text-xs text-brand-muted">{slot.dica}</p>
+              <p className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-brand-surface-2 px-2 py-1 text-xs font-semibold text-brand-text">
+                <Ruler size={12} />
+                {slot.dimensao}
+              </p>
+              <p className="mt-2 text-xs text-brand-muted">{slot.dica}</p>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <label
@@ -165,6 +195,9 @@ export function MarketingBanners({ slots: slotsIniciais }: { slots: Slot[] }) {
           </Card>
         )
       })}
+          </div>
+        </section>
+      ))}
     </div>
   )
 }

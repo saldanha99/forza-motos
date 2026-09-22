@@ -76,7 +76,7 @@ export function Footer() {
         {/* Brand column */}
         <div>
           <div className="mb-5">
-            <LogoSVG dark height={38} />
+            <LogoSVG dark height={54} />
           </div>
 
           <p className="text-[13px] text-[#777] leading-[1.7] mb-4">

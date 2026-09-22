@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { prisma } from '@/lib/prisma'
-import { BANNER_SLOTS } from '@/lib/marketing'
+import { BANNER_SLOTS, GRUPOS_BANNER } from '@/lib/marketing'
 import { MarketingBanners } from '@/components/admin/MarketingBanners'
 import { PageHeader } from '@/components/admin/ui/primitives'
 
@@ -13,7 +13,10 @@ export default async function MarketingAdminPage() {
   const slots = BANNER_SLOTS.map((s) => ({
     chave: s.chave,
     nome: s.nome,
+    grupo: s.grupo,
     dica: s.dica,
+    dimensao: s.dimensao,
+    proporcao: s.proporcao,
     fallback: s.fallback,
     imagemUrl: porChave.get(s.chave)?.imagemUrl ?? null,
   }))
@@ -22,10 +25,10 @@ export default async function MarketingAdminPage() {
     <div>
       <PageHeader
         titulo="Marketing"
-        descricao="Troque as imagens dos banners e heros do site na hora, sem deploy — restaurar padrão volta à arte original."
+        descricao="Todas as imagens da loja ficam aqui. Troque na hora, sem deploy — cada campo mostra o tamanho recomendado, e “restaurar padrão” volta à imagem original."
       />
 
-      <MarketingBanners slots={slots} />
+      <MarketingBanners slots={slots} grupos={GRUPOS_BANNER} />
     </div>
   )
 }

@@ -111,11 +111,13 @@ const SLIDES = [
   },
 ]
 
+// `id` casa com a chave vinda do módulo de marketing (home-atalho-<id>);
+// `img` é só o padrão de quando o admin ainda não trocou a imagem.
 const SERVICE_CARDS = [
-  { img: '/images/services/card-pneu.jpg',    label: 'Pneu',        time: '~30min' },
-  { img: '/images/services/card-freio.jpg',   label: 'Freio',       time: '~30min' },
-  { img: '/images/services/card-oleo.jpg',    label: 'Óleo',        time: '~30min' },
-  { img: '/images/services/card-corrente.jpg',label: 'Transmissão', time: '~1h' },
+  { id: 'pneu',        img: '/images/services/card-pneu.jpg',     label: 'Pneu',        time: '~30min' },
+  { id: 'freio',       img: '/images/services/card-freio.jpg',    label: 'Freio',       time: '~30min' },
+  { id: 'oleo',        img: '/images/services/card-oleo.jpg',     label: 'Óleo',        time: '~30min' },
+  { id: 'transmissao', img: '/images/services/card-corrente.jpg', label: 'Transmissão', time: '~1h' },
 ]
 
 // Michelin volta à grade quando o Caio enviar o logo atualizado (substituir /images/brands/michelin.svg)
@@ -128,7 +130,15 @@ const HERO_BRANDS = [
 ]
 
 // ── Visual right panel ────────────────────────────────────────────────────────
-function SlideVisual({ type, active }: { type: string; active: boolean }) {
+function SlideVisual({
+  type,
+  active,
+  atalhos = {},
+}: {
+  type: string
+  active: boolean
+  atalhos?: Partial<Record<string, string>>
+}) {
   if (type === 'tire') return (
     <div className="relative flex items-center justify-center h-full">
       <div
@@ -189,7 +199,7 @@ function SlideVisual({ type, active }: { type: string; active: boolean }) {
             }}
           >
             <Image
-              src={s.img}
+              src={atalhos[s.id] ?? s.img}
               alt={s.label}
               fill
               sizes="140px"
@@ -259,9 +269,12 @@ function SlideVisual({ type, active }: { type: string; active: boolean }) {
 // ── Main component ────────────────────────────────────────────────────────────
 export function HeroCarousel({
   bgImgs = {},
+  atalhos = {},
 }: {
   /** Imagens de fundo por slide vindas do módulo de marketing (chave = id do slide) */
   bgImgs?: Partial<Record<string, string>>
+  /** Imagens dos atalhos de serviço (chave = id do card) */
+  atalhos?: Partial<Record<string, string>>
 }) {
   const [current, setCurrent] = useState(0)
   const [animating, setAnimating] = useState(false)
@@ -423,7 +436,7 @@ export function HeroCarousel({
 
           {/* RIGHT */}
           <div className="hidden md:block relative" style={{ minHeight: 400 }}>
-            <SlideVisual type={slide.visual} active={!animating} />
+            <SlideVisual type={slide.visual} active={!animating} atalhos={atalhos} />
           </div>
         </div>
 
