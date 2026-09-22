@@ -1,7 +1,6 @@
-import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { usuarioDoPainel } from '@/lib/admin/acesso'
 import { lerTemaAdmin } from '@/lib/admin/tema'
 import { AdminThemeProvider } from '@/components/admin/ui/AdminTheme'
 import { AdminSidebar, type BadgesNav } from '@/components/admin/AdminSidebar'
@@ -35,24 +34,28 @@ async function contarPendencias(): Promise<BadgesNav> {
 }
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = await getServerSession(authOptions)
-  if (!session || session.user.role !== 'ADMIN') redirect('/login')
+  // Permissões relidas do banco a cada navegação: tirar acesso de alguém vale
+  // na hora, sem depender de a pessoa deslogar.
+  const usuario = await usuarioDoPainel()
+  if (!usuario) redirect('/login')
 
   const [tema, badges] = await Promise.all([
     lerTemaAdmin(),
-    contarPendencias(),
+    // Contadores são de pedidos, agenda e CRM: quem não enxerga essas áreas
+    // também não precisa da contagem.
+    usuario.role === 'ADMIN' ? contarPendencias() : Promise.resolve({} as BadgesNav),
   ])
 
   return (
     <AdminThemeProvider temaInicial={tema}>
       <div className="flex min-h-screen bg-brand-bg text-brand-text">
-        <AdminSidebar user={session.user} badges={badges} />
+        <AdminSidebar user={usuario} badges={badges} permissoes={usuario.permissoes} />
 
         {/* Busca global ⌘K */}
         <CommandPalette />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <AdminTopbar user={session.user} />
+          <AdminTopbar user={usuario} />
           <main className="admin-scroll flex-1 p-4 pb-24 sm:p-6 lg:p-8 lg:pb-8">
             <div className="mx-auto w-full max-w-7xl">{children}</div>
           </main>

@@ -4,6 +4,7 @@ import GoogleProvider from 'next-auth/providers/google'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import bcrypt from 'bcryptjs'
 import { prisma } from './prisma'
+import { permissoesEfetivas } from './admin/permissoes'
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
@@ -31,6 +32,8 @@ export const authOptions: NextAuthOptions = {
         })
 
         if (!user || !user.senha) return null
+        // Usuário desligado não entra, mesmo com a senha certa.
+        if (!user.ativo) return null
 
         const senhaCorreta = await bcrypt.compare(credentials.senha, user.senha)
         if (!senhaCorreta) return null
@@ -40,6 +43,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.nome,
           role: user.role,
+          permissoes: permissoesEfetivas(user.role, user.permissoes),
         }
       },
     }),
@@ -49,6 +53,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = (user as any).role
+        token.permissoes = (user as any).permissoes ?? []
       }
       return token
     },
@@ -56,6 +61,10 @@ export const authOptions: NextAuthOptions = {
       if (token && session.user) {
         session.user.id = token.id as string
         session.user.role = token.role as string
+        // Cópia do momento do login — serve para desenhar o menu e para o
+        // proxy. Quem decide de verdade é lib/admin/acesso.ts, que relê o
+        // banco a cada requisição.
+        session.user.permissoes = (token.permissoes as string[]) ?? []
       }
       return session
     },

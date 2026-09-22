@@ -6,21 +6,15 @@
  * que devolve a URL usada aqui.
  */
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { exigirAcesso } from '@/lib/admin/acesso'
 import { prisma } from '@/lib/prisma'
 import { BANNER_SLOTS } from '@/lib/marketing'
 
 export const dynamic = 'force-dynamic'
 
-async function exigirAdmin() {
-  const session = await getServerSession(authOptions)
-  if (!session || session.user.role !== 'ADMIN') return null
-  return session
-}
 
 export async function GET() {
-  if (!(await exigirAdmin())) {
+  if (!(await exigirAcesso('marketing'))) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
   }
 
@@ -37,7 +31,7 @@ export async function GET() {
 }
 
 export async function PUT(req: Request) {
-  if (!(await exigirAdmin())) {
+  if (!(await exigirAcesso('marketing'))) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
   }
 

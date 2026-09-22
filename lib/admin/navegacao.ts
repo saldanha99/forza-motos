@@ -1,7 +1,7 @@
 import {
   BookOpen, Bike, Calendar, FileText, ImagePlus, Layers, LayoutDashboard, ListChecks,
   Megaphone, MessageCircle, Package, PartyPopper, RefreshCw, Search, Settings, ShoppingBag,
-  Ticket, TicketPercent, Users, type LucideIcon,
+  Ticket, TicketPercent, Users, UserCog, type LucideIcon,
 } from 'lucide-react'
 
 /** Chave do contador que a sidebar mostra ao lado do item. */
@@ -63,7 +63,10 @@ export const GRUPOS_NAV: GrupoNav[] = [
   },
   {
     titulo: 'Sistema',
-    itens: [{ href: '/admin/configuracoes', label: 'Configurações', icon: Settings }],
+    itens: [
+      { href: '/admin/usuarios',      label: 'Usuários e acessos', icon: UserCog },
+      { href: '/admin/configuracoes', label: 'Configurações',      icon: Settings },
+    ],
   },
 ]
 
@@ -98,6 +101,7 @@ export const TITULOS: Record<string, { titulo: string; subtitulo: string }> = {
   '/admin/glossario':     { titulo: 'Glossário',      subtitulo: 'Termos técnicos gerados por IA para captar busca orgânica' },
   '/admin/seo':           { titulo: 'SEO',            subtitulo: 'Indexação, redirects e páginas com erro 404' },
   '/admin/marketing':     { titulo: 'Marketing',      subtitulo: 'Banners e campanhas exibidos na loja' },
+  '/admin/usuarios':      { titulo: 'Usuários e acessos', subtitulo: 'Quem entra no painel e o que cada um enxerga' },
   '/admin/configuracoes': { titulo: 'Configurações',  subtitulo: 'Integrações, chaves e ajustes gerais do sistema' },
 }
 

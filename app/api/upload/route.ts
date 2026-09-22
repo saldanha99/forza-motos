@@ -4,8 +4,7 @@
  * em /imagens/...) — não usa mais o Vercel Blob (cota estourada em 07/2026).
  */
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { exigirAcesso } from '@/lib/admin/acesso'
 import { writeFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 
@@ -15,8 +14,9 @@ const IMG_BASE_URL = process.env.IMG_BASE_URL ?? 'https://www.forzamotos.com.br/
 const EXT_PERMITIDAS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'])
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions)
-  if (!session || session.user.role !== 'ADMIN') {
+  // A área "marketing" cobre o upload: é por aqui que o banner sobe. ADMIN
+  // passa por ter todas as áreas.
+  if (!(await exigirAcesso('marketing'))) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
   }
 
