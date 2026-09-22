@@ -4,11 +4,12 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Command, ExternalLink, LogOut, PanelLeftClose, PanelLeftOpen, Search, X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { podeAcessarRota, type ChaveArea } from '@/lib/admin/permissoes'
 import {
   GRUPOS_NAV, NAV_MOBILE, type ChaveBadge, type ItemNav,
 } from '@/lib/admin/navegacao'
@@ -94,14 +95,26 @@ function ItemLink({
    ═══════════════════════════════════════════════════════════════════ */
 
 function Conteudo({
-  user, badges, recolhida, onNavegar,
+  user, badges, recolhida, onNavegar, permissoes,
 }: {
+  permissoes: ChaveArea[]
   user: any
   badges: BadgesNav
   recolhida: boolean
   onNavegar?: () => void
 }) {
   const ehAtivo = useAtivo()
+
+  // Grupo que ficou sem item some junto com o título, para não sobrar cabeçalho
+  // órfão no menu de quem só enxerga uma área.
+  const gruposVisiveis = useMemo(
+    () =>
+      GRUPOS_NAV.map((grupo) => ({
+        ...grupo,
+        itens: grupo.itens.filter((item) => podeAcessarRota(permissoes, item.href)),
+      })).filter((grupo) => grupo.itens.length > 0),
+    [permissoes],
+  )
 
   function abrirBusca() {
     onNavegar?.()
@@ -135,7 +148,7 @@ function Conteudo({
 
       {/* Navegação agrupada */}
       <nav className={cn('admin-scroll flex flex-1 flex-col gap-0.5 overflow-y-auto py-3', recolhida ? 'px-2' : 'px-3')}>
-        {GRUPOS_NAV.map((grupo, gi) => (
+        {gruposVisiveis.map((grupo, gi) => (
           <div key={grupo.titulo ?? gi} className={gi > 0 ? 'mt-3' : ''}>
             {grupo.titulo && !recolhida && (
               <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-brand-dim">
@@ -197,11 +210,21 @@ function Conteudo({
    Sidebar
    ═══════════════════════════════════════════════════════════════════ */
 
-export function AdminSidebar({ user, badges = {} }: { user: any; badges?: BadgesNav }) {
+export function AdminSidebar({
+  user,
+  badges = {},
+  permissoes,
+}: {
+  user: any
+  badges?: BadgesNav
+  /** Áreas que este usuário enxerga — o menu não mostra o que ele não abre */
+  permissoes: ChaveArea[]
+}) {
   const [recolhida, setRecolhida] = useState(false)
   const [gaveta, setGaveta] = useState(false)
   const pathname = usePathname()
   const ehAtivo = useAtivo()
+
 
   // Preferência de largura é local do operador — fica no navegador dele
   useEffect(() => {
@@ -258,7 +281,7 @@ export function AdminSidebar({ user, badges = {} }: { user: any; badges?: Badges
           </button>
         </div>
 
-        <Conteudo user={user} badges={badges} recolhida={recolhida} />
+        <Conteudo user={user} badges={badges} recolhida={recolhida} permissoes={permissoes} />
       </aside>
 
       {/* ── Gaveta mobile ── */}
@@ -291,14 +314,14 @@ export function AdminSidebar({ user, badges = {} }: { user: any; badges?: Badges
                 <X size={18} />
               </button>
             </div>
-            <Conteudo user={user} badges={badges} recolhida={false} onNavegar={() => setGaveta(false)} />
+            <Conteudo user={user} badges={badges} recolhida={false} onNavegar={() => setGaveta(false)} permissoes={permissoes} />
           </aside>
         </div>
       )}
 
       {/* ── Barra inferior mobile ── */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-brand-border bg-brand-sidebar px-1 py-1.5 lg:hidden">
-        {NAV_MOBILE.map((item) => {
+        {NAV_MOBILE.filter((item) => podeAcessarRota(permissoes, item.href)).map((item) => {
           const ativo = ehAtivo(item)
           const badge = item.badge ? badges[item.badge] : undefined
           const Icone = item.icon

@@ -55,6 +55,11 @@ model User {
   telefone      String?
   cpf           String?
   role          Role          @default(CUSTOMER)
+  /// Áreas do painel liberadas para este usuário (chaves de lib/admin/permissoes.ts).
+  /// Vazio = usa o padrão do papel. ADMIN enxerga tudo, ignorando esta lista.
+  permissoes    Json          @default("[]")
+  /// Desligado bloqueia o login sem apagar histórico do usuário.
+  ativo         Boolean       @default(true)
   /// Origem do cadastro do cliente
   origem        OrigemCliente @default(ECOMMERCE)
   /// ID do cliente no Tiny ERP (quando importado do ML)
@@ -72,6 +77,9 @@ model User {
 enum Role {
   CUSTOMER
   ADMIN
+  /// Acesso restrito ao painel — por padrão só as imagens do site.
+  /// O que cada um enxerga vem de User.permissoes; ver lib/admin/permissoes.ts
+  MARKETING
 }
 
 /// Origem do cliente para separar e-commerce próprio de Mercado Livre

@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { exigirAcesso } from '@/lib/admin/acesso'
 import { prisma } from '@/lib/prisma'
 
 export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  const session = await getServerSession(authOptions)
-  if (!session || session.user.role !== 'ADMIN') {
+  if (!(await exigirAcesso('blog'))) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
   }
 
@@ -21,8 +19,7 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
 
 export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  const session = await getServerSession(authOptions)
-  if (!session || session.user.role !== 'ADMIN') {
+  if (!(await exigirAcesso('blog'))) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
   }
 
