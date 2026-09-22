@@ -12,10 +12,11 @@ import { getBannerUrls } from '@/lib/marketing'
 import { BuscaPorPlaca } from '@/components/store/BuscaPorPlaca'
 import { BuscaPorMedida } from '@/components/store/BuscaPorMedida'
 import { getIndiceMedidas } from '@/lib/indice-medidas'
-import { CheckCircle2, Wrench, Clock, Shield, Award, Zap, CalendarDays, Gift, MapPin } from 'lucide-react'
+import { CheckCircle2, Wrench, Clock, Shield, Award, Zap, CalendarDays, Gift, MapPin, ArrowRight } from 'lucide-react'
 import { SITE_URL } from '@/lib/schema'
 import { LogoPirelli, LogoMichelin, LogoMetzeler } from '@/components/store/BrandLogo'
 import { EVENTO_PIRELLI_SLUG } from '@/lib/evento-pirelli'
+import { listarSegmentos } from '@/lib/pneus/segmentos'
 
 export const metadata: Metadata = {
   title: 'Pneus de Moto em Campinas — Credenciada Pirelli, Metzeler e Michelin',
@@ -133,10 +134,11 @@ async function getDadosPneus(campanhaEvento = false) {
 export default async function PneusPage(props: { searchParams?: Promise<{ evento?: string }> }) {
   const searchParams = await props.searchParams;
   const campanhaEvento = searchParams?.evento === 'pirelli'
-  const [{ pneusDestaque, indiceMedidas }, banners, eventoPirelli] = await Promise.all([
+  const [{ pneusDestaque, indiceMedidas }, banners, eventoPirelli, segmentos] = await Promise.all([
     getDadosPneus(campanhaEvento),
     getBannerUrls(),
     campanhaEvento ? prisma.eventoPirelli.findUnique({ where: { slug: EVENTO_PIRELLI_SLUG } }) : Promise.resolve(null),
+    listarSegmentos(),
   ])
 
   return (
@@ -219,6 +221,44 @@ export default async function PneusPage(props: { searchParams?: Promise<{ evento
         </div>
       </section>
 
+
+      {/* Categorias por tipo de moto — classificação feita em /admin/pneus-segmentos */}
+      {segmentos.length > 0 && (
+        <section className="py-12 bg-white border-b border-[#f0f0f0]">
+          <div className="max-w-[1280px] mx-auto px-6 md:px-12">
+            <div className="mb-6">
+              <span className="text-[#d42b2b] font-barlow font-bold text-[13px] uppercase tracking-[1.5px]">
+                Escolha pelo tipo de moto
+              </span>
+              <h2 className="font-barlow font-black text-[30px] md:text-[38px] text-[#111] tracking-[-0.5px] leading-[1.1] mt-1">
+                CATEGORIAS DE PNEU
+              </h2>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {segmentos.map((seg) => (
+                <Link
+                  key={seg.slug}
+                  href={`/pneus/categoria/${seg.slug}`}
+                  className="group relative overflow-hidden rounded-xl border border-[#e6e6e6] hover:border-[#d42b2b] bg-[#fafafa] p-5 transition-colors"
+                >
+                  <p className="font-barlow font-black text-[20px] text-[#111] leading-tight uppercase">
+                    {seg.nome}
+                  </p>
+                  {seg.descricao && (
+                    <p className="text-[12.5px] text-[#777] font-inter mt-1.5 leading-snug">
+                      {seg.descricao}
+                    </p>
+                  )}
+                  <p className="mt-4 inline-flex items-center gap-1 text-[12px] font-semibold text-[#d42b2b]">
+                    {seg.produtos} {seg.produtos === 1 ? 'pneu' : 'pneus'}
+                    <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* 4 formas de encontrar o pneu certo */}
       <section className="py-8 bg-[#111]">

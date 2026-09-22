@@ -142,6 +142,14 @@ model Product {
   /// Construção do pneu: "radial" (150/70R17) ou "diagonal" (150/70-17).
   /// Não é estilo de escrita — são pneus diferentes e não intercambiáveis.
   medidaConstrucao      String?
+  /// Segmento de uso do pneu (Custom, Big Trail, Esportivo/Street, Scooter).
+  /// Classificação comercial da loja: o Olist só manda "Pneu >> <marca>", então
+  /// o sync NUNCA escreve neste campo — quem define é o admin.
+  pneuSegmentoId        String?
+  pneuSegmento          PneuSegmento?  @relation(fields: [pneuSegmentoId], references: [id], onDelete: SetNull)
+  /// Linha/modelo do pneu dentro do segmento (ex.: "Angel GT", "Sportmax").
+  /// Vira subcategoria em /pneus/<segmento>. Também definida pelo admin.
+  pneuLinha             String?
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
 
@@ -154,9 +162,31 @@ model Product {
   estoqueReservado Int @default(0)
 
   @@index([variacaoDe])
+  @@index([pneuSegmentoId, ativo])
   @@index([medidaLargura, medidaPerfil, medidaAro])
   @@index([estoqueReservado])
   @@index([eventoPirelliId, ativo, ordemEvento])
+}
+
+/// Segmentos de pneu da vitrine (Custom, Big Trail, Esportivo/Street, Scooter).
+/// Ficam em tabela, e não no código, porque a loja precisa criar e renomear
+/// segmento sem depender de deploy.
+model PneuSegmento {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  slug      String   @unique
+  /// Texto curto exibido no card da categoria
+  descricao String?
+  /// Imagem do card — null usa a arte padrão da vitrine
+  imagemUrl String?
+  ordem     Int      @default(0)
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  produtos Product[]
+
+  @@index([ativo, ordem])
 }
 
 model Review {
