@@ -6,5 +6,13 @@ node_modules
 _backup_glossario_antes_plugin
 worker/node_modules
 *.log
-.env.local
-.env.example
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+**/.npmrc
+.DS_Store
+forza eventos.txt
+output
+tmp

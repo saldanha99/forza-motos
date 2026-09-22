@@ -2,6 +2,9 @@
 const nextConfig = {
   // Build autocontido p/ rodar em Docker na VPS (node .next/standalone/server.js)
   output: 'standalone',
+  turbopack: {
+    root: process.cwd(),
+  },
   images: {
     remotePatterns: [
       // Imagens de produto servidas pela própria VPS (nginx em /imagens)

@@ -2,13 +2,15 @@ import { withAuth } from 'next-auth/middleware'
 import { NextResponse } from 'next/server'
 
 export default withAuth(
-  function middleware(req) {
-    const { pathname } = req.nextUrl
+  function proxy(req) {
+    const { pathname, search } = req.nextUrl
     const token = req.nextauth.token
 
     // Bloquear /admin/* para não-ADMIN
     if (pathname.startsWith('/admin') && token?.role !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/login?callbackUrl=/admin', req.url))
+      const login = new URL('/login', req.url)
+      login.searchParams.set('callbackUrl', `${pathname}${search}`)
+      return NextResponse.redirect(login)
     }
 
     // Header usado pelo logger de 404 (lib/seo/not-found-logger.ts)
@@ -27,7 +29,7 @@ export default withAuth(
         return true
       },
     },
-  }
+  },
 )
 
 export const config = {
