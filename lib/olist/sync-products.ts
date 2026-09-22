@@ -94,7 +94,10 @@ export async function syncPaginaListagem(pagina: number) {
 
   // 2 queries em paralelo: SKUs existentes + slugs em conflito
   const [existentes, slugConflicts] = await Promise.all([
-    prisma.product.findMany({ where: { sku: { in: skus } }, select: { sku: true, temImagem: true, estoque: true } }),
+    prisma.product.findMany({
+      where: { sku: { in: skus } },
+      select: { sku: true, temImagem: true, estoque: true, preVenda: true, eventoPirelliId: true },
+    }),
     prisma.product.findMany({
       where: { slug: { in: dados.map(d => gerarSlug(d.nome)) } },
       select: { slug: true },
@@ -104,7 +107,12 @@ export async function syncPaginaListagem(pagina: number) {
   const existentesMap = new Map(existentes.map(e => [e.sku, e]))
   const slugsExistentes = new Set(slugConflicts.map(s => s.slug))
 
-  const toUpdate = dados.filter(d => existentesMap.has(d.sku))
+  // Ofertas exclusivas são administradas apenas pela área do evento. O sync
+  // do Tiny não pode substituir preço, disponibilidade ou publicação delas.
+  const toUpdate = dados.filter(d => {
+    const existente = existentesMap.get(d.sku)
+    return Boolean(existente && !existente.eventoPirelliId)
+  })
   const toCreate = dados.filter(d => !existentesMap.has(d.sku))
 
   // Monta lista de operações para $transaction (1 round-trip ao DB)
@@ -114,7 +122,7 @@ export async function syncPaginaListagem(pagina: number) {
       const temImagem = existing.temImagem || false
       // Payload sem saldo (estoque=null): preserva o estoque real do banco
       const estoqueFinal = d.estoque ?? existing.estoque
-      const ativo = d.ativo && temImagem && estoqueFinal > 0
+      const ativo = d.ativo && temImagem && (existing.preVenda || estoqueFinal > 0)
       return prisma.product.update({
         where: { sku: d.sku },
         data: {
@@ -211,8 +219,8 @@ export async function syncImagensLote(limite = 10) {
   const seteAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
 
   const naoVerif = await prisma.product.findMany({
-    where: { tinyId: { not: null }, temImagem: false, imagensVerificadas: false },
-    select: { id: true, sku: true, tinyId: true, nome: true, estoque: true },
+    where: { tinyId: { not: null }, eventoPirelliId: null, temImagem: false, imagensVerificadas: false },
+    select: { id: true, sku: true, tinyId: true, nome: true, estoque: true, preVenda: true },
     orderBy: { updatedAt: 'asc' },
     take: limite,
   })
@@ -222,11 +230,12 @@ export async function syncImagensLote(limite = 10) {
     ? await prisma.product.findMany({
         where: {
           tinyId: { not: null },
+          eventoPirelliId: null,
           temImagem: false,
           imagensVerificadas: true,
           updatedAt: { lt: seteAtras },
         },
-        select: { id: true, sku: true, tinyId: true, nome: true, estoque: true },
+        select: { id: true, sku: true, tinyId: true, nome: true, estoque: true, preVenda: true },
         orderBy: { updatedAt: 'asc' },
         take: restante,
       })
@@ -262,7 +271,7 @@ export async function syncImagensLote(limite = 10) {
         // para não poluir os próximos lotes
         await prisma.product.update({
           where: { id: produto.id },
-          data: { imagensVerificadas: true, ativo: false },
+          data: { imagensVerificadas: true, ativo: produto.preVenda ? undefined : false },
         })
         naoEncontradosNoTiny++
         erros++
@@ -272,7 +281,7 @@ export async function syncImagensLote(limite = 10) {
       const imagens = extrairImagensTiny(detalhe)
       const temImagem = imagens.length > 0
       const tinyAtivo = detalhe.situacao === 'A' || detalhe.situacao === 'Ativo'
-      const ativo = tinyAtivo && temImagem && produto.estoque > 0
+      const ativo = tinyAtivo && temImagem && (produto.preVenda || produto.estoque > 0)
       const descricao = detalhe.descricao_complementar || detalhe.obs || detalhe.descricao_curta || ''
       const categoria = detalhe.categoria?.descricao || (typeof detalhe.categoria === 'string' ? detalhe.categoria : '') || undefined
       const marca = detalhe.marca || undefined
@@ -354,7 +363,8 @@ export async function syncEstoquePrecos() {
 
         // Payload sem saldo: preserva estoque real do banco (não reinjetar 999)
         const estoqueFinal = d.estoque ?? existing.estoque
-        const ativo = d.ativo && existing.temImagem && estoqueFinal > 0
+        if (existing.eventoPirelliId) continue
+        const ativo = d.ativo && existing.temImagem && (existing.preVenda || estoqueFinal > 0)
 
         await prisma.product.update({
           where: { sku: d.sku },
@@ -387,8 +397,8 @@ export async function syncEstoqueLote(limite = 18) {
   // Consultas via API do Prisma (sem $queryRaw) — simples e portável no Postgres da VPS
 
   const naoVerificados = await prisma.product.findMany({
-    where: { tinyId: { not: null }, estoque: 999 },
-    select: { id: true, tinyId: true, temImagem: true },
+    where: { tinyId: { not: null }, eventoPirelliId: null, estoque: 999 },
+    select: { id: true, tinyId: true, temImagem: true, preVenda: true },
     orderBy: { updatedAt: 'asc' },
     take: limite,
   })
@@ -396,8 +406,8 @@ export async function syncEstoqueLote(limite = 18) {
   const restante = limite - naoVerificados.length
   const zerados = restante > 0
     ? await prisma.product.findMany({
-        where: { tinyId: { not: null }, estoque: { lte: 0 } },
-        select: { id: true, tinyId: true, temImagem: true },
+        where: { tinyId: { not: null }, eventoPirelliId: null, estoque: { lte: 0 } },
+        select: { id: true, tinyId: true, temImagem: true, preVenda: true },
         orderBy: { updatedAt: 'asc' },
         take: restante,
       })
@@ -421,7 +431,7 @@ export async function syncEstoqueLote(limite = 18) {
       grupo.map(async (produto) => {
         const novoEstoque = await fetchTinyProductEstoque(produto.tinyId!)
         if (novoEstoque === -1) throw new Error('API error')
-        const ativo = produto.temImagem && novoEstoque > 0
+        const ativo = produto.temImagem && (produto.preVenda || novoEstoque > 0)
         await prisma.product.update({
           where: { id: produto.id },
           data: { estoque: novoEstoque, ativo },
@@ -461,12 +471,12 @@ export async function syncEstoqueProduto(tinyId: string | number): Promise<numbe
   if (novoEstoque === -1) return -1
 
   const products = await prisma.product.findMany({
-    where: { tinyId: String(tinyId) },
-    select: { id: true, temImagem: true }
+    where: { tinyId: String(tinyId), eventoPirelliId: null },
+    select: { id: true, temImagem: true, preVenda: true }
   })
 
   for (const p of products) {
-    const ativo = p.temImagem && novoEstoque > 0
+    const ativo = p.temImagem && (p.preVenda || novoEstoque > 0)
     await prisma.product.update({
       where: { id: p.id },
       data: { estoque: novoEstoque, ativo },
@@ -494,9 +504,10 @@ export async function syncProdutoUnico(tinyId: string | number): Promise<'criado
   const existing = await prisma.product.findUnique({ where: { sku: resto.sku } })
 
   if (existing) {
+    if (existing.eventoPirelliId) return 'ignorado'
     // Payload sem saldo: preserva estoque real do banco (não reinjetar 999)
     const estoqueFinal = estoque ?? existing.estoque
-    const ativo = resto.ativo && temImagem && estoqueFinal > 0
+    const ativo = resto.ativo && temImagem && (existing.preVenda || estoqueFinal > 0)
     await prisma.product.update({
       where: { sku: resto.sku },
       data: {
@@ -604,13 +615,13 @@ export async function syncDeltaEstoque(diasAtras = 2): Promise<{
         : Math.max(0, Number(p.saldo ?? 0))
 
       const existingProducts = await prisma.product.findMany({
-        where: { tinyId },
-        select: { id: true, temImagem: true }
+        where: { tinyId, eventoPirelliId: null },
+        select: { id: true, temImagem: true, preVenda: true }
       })
 
       if (existingProducts.length > 0) {
         for (const ep of existingProducts) {
-          const ativo = ep.temImagem && estoque > 0
+          const ativo = ep.temImagem && (ep.preVenda || estoque > 0)
           await prisma.product.update({
             where: { id: ep.id },
             data: { estoque, ativo },
@@ -660,21 +671,22 @@ export async function syncDeltaProdutos(diasAtras = 2): Promise<{
       // Tenta localizar produto existente pelo sku ou tinyId para obter o temImagem
       let existing = await prisma.product.findUnique({
         where: { sku: d.sku },
-        select: { id: true, temImagem: true, estoque: true }
+        select: { id: true, temImagem: true, estoque: true, preVenda: true, eventoPirelliId: true }
       })
 
       if (!existing) {
         existing = await prisma.product.findFirst({
           where: { tinyId: d.tinyId },
-          select: { id: true, temImagem: true, estoque: true }
+          select: { id: true, temImagem: true, estoque: true, preVenda: true, eventoPirelliId: true }
         })
       }
 
       if (existing) {
+        if (existing.eventoPirelliId) continue
         // A fila de produtos alterados NÃO traz saldo — nunca sobrescrever o
         // estoque real verificado (era a origem do 999 reinjetado toda noite)
         const estoqueFinal = estoque ?? existing.estoque
-        const ativo = d.ativo && existing.temImagem && estoqueFinal > 0
+        const ativo = d.ativo && existing.temImagem && (existing.preVenda || estoqueFinal > 0)
         await prisma.product.update({
           where: { id: existing.id },
           data: {

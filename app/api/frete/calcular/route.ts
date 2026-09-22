@@ -10,7 +10,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cotarMelhorEnvio } from '@/lib/frete/melhor-envio'
 import { dimensoesPorCategoria } from '@/lib/frete/dimensoes'
 import { opcaoRetirada } from '@/lib/frete/cotar'
-import { aplicarFreteGratisSP } from '@/lib/frete/regras'
 
 // Cotação sempre ao vivo — cache guardava resultado velho e o cliente via
 // só "retirar na loja" ao voltar do checkout (bug relatado na reunião de 20/07)
@@ -23,7 +22,12 @@ const SEM_CACHE = { 'Cache-Control': 'no-store, must-revalidate' }
 
 export async function GET(req: NextRequest) {
   const cep      = req.nextUrl.searchParams.get('cep')?.replace(/\D/g, '') ?? ''
-  const subtotal = Number(req.nextUrl.searchParams.get('subtotal') ?? 0)
+  // Serve apenas para estimativa em páginas de produto. A confirmação do
+  // checkout usa /api/frete/cotar, que recalcula o valor pelo banco.
+  const valorDeclarado = Math.max(
+    0,
+    Math.min(Number(req.nextUrl.searchParams.get('subtotal') ?? 0) || 0, 100_000),
+  )
 
   if (cep.length !== 8) {
     return NextResponse.json({ error: 'CEP inválido' }, { status: 400 })
@@ -33,7 +37,7 @@ export async function GET(req: NextRequest) {
     const resultados = await cotarMelhorEnvio({
       cepDestino: cep,
       dimensoes:  DIMENSOES_PADRAO,
-      valorTotal: subtotal,
+      valorTotal: valorDeclarado,
     })
 
     const transportadoras = resultados
@@ -47,11 +51,11 @@ export async function GET(req: NextRequest) {
         prazo:          r.deliveryTime,
       }))
       .sort((a, b) => a.preco - b.preco)
-      .slice(0, 4) // máximo 4 opções de transportadora
+      .slice(0, 2) // PAC e SEDEX, quando disponíveis para a rota
 
     // retirada na loja sempre disponível, além do limite das 4
     const opcoes = [
-      ...aplicarFreteGratisSP(transportadoras, cep, subtotal),
+      ...transportadoras,
       opcaoRetirada(),
     ]
 

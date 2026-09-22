@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, use } from 'react';
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { formatDate, formatPrice, mascaraEndereco, whatsappLink } from '@/lib/utils'
+import { formatDate, whatsappLink } from '@/lib/utils'
 import { statusBadge } from '@/components/ui/Badge'
 import {
   MessageCircle, Package, CheckCircle, Truck, Clock,
-  Copy, Check, ExternalLink, MapPin, ShoppingBag, CreditCard,
+  Copy, Check, ExternalLink, MapPin, ShoppingBag,
   Search
 } from 'lucide-react'
 
@@ -15,14 +15,10 @@ interface TrackingData {
   orderNumber: string
   status: string
   createdAt: string
-  subtotal: number
-  frete: number
-  total: number
   freteServico: string | null
   freteTransportadora: string | null
+  fretePrazo: number | null
   trackingCode: string | null
-  enderecoEntrega: any
-  items: { nome: string; quantidade: number; precoUnitario: number }[]
   tracking: { status: string; descricao: string; createdAt: string }[]
 }
 
@@ -110,7 +106,38 @@ function BarraProgresso({ status, freteServico }: { status: string; freteServico
 }
 
 // ── Código de rastreio com botão copiar ────────────────────────────────────────
-function CodigoRastreio({ codigo }: { codigo: string }) {
+function dadosRastreio(codigo: string, transportadora: string | null) {
+  const nome = transportadora?.trim() || 'Transportadora'
+  const chave = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  const codigoUrl = encodeURIComponent(codigo)
+
+  if (chave.includes('correios')) {
+    return {
+      nome: 'Correios',
+      url: `https://rastreamento.correios.com.br/app/index.php?objetos=${codigoUrl}`,
+    }
+  }
+  if (chave.includes('jadlog')) {
+    return {
+      nome: 'Jadlog',
+      url: `https://www.jadlog.com.br/siteInstitucional/tracking.jad?cte=${codigoUrl}`,
+    }
+  }
+  if (chave.includes('total')) {
+    return {
+      nome: 'Total Express',
+      url: `https://totalconecta.totalexpress.com.br/rastreamento?codigo=${codigoUrl}&language=pt-br`,
+    }
+  }
+
+  // Demais serviços do Melhor Envio usam o rastreador multi-transportadora.
+  return {
+    nome,
+    url: `https://www.melhorrastreio.com.br/rastreio/${codigoUrl}`,
+  }
+}
+
+function CodigoRastreio({ codigo, transportadora }: { codigo: string; transportadora: string | null }) {
   const [copiado, setCopiado] = useState(false)
 
   async function copiar() {
@@ -121,13 +148,13 @@ function CodigoRastreio({ codigo }: { codigo: string }) {
     } catch {}
   }
 
-  const urlCorreios = `https://rastreamento.correios.com.br/app/index.php?objetos=${encodeURIComponent(codigo)}`
+  const rastreio = dadosRastreio(codigo, transportadora)
 
   return (
     <div className="mt-4 p-4 rounded-xl" style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.20)' }}>
       <p className="text-xs font-medium text-green-700 dark:text-green-400 mb-2 flex items-center gap-1.5">
         <Truck size={12} />
-        Código de rastreio — Correios
+        Código de rastreio — {rastreio.nome}
       </p>
       <div className="flex items-center gap-2">
         <code
@@ -149,47 +176,46 @@ function CodigoRastreio({ codigo }: { codigo: string }) {
           {copiado ? 'Copiado!' : 'Copiar'}
         </button>
         <a
-          href={urlCorreios}
+          href={rastreio.url}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all"
           style={{ background: 'rgba(212,43,43,0.08)', color: '#d42b2b', border: '1px solid rgba(212,43,43,0.15)' }}
         >
           <ExternalLink size={13} />
-          <span className="hidden sm:inline">Correios</span>
+          <span className="hidden sm:inline">Rastrear</span>
         </a>
       </div>
       <p className="text-[10px] text-faint mt-2">
-        Clique em &quot;Correios&quot; para rastrear diretamente no site dos Correios
+        Abra o rastreamento correspondente à transportadora deste pedido
       </p>
     </div>
   )
 }
 
 // ── Página principal ───────────────────────────────────────────────────────────
-export default function RastrearPage({ searchParams }: { searchParams: { pedido?: string } }) {
+export default function RastrearPage(props: { searchParams: Promise<{ pedido?: string }> }) {
+  const searchParams = use(props.searchParams);
   const [numeroPedido, setNumeroPedido] = useState(searchParams.pedido ?? '')
+  const [verificacao, setVerificacao] = useState('')
   const [loading,  setLoading]  = useState(false)
   const [pedido,   setPedido]   = useState<TrackingData | null>(null)
   const [erro,     setErro]     = useState('')
-
-  // Busca automática se vier ?pedido=xxx na URL
-  useEffect(() => {
-    if (searchParams.pedido) {
-      buscarPedidoDirectly(searchParams.pedido)
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function buscarPedidoDirectly(num: string) {
     setLoading(true)
     setErro('')
     setPedido(null)
     try {
-      const res = await fetch(`/api/rastrear?pedido=${encodeURIComponent(num.trim())}`)
-      if (!res.ok) throw new Error('Pedido não encontrado')
+      const res = await fetch('/api/rastrear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pedido: num.trim(), verificacao: verificacao.trim() }),
+      })
+      if (!res.ok) throw new Error('Pedido não encontrado ou dados não conferem')
       setPedido(await res.json())
     } catch {
-      setErro('Pedido não encontrado. Verifique o número e tente novamente.')
+      setErro('Pedido não encontrado ou os dados informados não conferem.')
     } finally {
       setLoading(false)
     }
@@ -197,7 +223,10 @@ export default function RastrearPage({ searchParams }: { searchParams: { pedido?
 
   async function buscarPedido(e: React.FormEvent) {
     e.preventDefault()
-    if (!numeroPedido.trim()) return
+    if (!numeroPedido.trim() || !verificacao.trim()) {
+      setErro('Informe o número do pedido e o e-mail ou CPF usado na compra.')
+      return
+    }
     buscarPedidoDirectly(numeroPedido)
   }
 
@@ -208,12 +237,12 @@ export default function RastrearPage({ searchParams }: { searchParams: { pedido?
       {/* Header */}
       <div className="mb-8">
         <h1 className="font-grotesk font-bold text-3xl text-ink mb-1">Rastrear Pedido</h1>
-        <p className="text-dim text-sm">Digite o número do pedido para acompanhar sua entrega</p>
+        <p className="text-dim text-sm">Informe o pedido e confirme o e-mail ou CPF usado na compra</p>
       </div>
 
       {/* Form de busca */}
-      <form onSubmit={buscarPedido} className="flex gap-3 mb-8">
-        <div className="relative flex-1">
+      <form onSubmit={buscarPedido} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 mb-8">
+        <div className="relative">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
           <Input
             value={numeroPedido}
@@ -222,6 +251,12 @@ export default function RastrearPage({ searchParams }: { searchParams: { pedido?
             className="pl-9"
           />
         </div>
+        <Input
+          value={verificacao}
+          onChange={(e) => setVerificacao(e.target.value)}
+          placeholder="E-mail ou CPF da compra"
+          autoComplete="email"
+        />
         <Button type="submit" loading={loading}>Buscar</Button>
       </form>
 
@@ -263,7 +298,10 @@ export default function RastrearPage({ searchParams }: { searchParams: { pedido?
 
             {/* Código de rastreio */}
             {pedido.trackingCode && (
-              <CodigoRastreio codigo={pedido.trackingCode} />
+              <CodigoRastreio
+                codigo={pedido.trackingCode}
+                transportadora={pedido.freteTransportadora}
+              />
             )}
           </div>
 
@@ -307,38 +345,8 @@ export default function RastrearPage({ searchParams }: { searchParams: { pedido?
             )}
           </div>
 
-          {/* Itens do pedido */}
-          <div className="bg-card border border-line rounded-2xl p-5">
-            <h2 className="font-grotesk font-semibold text-base text-ink mb-4 flex items-center gap-2">
-              <Package size={15} className="text-vermelho" />
-              Itens do pedido
-            </h2>
-            <div className="space-y-2">
-              {pedido.items.map((item, i) => (
-                <div key={i} className="flex justify-between text-sm py-1">
-                  <span className="text-dim">{item.nome} <span className="text-faint">×{item.quantidade}</span></span>
-                  <span className="text-ink font-medium shrink-0 ml-4">{formatPrice(Number(item.precoUnitario) * item.quantidade)}</span>
-                </div>
-              ))}
-              <div className="border-t border-line pt-3 mt-3 space-y-1.5">
-                <div className="flex justify-between text-sm text-dim">
-                  <span>Subtotal</span>
-                  <span>{formatPrice(pedido.subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-sm text-dim">
-                  <span>Frete</span>
-                  <span>{pedido.frete === 0 ? <span className="text-green-600 font-semibold">Grátis 🎉</span> : formatPrice(pedido.frete)}</span>
-                </div>
-                <div className="flex justify-between font-bold text-ink text-base border-t border-line pt-2">
-                  <span className="flex items-center gap-1.5"><CreditCard size={14} /> Total</span>
-                  <span>{formatPrice(pedido.total)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Endereço ou Local de Retirada */}
-          {pedido.freteServico === 'retirada' ? (
+          {/* O endereço da loja é público; endereço do cliente nunca vem da API. */}
+          {pedido.freteServico === 'retirada' && (
             <div className="bg-card border border-line rounded-2xl p-5">
               <h2 className="font-grotesk font-semibold text-base text-ink mb-2 flex items-center gap-2">
                 <MapPin size={15} className="text-vermelho" />
@@ -354,18 +362,6 @@ export default function RastrearPage({ searchParams }: { searchParams: { pedido?
                 <span className="text-xs text-faint mt-1.5 block font-semibold text-emerald-600 dark:text-emerald-400">
                   🏁 Disponível para retirada de Segunda a Sexta das 9h às 18h e Sábado das 8h às 12h.
                 </span>
-              </p>
-            </div>
-          ) : (
-            <div className="bg-card border border-line rounded-2xl p-5">
-              <h2 className="font-grotesk font-semibold text-base text-ink mb-2 flex items-center gap-2">
-                <MapPin size={15} className="text-vermelho" />
-                Endereço de entrega
-              </h2>
-              <p className="text-sm text-dim">
-                {mascaraEndereco(
-                  `${pedido.enderecoEntrega?.rua ?? ''}, ${pedido.enderecoEntrega?.numero ?? ''} – ${pedido.enderecoEntrega?.cidade ?? ''}/${pedido.enderecoEntrega?.estado ?? ''}`
-                )}
               </p>
             </div>
           )}

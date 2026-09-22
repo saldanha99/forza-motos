@@ -16,9 +16,10 @@ interface OpcaoFrete {
 interface Props {
   subtotal: number     // subtotal do carrinho ou preço do produto
   compact?: boolean    // modo acordeão (produto) vs expandido (carrinho)
+  items?: Array<{ productId: string; quantidade: number }>
 }
 
-export function CalculadorFrete({ subtotal, compact = false }: Props) {
+export function CalculadorFrete({ subtotal, compact = false, items = [] }: Props) {
   const [cep,     setCep]     = useState('')
   const [cidade,  setCidade]  = useState('')
   const [estado,  setEstado]  = useState('')
@@ -28,6 +29,10 @@ export function CalculadorFrete({ subtotal, compact = false }: Props) {
   const [aberto,  setAberto]  = useState(!compact)
 
   const inputRef = useRef<HTMLInputElement>(null)
+  const chaveItens = items
+    .map((item) => `${item.productId}:${item.quantidade}`)
+    .sort()
+    .join('|')
 
   // Recotação quando o subtotal muda com um CEP já informado (mudou a
   // quantidade no produto, ou entrou/saiu item do carrinho). Sem isso a
@@ -45,7 +50,7 @@ export function CalculadorFrete({ subtotal, compact = false }: Props) {
     return () => clearTimeout(t)
     // `cep` fora das deps de propósito: digitar o CEP já dispara handleChange
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subtotal])
+  }, [subtotal, chaveItens])
 
   async function calcular(cepLimpo: string) {
     setLoading(true)
@@ -59,8 +64,17 @@ export function CalculadorFrete({ subtotal, compact = false }: Props) {
       setCidade(local.localidade)
       setEstado(local.uf)
 
-      // Cotação real via Melhor Envio (server-side) — sem cache: valores sempre atuais
-      const res  = await fetch(`/api/frete/calcular?cep=${cepLimpo}&subtotal=${subtotal}`, { cache: 'no-store' })
+      // Com os IDs do carrinho, o servidor soma também a disponibilidade da
+      // pré-venda. O GET permanece apenas como fallback para usos legados que
+      // ainda não conheçam o produto.
+      const res = items.length > 0
+        ? await fetch('/api/frete/cotar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cepDestino: cepLimpo, items }),
+            cache: 'no-store',
+          })
+        : await fetch(`/api/frete/calcular?cep=${cepLimpo}&subtotal=${subtotal}`, { cache: 'no-store' })
       const data = await res.json()
 
       if (!res.ok) throw new Error(data.error || 'Erro ao calcular frete')
@@ -194,7 +208,9 @@ export function CalculadorFrete({ subtotal, compact = false }: Props) {
                         </p>
                         <p className="text-[10px] text-faint mt-0.5">
                           {op.id === 'retirada'
-                            ? 'Retire hoje mesmo — horário comercial'
+                            ? op.prazo > 0
+                              ? `Retirada após disponibilidade — até ${op.prazo} dias úteis`
+                              : 'Retire hoje mesmo — horário comercial'
                             : `Prazo: até ${op.prazo} ${op.prazo === 1 ? 'dia útil' : 'dias úteis'}`}
                         </p>
                       </div>

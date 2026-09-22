@@ -7,7 +7,8 @@ import { AlterarStatusPedido } from '@/components/admin/AlterarStatusPedido'
 import { PedidoStepper } from '@/components/admin/PedidoStepper'
 import { EtiquetaMelhorEnvio } from '@/components/admin/EtiquetaMelhorEnvio'
 
-export default async function PedidoDetalhePage({ params }: { params: { id: string } }) {
+export default async function PedidoDetalhePage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const pedido = await prisma.order.findUnique({
     where: { id: params.id },
     include: {
@@ -34,6 +35,7 @@ export default async function PedidoDetalhePage({ params }: { params: { id: stri
         pedidoId={pedido.id}
         status={pedido.status}
         olistOrderId={pedido.olistOrderId}
+        olistSyncStatus={pedido.olistSyncStatus}
         trackingCode={pedido.trackingCode}
         freteServico={pedido.freteServico}
       />
@@ -102,9 +104,10 @@ export default async function PedidoDetalhePage({ params }: { params: { id: stri
             pedidoId={pedido.id}
             freteServico={pedido.freteServico}
             freteTransportadora={pedido.freteTransportadora}
+            statusPedido={pedido.status}
+            nfeChave={pedido.nfeChave}
             melhorEnvioId={pedido.melhorEnvioId}
             melhorEnvioStatus={pedido.melhorEnvioStatus}
-            melhorEnvioEtiqueta={pedido.melhorEnvioEtiqueta}
             trackingCode={pedido.trackingCode}
           />
 
