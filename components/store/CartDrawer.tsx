@@ -5,7 +5,7 @@
  * cliente até o checkout. No mobile, um pill flutuante mantém o carrinho
  * sempre à vista enquanto houver itens.
  */
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -13,15 +13,17 @@ import { useCartStore } from '@/store/cart'
 import { formatPrice } from '@/lib/utils'
 import { CalculadorFrete } from './CalculadorFrete'
 import { useTravarScrollDeFundo } from '@/components/SmoothScroll'
-import { X, Minus, Plus, ShoppingCart, Trash2, ArrowRight, Truck } from 'lucide-react'
+import { X, Minus, Plus, ShoppingCart, Trash2, ArrowRight, Truck, AlertTriangle } from 'lucide-react'
 
 const FRETE_GRATIS_SP = 499
 
 export function CartDrawer() {
+  const confirmacaoTrocaRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
   const {
     items, drawerAberto, fecharDrawer, abrirDrawer,
     atualizarQuantidade, removerItem, subtotal, _hasHydrated,
+    trocaPendente, confirmarTrocaCarrinho, cancelarTrocaCarrinho,
   } = useCartStore()
 
   const total = subtotal()
@@ -43,6 +45,11 @@ export function CartDrawer() {
     fecharDrawer()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
+
+  useEffect(() => {
+    if (!trocaPendente) return
+    confirmacaoTrocaRef.current?.focus()
+  }, [trocaPendente])
 
   // Nas páginas de carrinho/checkout o resumo já está na tela
   if (!_hasHydrated || pathname.startsWith('/carrinho') || pathname.startsWith('/checkout')) {
@@ -105,6 +112,33 @@ export function CartDrawer() {
             <X size={20} />
           </button>
         </div>
+
+        {trocaPendente && (
+          <div
+            ref={confirmacaoTrocaRef}
+            role="alertdialog"
+            aria-labelledby="titulo-confirmacao-troca-carrinho"
+            aria-describedby="descricao-confirmacao-troca-carrinho"
+            tabIndex={-1}
+            className="border-b border-amber-200 bg-amber-50 px-5 py-4 text-amber-950 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-600"
+          >
+            <p id="titulo-confirmacao-troca-carrinho" className="flex items-start gap-2 text-sm font-bold">
+              <AlertTriangle size={18} className="mt-0.5 shrink-0 text-amber-600" />
+              Este produto pertence a uma compra diferente.
+            </p>
+            <p id="descricao-confirmacao-troca-carrinho" className="mt-2 text-xs leading-relaxed text-amber-900/75">
+              Ofertas do evento Pirelli e produtos do catálogo comum precisam de pedidos separados. Você pode manter este carrinho ou substituí-lo por {trocaPendente.item.nome}.
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button type="button" onClick={cancelarTrocaCarrinho} className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-bold">
+                Manter carrinho
+              </button>
+              <button type="button" onClick={confirmarTrocaCarrinho} className="rounded-lg bg-[#d42b2b] px-3 py-2 text-xs font-bold text-white">
+                Trocar carrinho
+              </button>
+            </div>
+          </div>
+        )}
 
         {items.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
@@ -204,7 +238,11 @@ export function CartDrawer() {
               </div>
               {/* Frete cotado aqui mesmo: o cliente vê o valor antes de ir para
                   o checkout, já com todos os itens do carrinho no cálculo */}
-              <CalculadorFrete subtotal={total} compact />
+              <CalculadorFrete
+                subtotal={total}
+                items={items.map((item) => ({ productId: item.id, quantidade: item.quantidade }))}
+                compact
+              />
               <Link
                 href="/checkout"
                 className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#d42b2b] hover:bg-red-700 text-white font-barlow font-bold uppercase text-sm tracking-wider transition-colors"
