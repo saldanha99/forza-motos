@@ -115,7 +115,8 @@ async function getFiltrosDisponiveis() {
 
 export const metadata = { title: 'Produtos' }
 
-export default async function ProdutosPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function ProdutosPage(props: { searchParams: Promise<SearchParams> }) {
+  const searchParams = await props.searchParams;
   const [{ produtos, total, pages, construcoes }, filtros] = await Promise.all([
     getProdutos(searchParams),
     getFiltrosDisponiveis(),

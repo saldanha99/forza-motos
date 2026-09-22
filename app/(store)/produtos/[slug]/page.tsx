@@ -7,6 +7,7 @@ import { ProductDetail } from '@/components/store/ProductDetail'
 import { ProductCard } from '@/components/store/ProductCard'
 import { Breadcrumb } from '@/components/store/Breadcrumb'
 import type { Metadata } from 'next'
+import { vendasEventoPirelliDisponiveis } from '@/lib/checkout/catalogo-evento-pirelli'
 
 const BASE = 'https://forzamotos.com.br'
 
@@ -31,7 +32,7 @@ async function montarSeletorTamanho(produto: { sku: string; variacaoDe: string |
   const [pai, irmaos] = await Promise.all([
     prisma.product.findUnique({ where: { sku: produto.variacaoDe }, select: { nome: true } }),
     prisma.product.findMany({
-      where: { variacaoDe: produto.variacaoDe },
+      where: { variacaoDe: produto.variacaoDe, ocultoManual: false },
       select: { slug: true, nome: true, estoque: true, ativo: true },
     }),
   ])
@@ -85,11 +86,14 @@ async function montarSeletorTamanho(produto: { sku: string; variacaoDe: string |
 }
 
 interface Props {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const p = await prisma.product.findUnique({ where: { slug: params.slug } })
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const params = await props.params;
+  const p = await prisma.product.findUnique({
+    where: { slug: params.slug, ativo: true, ocultoManual: false },
+  })
   if (!p) return { title: 'Produto não encontrado' }
 
   const imagens = Array.isArray(p.imagens) ? p.imagens : []
@@ -117,9 +121,26 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function ProdutoPage({ params }: Props) {
+export default async function ProdutoPage(props: Props) {
+  const params = await props.params;
   const produto = await prisma.product.findUnique({
-    where: { slug: params.slug, ativo: true },
+    where: { slug: params.slug, ativo: true, ocultoManual: false },
+    include: {
+      eventoPirelli: {
+        select: {
+          id: true,
+          titulo: true,
+          ativo: true,
+          publicado: true,
+          vendasAntecipadasAbertas: true,
+          dataInicio: true,
+          dataFim: true,
+          valorMinimoPneus: true,
+          operadorValorMinimoPneus: true,
+          limiteNomeGravacao: true,
+        },
+      },
+    },
   })
 
   if (!produto) notFound()
@@ -130,7 +151,12 @@ export default async function ProdutoPage({ params }: Props) {
   // Produto-pai não é comprável (estoque agregado): manda pro 1º tamanho disponível
   if (produto.ehPai) {
     const filho = await prisma.product.findFirst({
-      where: { variacaoDe: produto.sku, ativo: true, estoque: { gt: 0 } },
+      where: {
+        variacaoDe: produto.sku,
+        ativo: true,
+        ocultoManual: false,
+        estoque: { gt: 0 },
+      },
       orderBy: { nome: 'asc' },
       select: { slug: true },
     })
@@ -144,6 +170,7 @@ export default async function ProdutoPage({ params }: Props) {
       where: {
         categoria: produto.categoria,
         ativo: true,
+        ocultoManual: false,
         estoque: { gt: 0 },
         preco: { gt: 0, not: 999 },
         variacaoDe: null,
@@ -158,6 +185,17 @@ export default async function ProdutoPage({ params }: Props) {
 
   const imagens = Array.isArray(produto.imagens) ? produto.imagens : []
   const preco = Number(produto.precoPromocional ?? produto.preco)
+  const ofertaEvento = produto.eventoPirelli
+      ? {
+        titulo: produto.eventoPirelli.titulo,
+        disponivel: vendasEventoPirelliDisponiveis(produto.eventoPirelli),
+        limitePorPedido: produto.limitePorPedidoEvento,
+        valorMinimoBrinde: Number(produto.eventoPirelli.valorMinimoPneus),
+        operadorValorMinimoBrinde: produto.eventoPirelli.operadorValorMinimoPneus,
+        limiteNomeGravacao: produto.eventoPirelli.limiteNomeGravacao,
+      }
+    : null
+  const { eventoPirelli: _eventoPirelli, ...produtoDetalhe } = produto
 
   // JSON-LD estruturado para Google Shopping e SEO de produto
   const jsonLd = {
@@ -174,9 +212,13 @@ export default async function ProdutoPage({ params }: Props) {
       '@type': 'Offer',
       price: preco.toFixed(2),
       priceCurrency: 'BRL',
-      availability: produto.estoque > 0
-        ? 'https://schema.org/InStock'
-        : 'https://schema.org/OutOfStock',
+      availability: ofertaEvento && !ofertaEvento.disponivel
+        ? 'https://schema.org/OutOfStock'
+        : produto.preVenda
+          ? 'https://schema.org/PreOrder'
+          : produto.estoque > 0
+            ? 'https://schema.org/InStock'
+            : 'https://schema.org/OutOfStock',
       url: `${BASE}/produtos/${produto.slug}`,
       seller: { '@type': 'Organization', name: 'Forza Motos' },
     },
@@ -197,7 +239,7 @@ export default async function ProdutoPage({ params }: Props) {
           ]}
         />
 
-        <ProductDetail produto={produto} seletorTamanho={seletorTamanho} />
+        <ProductDetail produto={produtoDetalhe} seletorTamanho={seletorTamanho} ofertaEvento={ofertaEvento} />
 
         {relacionados.length > 0 && (
           <section className="mt-16">

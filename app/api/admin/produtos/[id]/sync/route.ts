@@ -13,10 +13,8 @@ import { fetchTinyProduct, fetchTinyProductEstoque, extrairImagensTiny } from '@
 
 export const maxDuration = 30
 
-export async function POST(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
@@ -25,11 +23,17 @@ export async function POST(
   // Busca produto no banco
   const produto = await prisma.product.findUnique({
     where: { id: params.id },
-    select: { id: true, tinyId: true, nome: true, sku: true, imagens: true },
+    select: { id: true, tinyId: true, nome: true, sku: true, imagens: true, preVenda: true, eventoPirelliId: true },
   })
 
   if (!produto) {
     return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 })
+  }
+
+  if (produto.eventoPirelliId) {
+    return NextResponse.json({
+      error: 'Produto exclusivo do evento não é sincronizado automaticamente. Edite pela área Produtos do Evento Pirelli.',
+    }, { status: 409 })
   }
 
   if (!produto.tinyId) {
@@ -44,7 +48,7 @@ export async function POST(
       // Produto sumiu do Tiny → marca como inativo
       await prisma.product.update({
         where: { id: params.id },
-        data: { ativo: false, imagensVerificadas: true },
+        data: { ativo: produto.preVenda ? undefined : false, imagensVerificadas: true },
       })
       return NextResponse.json({
         ok: true,
@@ -73,7 +77,7 @@ export async function POST(
     // Determina imagens finais e se tem imagem
     const finalImagens = imagens.length > 0 ? imagens : (produto.imagens as any[] || [])
     const temImagem = finalImagens.length > 0
-    const finalAtivo = tinyAtivo && temImagem && (estoque >= 0 ? estoque : 0) > 0
+    const finalAtivo = tinyAtivo && temImagem && (produto.preVenda || (estoque >= 0 ? estoque : 0) > 0)
 
     // Monta campos atualizados
     const campos: Record<string, any> = {

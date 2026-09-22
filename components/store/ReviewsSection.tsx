@@ -1,79 +1,35 @@
-'use client'
+import { ExternalLink, Star } from 'lucide-react'
 
-import { useEffect, useRef } from 'react'
-import { SITE_URL, SITE_NAME } from '@/lib/schema'
-
-const AGGREGATE_RATING = {
-  '@context': 'https://schema.org',
-  '@type': 'LocalBusiness',
-  '@id': `${SITE_URL}/#organization`,
-  name: SITE_NAME,
-  aggregateRating: {
-    '@type': 'AggregateRating',
-    ratingValue: '4.9',
-    reviewCount: '124',
-    bestRating: '5',
-    worstRating: '1',
-  },
-}
-
-const WIDGET_ID = '73043017787d1877e976b42d67e'
+const GOOGLE_MAPS_URL = 'https://maps.google.com/?q=R.+Funilense,+110+Campinas+SP'
 
 export function ReviewsSection() {
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!containerRef.current) return
-    if (document.querySelector(`script[src*="${WIDGET_ID}"]`)) return
-
-    const script = document.createElement('script')
-    script.src = `https://cdn.trustindex.io/loader.js?${WIDGET_ID}`
-    script.async = true
-    script.defer = true
-    containerRef.current.appendChild(script)
-  }, [])
-
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(AGGREGATE_RATING) }}
-      />
-
-      <section
-        className="bg-[#fafafa] dark:bg-[#121212]"
-        style={{
-          borderTop: '1px solid rgba(128,128,128,0.15)',
-          borderBottom: '1px solid rgba(128,128,128,0.15)',
-          padding: '56px 0',
-        }}
-      >
-        <div className="max-w-[1280px] mx-auto px-6 md:px-12">
-          <div className="text-center mb-10">
-            <h2
-              className="font-barlow font-bold text-3xl md:text-4xl text-[#111] dark:text-white mb-2"
-              style={{ letterSpacing: '-0.5px' }}
-            >
-              O que dizem nossos clientes
-            </h2>
-            <p className="text-[#666] dark:text-[#aaa] text-sm font-inter">
-              Avaliações reais do Google · Forza Motos Campinas
-            </p>
-          </div>
-
-          {/* Container do Widget Trustindex */}
-          <div ref={containerRef} className="min-h-[350px] w-full flex justify-center items-center">
-            <iframe
-              src={`https://cdn.trustindex.io/amp-widget.html#${WIDGET_ID}`}
-              width="100%"
-              height="353"
-              style={{ border: 'none', overflow: 'hidden' }}
-              title="Avaliações do Google - Forza Motos"
-              sandbox="allow-scripts allow-same-origin allow-popups"
-            />
-          </div>
+    <section
+      aria-labelledby="avaliacoes-google"
+      className="border-y border-black/10 bg-[#fafafa] px-6 py-14 dark:border-white/10 dark:bg-[#121212] md:px-12"
+    >
+      <div className="mx-auto max-w-[880px] rounded-2xl border border-black/10 bg-white p-7 text-center shadow-sm dark:border-white/10 dark:bg-[#191919] sm:p-10">
+        <div className="mx-auto mb-4 flex w-fit gap-1 text-amber-500" aria-hidden="true">
+          {Array.from({ length: 5 }, (_, index) => (
+            <Star key={index} size={20} fill="currentColor" />
+          ))}
         </div>
-      </section>
-    </>
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d42b2b]">Reputação pública</p>
+        <h2 id="avaliacoes-google" className="mt-2 font-barlow text-3xl font-bold text-[#111] dark:text-white md:text-4xl">
+          Confira as avaliações no Google
+        </h2>
+        <p className="mx-auto mt-3 max-w-xl font-inter text-sm leading-relaxed text-[#666] dark:text-[#aaa]">
+          Veja comentários publicados por clientes no perfil da Forza Motos. As informações são exibidas e atualizadas diretamente pelo Google.
+        </p>
+        <a
+          href={GOOGLE_MAPS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-6 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#d42b2b] px-5 font-barlow text-sm font-bold uppercase tracking-wide text-white transition-colors hover:bg-[#b82222]"
+        >
+          Ver avaliações no Google <ExternalLink size={15} aria-hidden="true" />
+        </a>
+      </div>
+    </section>
   )
 }

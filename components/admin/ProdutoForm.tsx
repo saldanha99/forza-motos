@@ -26,6 +26,7 @@ interface Produto {
   destaque?: boolean
   preVenda?: boolean
   prazoEntregaDias?: number | null
+  ocultoManual?: boolean
 }
 
 export function ProdutoForm({ produto }: { produto?: Produto }) {
@@ -42,7 +43,8 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
     estoque: produto?.estoque ?? 0,
     categoria: produto?.categoria ?? '',
     marca: produto?.marca ?? '',
-    ativo: produto?.ativo ?? true,
+    // No painel, o controle representa o resultado que o cliente realmente vê.
+    ativo: produto ? Boolean(produto.ativo && !produto.ocultoManual) : true,
     destaque: produto?.destaque ?? false,
     preVenda: produto?.preVenda ?? false,
     prazoEntregaDias: produto?.prazoEntregaDias ?? '',
@@ -208,7 +210,12 @@ export function ProdutoForm({ produto }: { produto?: Produto }) {
           </Campo>
         </div>
         <div className="grid gap-2 sm:grid-cols-3">
-          <Switch checked={form.ativo} onChange={(v) => update('ativo', v)} label="Produto ativo" />
+          <Switch
+            checked={form.ativo}
+            onChange={(v) => update('ativo', v)}
+            label="Visível na loja"
+            descricao="Ao ativar, remove também um ocultamento anterior"
+          />
           <Switch checked={form.destaque} onChange={(v) => update('destaque', v)} label="Produto em destaque" />
           <Switch checked={form.preVenda} onChange={(v) => update('preVenda', v)} label="Pré-venda" descricao="Vende sem estoque" />
         </div>

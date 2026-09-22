@@ -1,12 +1,14 @@
 export const dynamic = 'force-dynamic'
 import { prisma } from '@/lib/prisma'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { ProdutoForm } from '@/components/admin/ProdutoForm'
 import { PageHeader } from '@/components/admin/ui/primitives'
 
-export default async function EditarProdutoPage({ params }: { params: { id: string } }) {
+export default async function EditarProdutoPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const produto = await prisma.product.findUnique({ where: { id: params.id } })
   if (!produto) notFound()
+  if (produto.eventoPirelliId) redirect('/admin/evento-pirelli/produtos')
 
   return (
     <div className="max-w-3xl">

@@ -17,6 +17,8 @@ import { TrustBar } from '@/components/store/TrustBar'
 import { BrandMarquee } from '@/components/store/BrandMarquee'
 import { BuscaCombinada } from '@/components/store/BuscaCombinada'
 import { getIndiceMedidas } from '@/lib/indice-medidas'
+import { EVENTO_PIRELLI_SLUG } from '@/lib/evento-pirelli'
+import { eventoPirelliParaListagem } from '@/lib/eventos/listagem-pirelli'
 
 export const metadata: Metadata = {
   title: 'Forza Motos — Pneus e Peças para Moto em Campinas/SP',
@@ -92,11 +94,27 @@ async function getHomeData() {
       LIMIT 12
     ` as any[]
 
-    const proximosEventos = await prisma.evento.findMany({
-      where: { publicado: true, ativo: true, dataInicio: { gte: new Date() } },
-      orderBy: { dataInicio: 'asc' },
-      take: 3,
-    })
+    const agora = new Date()
+    const [eventosComuns, eventoPirelli] = await Promise.all([
+      prisma.evento.findMany({
+        where: { publicado: true, ativo: true, ocultoListagem: false, dataInicio: { gte: agora } },
+        orderBy: { dataInicio: 'asc' },
+        take: 3,
+      }),
+      prisma.eventoPirelli.findUnique({ where: { slug: EVENTO_PIRELLI_SLUG } }),
+    ])
+    const itemPirelli = eventoPirelliParaListagem(eventoPirelli, 'home', agora)
+    const proximosEventos = [
+      ...eventosComuns.map((evento) => ({
+        ...evento,
+        preco: Number(evento.preco),
+        etiquetaPreco: null,
+        href: `/eventos/${evento.slug}`,
+      })),
+      ...(itemPirelli ? [itemPirelli] : []),
+    ]
+      .sort((a, b) => a.dataInicio.getTime() - b.dataInicio.getTime())
+      .slice(0, 3)
 
     return { destaque, promos: promos as any[], maisVendidos: maisVendidos as any[], temVendasReais, proximosEventos }
   } catch (e) {
@@ -555,11 +573,12 @@ export default async function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {proximosEventos.map((ev) => {
                 const preco = Number(ev.preco)
+                const etiquetaPreco = ev.etiquetaPreco ?? (preco === 0 ? 'Gratuito' : `R$ ${preco.toFixed(2)}`)
                 const data = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).format(ev.dataInicio)
                 return (
                   <Link
                     key={ev.id}
-                    href={`/eventos/${ev.slug}`}
+                    href={ev.href}
                     className="group flex flex-col bg-white/5 border border-white/10 hover:border-[#d42b2b]/50 rounded-2xl overflow-hidden transition-all duration-200 hover:bg-white/8"
                   >
                     {ev.imagemUrl ? (
@@ -580,8 +599,8 @@ export default async function HomePage() {
                     <div className="p-5 flex flex-col flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-semibold text-[#d42b2b] uppercase tracking-wider">{ev.categoria}</span>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${preco === 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-[#d42b2b]/20 text-[#d42b2b]'}`}>
-                          {preco === 0 ? 'Gratuito' : `R$ ${preco.toFixed(2)}`}
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${preco === 0 && !ev.etiquetaPreco ? 'bg-emerald-500/20 text-emerald-400' : 'bg-[#d42b2b]/20 text-[#d42b2b]'}`}>
+                          {etiquetaPreco}
                         </span>
                       </div>
                       <h3 className="font-barlow font-bold text-white text-base leading-tight mb-3 group-hover:text-[#d42b2b] transition-colors line-clamp-2">

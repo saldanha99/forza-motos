@@ -12,11 +12,17 @@ import { Input } from '@/components/admin/ui/form'
 
 export const metadata = { title: 'Produtos — Forza Admin' }
 
-export default async function ProdutosAdminPage({ searchParams }: { searchParams: { busca?: string } }) {
+export default async function ProdutosAdminPage(props: { searchParams: Promise<{ busca?: string }> }) {
+  const searchParams = await props.searchParams;
   const produtos = await prisma.product.findMany({
-    where: searchParams.busca
-      ? { OR: [{ nome: { contains: searchParams.busca, mode: 'insensitive' } }, { sku: { contains: searchParams.busca, mode: 'insensitive' } }] }
-      : undefined,
+    where: {
+      // As ofertas da ação têm regras próprias de preço, prazo e pré-venda e
+      // são mantidas somente no módulo dedicado para evitar edição acidental.
+      eventoPirelliId: null,
+      ...(searchParams.busca
+        ? { OR: [{ nome: { contains: searchParams.busca, mode: 'insensitive' as const } }, { sku: { contains: searchParams.busca, mode: 'insensitive' as const } }] }
+        : {}),
+    },
     orderBy: { createdAt: 'desc' },
     take: 100,
   })
@@ -25,11 +31,16 @@ export default async function ProdutosAdminPage({ searchParams }: { searchParams
     <div>
       <PageHeader
         titulo="Produtos"
-        descricao="Catálogo completo da loja — edite preço, estoque e visibilidade, ou sincronize o cadastro com o Tiny."
+        descricao="Catálogo regular da loja — edite preço, estoque e visibilidade, ou sincronize o cadastro com o Tiny."
         acoes={
-          <BotaoLink href="/admin/produtos/novo">
-            <Plus size={16} /> Novo produto
-          </BotaoLink>
+          <>
+            <BotaoLink href="/admin/evento-pirelli/produtos" variante="secundario">
+              Ofertas Pirelli
+            </BotaoLink>
+            <BotaoLink href="/admin/produtos/novo">
+              <Plus size={16} /> Novo produto
+            </BotaoLink>
+          </>
         }
       />
 
@@ -62,7 +73,11 @@ export default async function ProdutosAdminPage({ searchParams }: { searchParams
             </>
           }
         >
-          {produtos.map((p) => (
+          {produtos.map((p) => {
+            const naLoja = p.ativo && !p.ocultoManual
+              && (p.fornecedor !== 'eurolaqui' || p.mantidoManual)
+
+            return (
             <tr key={p.id} className={TR_LINHA}>
               <td className={TD_CELULA}>
                 <div className="font-medium text-brand-text">{p.nome}</div>
@@ -77,7 +92,13 @@ export default async function ProdutosAdminPage({ searchParams }: { searchParams
               </td>
               <td className={TD_CELULA}>
                 <div className="flex flex-wrap gap-2">
-                  {p.ativo ? <Badge tom="success">Ativo</Badge> : <Badge tom="danger">Inativo</Badge>}
+                  {naLoja ? (
+                    <Badge tom="success">Na loja</Badge>
+                  ) : p.ocultoManual ? (
+                    <Badge tom="warning">Oculto</Badge>
+                  ) : (
+                    <Badge tom="danger">Inativo</Badge>
+                  )}
                   {p.destaque && <Badge tom="info">Destaque</Badge>}
                 </div>
               </td>
@@ -93,7 +114,8 @@ export default async function ProdutosAdminPage({ searchParams }: { searchParams
                 </div>
               </td>
             </tr>
-          ))}
+            )
+          })}
         </Tabela>
       )}
     </div>

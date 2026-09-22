@@ -182,7 +182,7 @@ export function ProductCard({ produto }: { produto: Produto }) {
             >
               {produto.preVenda && produto.prazoEntregaDias
                 ? `Postagem em até ${produto.prazoEntregaDias} dias úteis`
-                : `ou 6x de ${formatPrice(precoFinal / 6)} sem juros`}
+                : '5% de desconto no Pix'}
             </span>
           </div>
 

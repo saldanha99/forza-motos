@@ -14,7 +14,8 @@ async function exigirAdmin() {
   return session && session.user.role === 'ADMIN'
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   if (!(await exigirAdmin())) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
@@ -27,7 +28,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   return NextResponse.json(cupom)
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   if (!(await exigirAdmin())) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }

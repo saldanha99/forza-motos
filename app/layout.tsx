@@ -81,7 +81,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${barlowCondensed.variable} ${inter.variable}`}>
+    <html
+      lang="pt-BR"
+      className={`${barlowCondensed.variable} ${inter.variable}`}
+      suppressHydrationWarning
+    >
       <body className="bg-white text-[#111] font-inter antialiased">
         {/* SEO — JSON-LD global (Organization + WebSite + LocalBusiness) */}
         <JsonLd

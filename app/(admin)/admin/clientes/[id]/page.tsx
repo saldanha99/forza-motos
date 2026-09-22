@@ -8,7 +8,8 @@ import {
   Card, CardHeader, EmptyState, PageHeader, StatusPill,
 } from '@/components/admin/ui/primitives'
 
-export default async function ClienteDetalhePage({ params }: { params: { id: string } }) {
+export default async function ClienteDetalhePage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const cliente = await prisma.user.findUnique({
     where: { id: params.id },
     include: {

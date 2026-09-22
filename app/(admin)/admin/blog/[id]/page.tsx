@@ -5,7 +5,8 @@ import { prisma } from '@/lib/prisma'
 import { BlogForm } from '@/components/admin/BlogForm'
 import { PageHeader } from '@/components/admin/ui/primitives'
 
-export default async function EditarBlogPage({ params }: { params: { id: string } }) {
+export default async function EditarBlogPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const post = await prisma.blogPost.findUnique({ where: { id: params.id } })
   if (!post) notFound()
 

@@ -38,7 +38,7 @@ export function CommandPalette() {
   const [selecionado, setSelecionado] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const listaRef = useRef<HTMLDivElement>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const fechar = useCallback(() => {
     setAberto(false)

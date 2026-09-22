@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 import type { Metadata } from 'next'
+import type { Prisma } from '@prisma/client'
 import Link from 'next/link'
 import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
@@ -11,9 +12,10 @@ import { getBannerUrls } from '@/lib/marketing'
 import { BuscaPorPlaca } from '@/components/store/BuscaPorPlaca'
 import { BuscaPorMedida } from '@/components/store/BuscaPorMedida'
 import { getIndiceMedidas } from '@/lib/indice-medidas'
-import { CheckCircle2, Wrench, Clock, Shield, Award, Zap } from 'lucide-react'
+import { CheckCircle2, Wrench, Clock, Shield, Award, Zap, CalendarDays, Gift, MapPin } from 'lucide-react'
 import { SITE_URL } from '@/lib/schema'
 import { LogoPirelli, LogoMichelin, LogoMetzeler } from '@/components/store/BrandLogo'
+import { EVENTO_PIRELLI_SLUG } from '@/lib/evento-pirelli'
 
 export const metadata: Metadata = {
   title: 'Pneus de Moto em Campinas — Credenciada Pirelli, Metzeler e Michelin',
@@ -69,15 +71,23 @@ const FAQS = [
   },
 ]
 
-async function getDadosPneus() {
-  const wherePneus = {
+async function getDadosPneus(campanhaEvento = false) {
+  const wherePneus: Prisma.ProductWhereInput = {
     ativo: true,
     estoque: { gt: 0 },
     preco: { gt: 0, not: 999 },
     variacaoDe: null,
-    OR: [
-      { categoria: { contains: 'pneu', mode: 'insensitive' as const } },
-      { nome: { contains: 'pneu', mode: 'insensitive' as const } },
+    AND: [
+      {
+        OR: [
+          { categoria: { contains: 'pneu', mode: 'insensitive' } },
+          { nome: { contains: 'pneu', mode: 'insensitive' } },
+        ],
+      },
+      ...(campanhaEvento ? [{ OR: [
+        { marca: { contains: 'pirelli', mode: 'insensitive' as const } },
+        { marca: { contains: 'metzeler', mode: 'insensitive' as const } },
+      ] }] : []),
     ],
   }
 
@@ -86,6 +96,20 @@ async function getDadosPneus() {
       where: wherePneus,
       take: 12,
       orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true,
+        nome: true,
+        slug: true,
+        preco: true,
+        precoPromocional: true,
+        imagens: true,
+        estoque: true,
+        marca: true,
+        categoria: true,
+        ehPai: true,
+        preVenda: true,
+        prazoEntregaDias: true,
+      },
     }),
     prisma.product.findMany({
       where: wherePneus,
@@ -96,20 +120,28 @@ async function getDadosPneus() {
   ])
 
   return {
-    pneusDestaque,
+    pneusDestaque: pneusDestaque.map((produto) => ({
+      ...produto,
+      preco: Number(produto.preco),
+      precoPromocional: produto.precoPromocional === null ? null : Number(produto.precoPromocional),
+    })),
     marcas: marcas.map((m) => m.marca).filter(Boolean),
     indiceMedidas,
   }
 }
 
-export default async function PneusPage() {
-  const [{ pneusDestaque, indiceMedidas }, banners] = await Promise.all([
-    getDadosPneus(),
+export default async function PneusPage(props: { searchParams?: Promise<{ evento?: string }> }) {
+  const searchParams = await props.searchParams;
+  const campanhaEvento = searchParams?.evento === 'pirelli'
+  const [{ pneusDestaque, indiceMedidas }, banners, eventoPirelli] = await Promise.all([
+    getDadosPneus(campanhaEvento),
     getBannerUrls(),
+    campanhaEvento ? prisma.eventoPirelli.findUnique({ where: { slug: EVENTO_PIRELLI_SLUG } }) : Promise.resolve(null),
   ])
 
   return (
     <>
+      {campanhaEvento && <BannerOfertasEventoPirelli evento={eventoPirelli} />}
       <div className="max-w-[1280px] mx-auto px-4 md:px-12">
         <Breadcrumb items={[{ name: 'Pneus', url: '/pneus' }]} />
       </div>
@@ -281,13 +313,13 @@ export default async function PneusPage() {
 
       {/* Pneus em destaque */}
       {pneusDestaque.length > 0 && (
-        <section className="py-14 bg-[#fafafa] border-t border-[#eee]">
+        <section id={campanhaEvento ? 'pneus-evento' : undefined} className="scroll-mt-24 py-14 bg-[#fafafa] border-t border-[#eee]">
           <div className="max-w-[1280px] mx-auto px-6 md:px-12">
             <h2 className="font-barlow font-bold text-3xl md:text-4xl text-[#111] text-center mb-2" style={{ letterSpacing: '-0.5px' }}>
-              Pneus mais vendidos
+              {campanhaEvento ? 'Pneus participantes' : 'Pneus mais vendidos'}
             </h2>
             <p className="text-center text-[#666] font-inter mb-10">
-              Os pneus que mais saem da nossa loja todo mês
+              {campanhaEvento ? 'Pirelli e Metzeler disponíveis no e-commerce da Forza Motos' : 'Os pneus que mais saem da nossa loja todo mês'}
             </p>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {pneusDestaque.slice(0, 8).map((p) => (
@@ -328,5 +360,48 @@ export default async function PneusPage() {
         items={FAQS}
       />
     </>
+  )
+}
+
+function BannerOfertasEventoPirelli({ evento }: { evento: {
+  dataInicio: Date | null
+  dataFim: Date | null
+  local: string | null
+  valorMinimoPneus: Prisma.Decimal
+  valorCanecaAvulsa: Prisma.Decimal
+} | null }) {
+  const agora = new Date()
+  const inicio = evento?.dataInicio ?? new Date('2026-09-05T14:00:00.000Z')
+  const fim = evento?.dataFim ?? new Date('2026-09-07T02:59:59.999Z')
+  const status = agora < inicio ? 'Em breve' : agora > fim ? 'Ação encerrada' : 'Somente neste fim de semana'
+  const valorMinimo = Number(evento?.valorMinimoPneus ?? 899)
+  const valorCaneca = Number(evento?.valorCanecaAvulsa ?? 89)
+  const dinheiro = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
+
+  return (
+    <section id="ofertas-evento" className="scroll-mt-24 overflow-hidden bg-[#101012] text-white">
+      <div className="mx-auto grid max-w-[1280px] gap-8 px-6 py-12 md:px-12 lg:grid-cols-[1.2fr_0.8fr] lg:items-center lg:py-16">
+        <div>
+          <p className="inline-flex rounded-full bg-[#f5b82e] px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-black">{status}</p>
+          <h1 className="mt-5 max-w-3xl font-barlow text-4xl font-black uppercase leading-[0.95] md:text-6xl">Ofertas do Rodeo Lucky Friends</h1>
+          <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/65">Condições exclusivas da Forza Motos em pneus Pirelli e Metzeler participantes. Compre pelo site e apresente o pedido à equipe no estande.</p>
+          <div className="mt-6 flex flex-wrap gap-4 text-sm text-white/65">
+            <span className="inline-flex items-center gap-2"><CalendarDays size={17} className="text-[#f5b82e]" /> 5 e 6 de setembro de 2026</span>
+            <span className="inline-flex items-center gap-2"><MapPin size={17} className="text-[#f5b82e]" /> {evento?.local ?? 'Lucky Friends Arena — Sorocaba/SP'}</span>
+          </div>
+          <a href="#pneus-evento" className="mt-7 inline-flex min-h-12 items-center rounded-xl bg-[#dc1f26] px-6 font-barlow text-sm font-black uppercase tracking-wider text-white hover:bg-[#ef2930]">Ver pneus participantes</a>
+        </div>
+        <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-6">
+          <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-[#f5b82e]"><Gift size={17} /> Lembrança exclusiva</p>
+          <p className="mt-4 font-barlow text-3xl font-black uppercase">Sua compra vira caneca personalizada</p>
+          <ul className="mt-5 space-y-3 text-sm leading-relaxed text-white/65">
+            <li>• Compras de pneus participantes acima de {dinheiro.format(valorMinimo)} recebem uma caneca com nome.</li>
+            <li>• Caneca avulsa personalizada por {dinheiro.format(valorCaneca)}.</li>
+            <li>• Benefícios válidos somente durante o evento e enquanto durarem os estoques.</li>
+          </ul>
+          <p className="mt-5 border-t border-white/10 pt-4 text-[11px] leading-relaxed text-white/38">Os preços exibidos são os vigentes no e-commerce. Produtos participantes, estoque e liberação do brinde são confirmados pela equipe Forza Motos no estande.</p>
+        </div>
+      </div>
+    </section>
   )
 }

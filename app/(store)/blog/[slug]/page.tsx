@@ -8,16 +8,18 @@ import type { Metadata } from 'next'
 import { ArrowLeft } from 'lucide-react'
 
 interface Props {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const params = await props.params;
   const post = await prisma.blogPost.findUnique({ where: { slug: params.slug, publicado: true } })
   if (!post) return { title: 'Post não encontrado' }
-  return { title: post.titulo, description: post.conteudo.replace(/<[^>]*>/g, '').slice(0, 160) }
+  return { title: post.titulo, description: post.conteudo.replace(/<[^>]*>/g, '').slice(0, 160) };
 }
 
-export default async function BlogPostPage({ params }: Props) {
+export default async function BlogPostPage(props: Props) {
+  const params = await props.params;
   const post = await prisma.blogPost.findUnique({
     where: { slug: params.slug, publicado: true },
   })

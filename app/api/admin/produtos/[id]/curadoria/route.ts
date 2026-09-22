@@ -12,7 +12,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
@@ -22,14 +23,19 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const produto = await prisma.product.findUnique({
     where: { id: params.id },
-    select: { id: true, temImagem: true, estoque: true, fornecedor: true },
+    select: { id: true, temImagem: true, estoque: true, fornecedor: true, preVenda: true, eventoPirelliId: true },
   })
   if (!produto) return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 })
+  if (produto.eventoPirelliId) {
+    return NextResponse.json({
+      error: 'Produto exclusivo do evento. Altere a publicação pela área Produtos do Evento Pirelli.',
+    }, { status: 409 })
+  }
 
   const eurolaqui = produto.fornecedor === 'eurolaqui'
 
   // Ativo só se: quer visível + tem imagem + (tem estoque OU é eurolaqui mantido)
-  const ativo = !!visivel && produto.temImagem && (eurolaqui || produto.estoque > 0)
+  const ativo = !!visivel && produto.temImagem && (produto.preVenda || eurolaqui || produto.estoque > 0)
 
   await prisma.product.update({
     where: { id: params.id },

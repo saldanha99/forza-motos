@@ -18,7 +18,7 @@ import { headers } from 'next/headers'
  */
 export async function log404() {
   try {
-    const h = headers()
+    const h = await headers()
     const path = h.get('x-pathname') || h.get('referer') || '/desconhecido'
     const userAgent = h.get('user-agent')?.slice(0, 500) || null
     const referer = h.get('referer') || null

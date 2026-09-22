@@ -34,11 +34,12 @@ const ORIGEM_LABEL: Record<string, string> = {
   MANUAL:       '✏️ Manual',
 }
 
-export default async function ClientesAdminPage({
-  searchParams,
-}: {
-  searchParams: { categoria?: string }
-}) {
+export default async function ClientesAdminPage(
+  props: {
+    searchParams: Promise<{ categoria?: string }>
+  }
+) {
+  const searchParams = await props.searchParams;
   const categoria = searchParams.categoria ?? 'todos'
 
   const clientes = await prisma.user.findMany({

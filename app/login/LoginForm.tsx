@@ -11,7 +11,10 @@ import toast from 'react-hot-toast'
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') ?? '/'
+  const callbackInformado = searchParams.get('callbackUrl') ?? '/'
+  const callbackUrl = callbackInformado.startsWith('/') && !callbackInformado.startsWith('//')
+    ? callbackInformado
+    : '/'
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({ email: '', senha: '' })
 
