@@ -6,16 +6,16 @@ import { processarJobsPendentes } from '@/lib/glossario/worker'
  *
  * Endpoint protegido por CRON_SECRET. Processa até N jobs pendentes da fila.
  *
- * Configure no vercel.json:
+ * Agendado na crontab da VPS via /opt/forza/cron-forza.sh:
  *   {
  *     "crons": [
  *       { "path": "/api/glossario/cron", "schedule": "0 * * * *" }
  *     ]
  *   }
  *
- * Vercel envia automaticamente o header `Authorization: Bearer <CRON_SECRET>`.
+ * O cron-forza.sh lê o CRON_SECRET do app.env e envia `Authorization: Bearer <CRON_SECRET>`.
  */
-export const maxDuration = 60 // 1 minuto (Vercel Hobby) ou ajuste no plano Pro
+export const maxDuration = 60 // 1 minuto
 
 export async function GET(req: Request) {
   const auth = req.headers.get('authorization')

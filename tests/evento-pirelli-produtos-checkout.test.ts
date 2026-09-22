@@ -380,9 +380,11 @@ test('prévia de frete usa os itens e endpoints genéricos não alteram oferta e
     assert.match(arquivo, /eventoPirelliId/)
     assert.match(arquivo, /status: 409/)
   }
+  const gravacao = foto.indexOf('await writeFile(path.join(dir, nome)')
+  assert.ok(gravacao > 0, 'upload de foto deve gravar no storage da VPS')
   assert.ok(
-    foto.indexOf('if (current.eventoPirelliId)') < foto.indexOf("await put(filename, file"),
-    'foto de produto do evento deve ser bloqueada antes do upload no Blob',
+    foto.indexOf('if (current.eventoPirelliId)') < gravacao,
+    'foto de produto do evento deve ser bloqueada antes de gravar o arquivo',
   )
 })
 

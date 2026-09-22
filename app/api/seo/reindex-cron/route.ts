@@ -13,7 +13,7 @@ import { triggerIndexingBatch } from '@/lib/seo/indexing'
  *   - Conteúdo atualizado em massa via script/migration
  *   - "Refresh" dos hubs (homepage, /produtos, /blog, /glossario)
  *
- * Configure no vercel.json:
+ * Agendado na crontab da VPS via /opt/forza/cron-forza.sh:
  *
  *   {
  *     "crons": [
@@ -26,10 +26,10 @@ import { triggerIndexingBatch } from '@/lib/seo/indexing'
  *   ?horas=24     janela de tempo a varrer (default: 24)
  *   ?limite=500   máximo de URLs a notificar (default: 500)
  */
-export const maxDuration = 300 // 5min (precisa do plano Pro da Vercel para passar de 60s)
+export const maxDuration = 300 // 5min
 
 export async function GET(req: Request) {
-  // Auth — Vercel envia `Authorization: Bearer ${CRON_SECRET}` automaticamente
+  // Auth — o cron-forza.sh envia `Authorization: Bearer ${CRON_SECRET}`
   const auth = req.headers.get('authorization')
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
