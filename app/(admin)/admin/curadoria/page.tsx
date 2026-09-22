@@ -58,17 +58,22 @@ function colunaDoProduto(p: {
   estoque: number
   fornecedor: string | null
   ativo: boolean
+  ocultoManual: boolean
+  mantidoManual: boolean
 }): 'bloqueado' | 'loja' | 'oculto' {
   const semEstoque = p.estoque <= 0 && p.fornecedor !== 'eurolaqui'
   if (!p.temImagem || semEstoque) return 'bloqueado'
-  return p.ativo ? 'loja' : 'oculto'
+  const naLoja = p.ativo && !p.ocultoManual
+    && (p.fornecedor !== 'eurolaqui' || p.mantidoManual)
+  return naLoja ? 'loja' : 'oculto'
 }
 
-export default async function CuradoriaPage({
-  searchParams,
-}: {
-  searchParams: { cat?: string; q?: string; page?: string; estado?: string; vista?: string }
-}) {
+export default async function CuradoriaPage(
+  props: {
+    searchParams: Promise<{ cat?: string; q?: string; page?: string; estado?: string; vista?: string }>
+  }
+) {
+  const searchParams = await props.searchParams;
   const cat = searchParams.cat ?? ''
   const q = searchParams.q?.trim() ?? ''
   const page = Math.max(1, Number(searchParams.page ?? 1))
@@ -107,7 +112,10 @@ export default async function CuradoriaPage({
   const where: any = { tinyId: { not: null }, ehPai: false }
   if (cat) where.categoria = cat
   if (q) where.nome = { contains: q, mode: 'insensitive' }
-  if (estado === 'loja') where.ativo = true
+  if (estado === 'loja') {
+    where.ativo = true
+    where.ocultoManual = false
+  }
   if (estado === 'ocultos') where.OR = [{ ativo: false }, { ocultoManual: true }]
 
   const temRecorte = !!(cat || q)

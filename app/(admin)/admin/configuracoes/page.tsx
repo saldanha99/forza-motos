@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Save, Globe, Search, RefreshCw, CreditCard, ExternalLink, AlertCircle } from 'lucide-react'
+import { Save, Globe, Search, RefreshCw, QrCode, ExternalLink, AlertCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { WhatsAppQRCard } from '@/components/admin/WhatsAppQRCard'
 import { Card, CardHeader, PageHeader, Botao, BotaoLink } from '@/components/admin/ui/primitives'
@@ -152,7 +152,7 @@ export default function ConfiguracoesPage() {
           <CardHeader
             titulo={
               <span className="flex items-center gap-2">
-                <CreditCard size={18} className="text-brand-accent" /> Mercado Pago (Checkout Pro)
+                <QrCode size={18} className="text-brand-accent" /> Mercado Pago (Pix)
               </span>
             }
           />
@@ -175,30 +175,33 @@ export default function ConfiguracoesPage() {
               </div>
             </Campo>
 
-            {/* 2. Meios de Pagamento & Chave Pix */}
+            {/* 2. Política Pix & Chave Pix */}
             <div className="space-y-3 border-t border-brand-hair pt-6">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-brand-dim">
-                  Meios de Pagamento Aceitos
+                  Política de pagamento
                 </p>
                 <p className="mt-1 text-xs text-brand-muted">
-                  Escolha os meios de pagamento que deseja oferecer no ambiente do Mercado Pago. Cada opção salva sozinha ao ser alterada.
+                  O e-commerce opera somente à vista via Pix. Cartão, parcelamento e boleto estão bloqueados nas novas cobranças.
                 </p>
+              </div>
+
+              <div className="rounded-xl border border-brand-success bg-brand-success-soft p-4">
+                <div className="flex items-start gap-3">
+                  <QrCode className="mt-0.5 shrink-0 text-brand-success" size={20} />
+                  <div>
+                    <p className="text-sm font-semibold text-brand-text">Pix sem cartão ou boleto</p>
+                    <p className="mt-1 text-xs leading-relaxed text-brand-muted">
+                      Esta regra é aplicada também no servidor e não pode ser substituída pelo navegador do cliente.{' '}
+                      Compradores logados no Mercado Pago ainda podem ver o saldo da própria conta, pois o Checkout Pro não permite ocultá-lo.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Switch
-                  label="Cartões de crédito e débito"
-                  checked={(valores['mp_accept_cards'] ?? 'true') === 'true'}
-                  onChange={(v) => salvar('mp_accept_cards', v ? 'true' : 'false')}
-                />
-                <Switch
-                  label="Dinheiro (Saldo Mercado Pago ou Boleto Bancário)"
-                  checked={(valores['mp_accept_ticket'] ?? 'true') === 'true'}
-                  onChange={(v) => salvar('mp_accept_ticket', v ? 'true' : 'false')}
-                />
-                <Switch
-                  label="Transferência bancária (Pix) — Recomendado"
+                  label="Pix habilitado no Mercado Pago"
                   descricao="Só aparece na loja se houver uma Chave Pix cadastrada na sua conta do Mercado Pago."
                   checked={(valores['mp_accept_pix'] ?? 'true') === 'true'}
                   onChange={(v) => salvar('mp_accept_pix', v ? 'true' : 'false')}
@@ -223,36 +226,13 @@ export default function ConfiguracoesPage() {
               </div>
             </div>
 
-            {/* 3. Máximo de Parcelas */}
-            <div className="border-t border-brand-hair pt-6">
-              <Campo
-                label="Máximo de Parcelas"
-                dica="Selecione o número máximo de parcelas que deseja oferecer em sua loja."
-              >
-                <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
-                  <Select
-                    className="flex-1"
-                    value={valores['mp_max_installments'] ?? '12'}
-                    onChange={(e) => setValores((v) => ({ ...v, mp_max_installments: e.target.value }))}
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
-                      <option key={n} value={String(n)}>
-                        {n}x {n === 1 ? '(Sem parcelamento)' : ''}
-                      </option>
-                    ))}
-                  </Select>
-                  <BotaoSalvar chave="mp_max_installments" />
-                </div>
-              </Campo>
-            </div>
-
-            {/* 4. Tarifa e Parcelas sem Acréscimo (Atalho) */}
+            {/* 3. Tarifas Pix (Atalho) */}
             <div className="space-y-2 border-t border-brand-hair pt-6">
               <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-brand-dim">
-                Tarifas e Parcelamento sem Juros
+                Tarifas do Pix
               </p>
               <p className="text-xs text-brand-muted">
-                As taxas cobradas por transação e a oferta de parcelas sem acréscimo para os seus clientes devem ser configuradas diretamente na sua conta do Mercado Pago.
+                Consulte as taxas e os prazos de recebimento diretamente na sua conta do Mercado Pago.
               </p>
               <BotaoLink
                 href="https://www.mercadopago.com.br/costs-section#from-section=menu"
@@ -262,11 +242,11 @@ export default function ConfiguracoesPage() {
                 tamanho="sm"
                 className="mt-1"
               >
-                <ExternalLink size={13} /> Configurar Tarifas no Mercado Pago
+                <ExternalLink size={13} /> Consultar tarifas no Mercado Pago
               </BotaoLink>
             </div>
 
-            {/* 5. Retorno Automático */}
+            {/* 4. Retorno Automático */}
             <div className="border-t border-brand-hair pt-6">
               <Campo
                 label="Retorno Automático do Cliente"
@@ -287,7 +267,7 @@ export default function ConfiguracoesPage() {
               </Campo>
             </div>
 
-            {/* 6. Modo Binário */}
+            {/* 5. Modo Binário */}
             <div className="border-t border-brand-hair pt-6">
               <Campo
                 label="Modo Binário"
@@ -307,11 +287,11 @@ export default function ConfiguracoesPage() {
               </Campo>
             </div>
 
-            {/* 7. Validade das Preferências */}
+            {/* 6. Validade das Preferências */}
             <div className="border-t border-brand-hair pt-6">
               <Campo
                 label="Validade do Link de Pagamento (Minutos)"
-                dica="Indique por quantos minutos a preferência de pagamento ficará ativa antes de expirar (deixe em branco para sem expiração). Recomendado: 60 minutos para evitar abandono com boleto/Pix pendentes."
+                dica="Indique por quantos minutos a preferência de pagamento Pix ficará ativa antes de expirar (deixe em branco para sem expiração)."
               >
                 <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                   <Input

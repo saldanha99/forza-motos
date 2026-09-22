@@ -6,7 +6,8 @@ import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 
 /** Alterna o campo `resolvido` de um registro de 404 — usado depois de criar o redirect correspondente. */
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })

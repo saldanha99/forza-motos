@@ -197,7 +197,7 @@ export function KanbanBoard<T extends ItemKanban>({
   )
   useEffect(() => setLocal(itens), [assinatura]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   useEffect(() => () => clearTimeout(timerRef.current), [])
 
   const sensores = useSensors(

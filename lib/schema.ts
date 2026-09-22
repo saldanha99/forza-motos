@@ -62,7 +62,7 @@ export function getLocalBusinessSchema() {
     geo: GEO,
     openingHoursSpecification: OPENING_HOURS,
     priceRange: '$$',
-    paymentAccepted: ['Cash', 'Credit Card', 'PIX'],
+    paymentAccepted: ['PIX'],
     currenciesAccepted: 'BRL',
     hasMap: 'https://maps.google.com/?q=R.+Funilense,+110+Campinas+SP',
     sameAs: [
@@ -107,6 +107,7 @@ export function getProductSchema(produto: {
   imagem?: string
   slug: string
   estoque: number
+  preVenda?: boolean
 }) {
   const preco = Number(produto.precoPromocional ?? produto.preco)
 
@@ -129,8 +130,9 @@ export function getProductSchema(produto: {
       priceValidUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
         .toISOString()
         .split('T')[0],
-      availability:
-        produto.estoque > 0
+      availability: produto.preVenda
+        ? 'https://schema.org/PreOrder'
+        : produto.estoque > 0
           ? 'https://schema.org/InStock'
           : 'https://schema.org/OutOfStock',
       itemCondition: 'https://schema.org/NewCondition',

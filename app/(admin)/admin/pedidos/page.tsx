@@ -48,11 +48,12 @@ function AlternadorVista({ vista }: { vista: 'quadro' | 'lista' }) {
   )
 }
 
-export default async function PedidosAdminPage({
-  searchParams,
-}: {
-  searchParams: { status?: string; page?: string; vista?: string }
-}) {
+export default async function PedidosAdminPage(
+  props: {
+    searchParams: Promise<{ status?: string; page?: string; vista?: string }>
+  }
+) {
+  const searchParams = await props.searchParams;
   const vista = searchParams.vista === 'lista' ? 'lista' : 'quadro'
 
   /* ── Quadro ───────────────────────────────────────────────────── */

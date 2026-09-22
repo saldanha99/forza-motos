@@ -1,15 +1,82 @@
-import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { obterEventoPirelli } from '@/lib/evento-pirelli'
+import { CrmEventoPirelli } from '@/components/evento-pirelli/CrmEventoPirelli'
 
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Leads — Evento Pirelli' }
+export const metadata = { title: 'CRM — Evento Pirelli' }
 
-export default async function LeadsEventoPirelliPage() {
+export default async function CrmEventoPirelliPage() {
   const evento = await obterEventoPirelli()
   const visitantes = await prisma.eventoPirelliVisitante.findMany({
-    where: { eventoId: evento.id }, orderBy: { createdAt: 'desc' },
-    include: { tentativaQuiz: true, participacaoFoto: true, balanceamento: true, canecaBrinde: true },
+    where: { eventoId: evento.id },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      tentativaQuiz: true,
+      balanceamento: true,
+      canecaBrinde: true,
+      elegibilidadesCaneca: {
+        where: { revogadoEm: null },
+        orderBy: { validadoEm: 'desc' },
+      },
+      comprasCaneca: { orderBy: { registradoEm: 'desc' } },
+      lancamentosCaixa: {
+        where: { estornadoEm: null },
+        orderBy: { confirmadoEm: 'desc' },
+      },
+      pedidos: {
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, orderNumber: true, status: true, total: true, createdAt: true },
+      },
+    },
   })
-  return <main className="max-w-6xl mx-auto pb-20"><Link href="/admin/evento-pirelli" className="text-sm text-brand-muted">← Evento Pirelli</Link><h1 className="font-barlow font-black text-4xl text-brand-text mt-2">Leads e balanceamento</h1><p className="text-brand-muted mt-1">Lista em ordem de cadastro. Cada visitante já foi registrado como lead de origem EVENTO_PIRELLI.</p><div className="mt-5 overflow-x-auto rounded-2xl bg-brand-surface border border-brand-border"><table className="w-full text-sm"><thead className="text-left text-brand-muted border-b border-brand-border"><tr><th className="p-3">Visitante</th><th className="p-3">Caneca</th><th className="p-3">Quiz</th><th className="p-3">Foto</th><th className="p-3">Balanceamento</th><th className="p-3">Consentimento marketing</th></tr></thead><tbody>{visitantes.map((v) => <tr key={v.id} className="border-b border-brand-border/50 text-brand-text"><td className="p-3"><b>{v.nomeCompleto}</b><br/><span className="text-brand-muted">{v.whatsapp} {v.instagram ? `· @${v.instagram}` : ''}</span></td><td className="p-3">{v.canecaBrinde?.status ?? '—'}</td><td className="p-3">{v.tentativaQuiz ? `${v.tentativaQuiz.pontuacao}/${v.tentativaQuiz.pontuacaoMaxima}` : '—'}</td><td className="p-3">{v.participacaoFoto?.status ?? '—'}</td><td className="p-3">{v.balanceamento ? `${v.balanceamento.status}${v.balanceamento.horarioPreferido ? ` · ${v.balanceamento.horarioPreferido}` : ''}` : '—'}</td><td className="p-3">{v.consentimentoMarketingEm ? <span className="text-brand-success">Sim</span> : <span className="text-brand-muted">Não</span>}</td></tr>)}</tbody></table>{!visitantes.length && <p className="p-6 text-brand-muted">Ainda não há leads.</p>}</div></main>
+
+  return <CrmEventoPirelli
+    valorMinimoPneus={Number(evento.valorMinimoPneus)}
+    visitantes={visitantes.map((visitante) => ({
+      ...visitante,
+      createdAt: visitante.createdAt.toISOString(),
+      updatedAt: visitante.updatedAt.toISOString(),
+      nomeGravacaoConfirmadoEm: visitante.nomeGravacaoConfirmadoEm?.toISOString() ?? null,
+      kitParticipacaoEntregueEm: visitante.kitParticipacaoEntregueEm?.toISOString() ?? null,
+      tentativaQuiz: visitante.tentativaQuiz ? {
+        ...visitante.tentativaQuiz,
+        iniciadaEm: visitante.tentativaQuiz.iniciadaEm.toISOString(),
+        concluidaEm: visitante.tentativaQuiz.concluidaEm?.toISOString() ?? null,
+      } : null,
+      canecaBrinde: visitante.canecaBrinde ? {
+        ...visitante.canecaBrinde,
+        createdAt: visitante.canecaBrinde.createdAt.toISOString(),
+        updatedAt: visitante.canecaBrinde.updatedAt.toISOString(),
+        gravacaoIniciadaEm: visitante.canecaBrinde.gravacaoIniciadaEm?.toISOString() ?? null,
+        prontaEm: visitante.canecaBrinde.prontaEm?.toISOString() ?? null,
+        entregueEm: visitante.canecaBrinde.entregueEm?.toISOString() ?? null,
+      } : null,
+      elegibilidadesCaneca: visitante.elegibilidadesCaneca.map((item) => ({
+        ...item,
+        valorPneus: item.valorPneus ? Number(item.valorPneus) : null,
+        validadoEm: item.validadoEm.toISOString(),
+        pagamentoConfirmadoEm: item.pagamentoConfirmadoEm?.toISOString() ?? null,
+      })),
+      comprasCaneca: visitante.comprasCaneca.map((item) => ({
+        ...item,
+        valorUnitarioSnapshot: item.valorUnitarioSnapshot ? Number(item.valorUnitarioSnapshot) : null,
+        valorPago: item.valorPago ? Number(item.valorPago) : null,
+        pagamentoConfirmadoEm: item.pagamentoConfirmadoEm?.toISOString() ?? null,
+        registradoEm: item.registradoEm.toISOString(),
+        entregueEm: item.entregueEm?.toISOString() ?? null,
+      })),
+      lancamentosCaixa: visitante.lancamentosCaixa.map((item) => ({
+        ...item,
+        valorUnitario: item.valorUnitario ? Number(item.valorUnitario) : null,
+        valorTotal: Number(item.valorTotal),
+        confirmadoEm: item.confirmadoEm.toISOString(),
+        createdAt: item.createdAt.toISOString(),
+      })),
+      pedidos: visitante.pedidos.map((pedido) => ({
+        ...pedido,
+        total: Number(pedido.total),
+        createdAt: pedido.createdAt.toISOString(),
+      })),
+    }))}
+  />
 }

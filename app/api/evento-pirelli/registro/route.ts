@@ -2,7 +2,15 @@ import { NextResponse } from 'next/server'
 import { Prisma, type EventoPirelliVisitante } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { capturarLead } from '@/lib/crm/leads'
-import { eventoDisponivel, limparNomeGravacao, nomeGravacaoValido, normalizarWhatsappEvento, novoCodigoQr, obterEventoPirelli, paraBooleano } from '@/lib/evento-pirelli'
+import {
+  inscricaoEventoPirelliDisponivel,
+  mensagemEventoPirelliIndisponivel,
+  normalizarWhatsappEvento,
+  novoCodigoQr,
+  obterEventoPirelli,
+  paraBooleano,
+  whatsappEventoValido,
+} from '@/lib/evento-pirelli'
 import {
   LIMITE_REGISTRO_POR_IP,
   LIMITE_REGISTRO_POR_WHATSAPP,
@@ -13,9 +21,25 @@ import {
 
 export const dynamic = 'force-dynamic'
 
-/** Cadastro de estande: nome, telefone e dois checkboxes. 8 KB é folga larga. */
-const MAX_PAYLOAD_BYTES = 8 * 1024
-const CAMPOS = new Set(['nomeCompleto', 'nomeGravacao', 'whatsapp', 'email', 'instagram', 'confirmouNome', 'consentimentoMarketing', 'chaveSubmissao'])
+/** Cadastro completo do evento, ainda pequeno mesmo com endereço e moto. */
+const MAX_PAYLOAD_BYTES = 16 * 1024
+const CAMPOS = new Set([
+  'nomeCompleto',
+  'whatsapp',
+  'email',
+  'enderecoCep',
+  'enderecoRua',
+  'enderecoNumero',
+  'enderecoComplemento',
+  'enderecoBairro',
+  'enderecoCidade',
+  'enderecoEstado',
+  'motoMarca',
+  'motoModelo',
+  'motoAno',
+  'consentimentoMarketing',
+  'chaveSubmissao',
+])
 /**
  * A chave é um token opaco gerado no dispositivo (`crypto.randomUUID` quando
  * existe). Não exigimos formato UUID: navegador antigo ou contexto sem
@@ -26,19 +50,34 @@ const CHAVE_SUBMISSAO = /^[A-Za-z0-9._:-]{16,100}$/
 
 type EntradaRegistro = {
   nomeCompleto: string
-  nomeGravacao: string
   whatsapp: string
-  email: string | null
-  instagram: string | null
+  email: string
+  enderecoCep: string
+  enderecoRua: string
+  enderecoNumero: string
+  enderecoComplemento: string | null
+  enderecoBairro: string
+  enderecoCidade: string
+  enderecoEstado: string
+  motoMarca: string
+  motoModelo: string
+  motoAno: number
   consentimentoMarketing: boolean
   chaveSubmissao: string
 }
 
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function textoObrigatorio(registro: Record<string, unknown>, campo: string, limite: number) {
+  if (typeof registro[campo] !== 'string') return null
+  const valor = registro[campo].trim().replace(/\s+/g, ' ')
+  return valor && valor.length <= limite ? valor : null
+}
+
 /**
  * Validação estrita e barata antes de qualquer escrita: tipo de cada campo,
- * conjunto fechado de chaves e teto de bytes. `confirmouNome` precisa ser o
- * booleano `true` — a string "false" passava como confirmação e decidia o que
- * ia gravado na caneca.
+ * conjunto fechado de chaves e teto de bytes. O nome da caneca não pertence a
+ * esta etapa e por isso nem é aceito no contrato público.
  */
 async function lerEntrada(request: Request): Promise<EntradaRegistro | null> {
   if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) return null
@@ -52,41 +91,61 @@ async function lerEntrada(request: Request): Promise<EntradaRegistro | null> {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return null
   const registro = body as Record<string, unknown>
   if (Object.keys(registro).some((campo) => !CAMPOS.has(campo))) return null
-  // confirmouNome decide o que vai gravado na caneca: só o booleano `true`
-  // confirma. O opt-in de marketing continua tolerando a string que alguns
-  // formulários enviam — `paraBooleano` já trata "false" como falso, e um 400
-  // aqui deixaria a pessoa sem se cadastrar por causa do checkbox opcional.
-  if (registro.confirmouNome !== true) return null
+  // O opt-in continua tolerando a string que alguns formulários enviam.
   if (registro.consentimentoMarketing !== undefined && registro.consentimentoMarketing !== null
       && typeof registro.consentimentoMarketing !== 'boolean' && typeof registro.consentimentoMarketing !== 'string') return null
 
-  const camposTexto = ['nomeCompleto', 'nomeGravacao', 'whatsapp', 'chaveSubmissao'] as const
+  const camposTexto = [
+    'nomeCompleto', 'whatsapp', 'email', 'enderecoCep', 'enderecoRua',
+    'enderecoNumero', 'enderecoBairro', 'enderecoCidade', 'enderecoEstado',
+    'motoMarca', 'motoModelo', 'chaveSubmissao',
+  ] as const
   if (camposTexto.some((campo) => typeof registro[campo] !== 'string')) return null
-  if (registro.email !== undefined && registro.email !== null && typeof registro.email !== 'string') return null
-  if (registro.instagram !== undefined && registro.instagram !== null && typeof registro.instagram !== 'string') return null
+  if (registro.enderecoComplemento !== undefined && registro.enderecoComplemento !== null && typeof registro.enderecoComplemento !== 'string') return null
+  if (typeof registro.motoAno !== 'string' && typeof registro.motoAno !== 'number') return null
 
-  const nomeCompleto = (registro.nomeCompleto as string).trim()
-  const nomeGravacao = limparNomeGravacao(registro.nomeGravacao as string)
+  const nomeCompleto = textoObrigatorio(registro, 'nomeCompleto', 120)
+  const email = textoObrigatorio(registro, 'email', 254)?.toLocaleLowerCase('pt-BR') ?? null
+  const enderecoRua = textoObrigatorio(registro, 'enderecoRua', 160)
+  const enderecoNumero = textoObrigatorio(registro, 'enderecoNumero', 30)
+  const enderecoBairro = textoObrigatorio(registro, 'enderecoBairro', 100)
+  const enderecoCidade = textoObrigatorio(registro, 'enderecoCidade', 100)
+  const motoMarca = textoObrigatorio(registro, 'motoMarca', 80)
+  const motoModelo = textoObrigatorio(registro, 'motoModelo', 100)
   const whatsappBruto = registro.whatsapp as string
   const chaveSubmissao = (registro.chaveSubmissao as string).trim()
-  const email = String(registro.email ?? '').trim()
-  const instagram = String(registro.instagram ?? '').trim().replace(/^@/, '')
-  if (!nomeCompleto || nomeCompleto.length > 120 || whatsappBruto.length > 32) return null
+  const enderecoCep = String(registro.enderecoCep).replace(/\D/g, '')
+  const enderecoEstado = String(registro.enderecoEstado).trim().toUpperCase()
+  const enderecoComplemento = String(registro.enderecoComplemento ?? '').trim().replace(/\s+/g, ' ')
+  const motoAno = Number(registro.motoAno)
+  const maiorAnoAceito = new Date().getFullYear() + 1
+
+  if (!nomeCompleto || !email || !EMAIL.test(email) || whatsappBruto.length > 32) return null
+  if (!enderecoRua || !enderecoNumero || !enderecoBairro || !enderecoCidade) return null
+  if (!/^\d{8}$/.test(enderecoCep) || !/^[A-Z]{2}$/.test(enderecoEstado) || enderecoComplemento.length > 120) return null
+  if (!motoMarca || !motoModelo || !Number.isInteger(motoAno) || motoAno < 1900 || motoAno > maiorAnoAceito) return null
   if (!CHAVE_SUBMISSAO.test(chaveSubmissao)) return null
-  if (email.length > 254 || instagram.length > 64 || nomeGravacao.length > 100) return null
 
   return {
     nomeCompleto,
-    nomeGravacao,
     whatsapp: normalizarWhatsappEvento(whatsappBruto),
-    email: email || null,
-    instagram: instagram || null,
+    email,
+    enderecoCep,
+    enderecoRua,
+    enderecoNumero,
+    enderecoComplemento: enderecoComplemento || null,
+    enderecoBairro,
+    enderecoCidade,
+    enderecoEstado,
+    motoMarca,
+    motoModelo,
+    motoAno,
     consentimentoMarketing: paraBooleano(registro.consentimentoMarketing),
     chaveSubmissao,
   }
 }
 
-function respostaVisitante(visitante: { id: string; codigoQr: string; nomeGravacao: string }, repetido = false) {
+function respostaVisitante(visitante: { id: string; codigoQr: string; nomeCompleto: string }, repetido = false) {
   return NextResponse.json({ ok: true, visitante, ...(repetido ? { repetido: true } : {}) }, { status: repetido ? 200 : 201 })
 }
 
@@ -102,11 +161,18 @@ async function reservarVisitante(eventoId: string, entrada: EntradaRegistro, con
       data: {
         eventoId,
         nomeCompleto: entrada.nomeCompleto,
-        nomeGravacao: entrada.nomeGravacao,
-        nomeGravacaoConfirmadoEm: new Date(),
         whatsapp: entrada.whatsapp,
         email: entrada.email,
-        instagram: entrada.instagram,
+        enderecoCep: entrada.enderecoCep,
+        enderecoRua: entrada.enderecoRua,
+        enderecoNumero: entrada.enderecoNumero,
+        enderecoComplemento: entrada.enderecoComplemento,
+        enderecoBairro: entrada.enderecoBairro,
+        enderecoCidade: entrada.enderecoCidade,
+        enderecoEstado: entrada.enderecoEstado,
+        motoMarca: entrada.motoMarca,
+        motoModelo: entrada.motoModelo,
+        motoAno: entrada.motoAno,
         consentimentoMarketingEm,
         chaveSubmissao: entrada.chaveSubmissao,
         codigoQr: novoCodigoQr(),
@@ -189,26 +255,26 @@ export async function POST(request: Request) {
     }
 
     const evento = await obterEventoPirelli()
-    if (!eventoDisponivel(evento)) {
-      return NextResponse.json({ error: 'Este evento ainda não está disponível.' }, { status: 404 })
+    if (!inscricaoEventoPirelliDisponivel(evento)) {
+      return NextResponse.json({ error: mensagemEventoPirelliIndisponivel(evento) }, { status: 404 })
     }
-    if (entrada.whatsapp.length < 12 || entrada.whatsapp.length > 13) {
-      return NextResponse.json({ error: 'Preencha o nome, WhatsApp e confirme o nome de gravação.' }, { status: 400 })
-    }
-    if (entrada.nomeGravacao.length < 2 || entrada.nomeGravacao.length > evento.limiteNomeGravacao || !nomeGravacaoValido(entrada.nomeGravacao)) {
-      return NextResponse.json({ error: `O nome de gravação deve ter entre 2 e ${evento.limiteNomeGravacao} caracteres e não pode ter emoji.` }, { status: 400 })
+    if (!whatsappEventoValido(entrada.whatsapp)) {
+      return NextResponse.json({ error: 'Informe um WhatsApp celular brasileiro válido com DDD.' }, { status: 400 })
     }
 
     const consentimentoMarketingEm = entrada.consentimentoMarketing ? new Date() : null
     const resultado = await reservarVisitante(evento.id, entrada, consentimentoMarketingEm)
     if (resultado.tipo === 'conflito') {
-      return NextResponse.json({ error: 'Este WhatsApp já está cadastrado. Procure o atendimento no estande para recuperar seu QR.' }, { status: 409 })
+      return NextResponse.json({
+        error: 'Este WhatsApp já está cadastrado. Use “Recuperar meu acesso” para receber um código seguro.',
+        recuperavel: true,
+      }, { status: 409 })
     }
     if (resultado.tipo === 'criado') await vincularLead(resultado.visitante, entrada, consentimentoMarketingEm)
     else await reconciliarLeadDoVisitante(resultado.visitante, entrada)
 
     return respostaVisitante(
-      { id: resultado.visitante.id, codigoQr: resultado.visitante.codigoQr, nomeGravacao: resultado.visitante.nomeGravacao },
+      { id: resultado.visitante.id, codigoQr: resultado.visitante.codigoQr, nomeCompleto: resultado.visitante.nomeCompleto },
       resultado.tipo === 'repetido',
     )
   } catch (error) {

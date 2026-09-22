@@ -50,11 +50,12 @@ function diaISO(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export default async function AgendamentosAdminPage({
-  searchParams,
-}: {
-  searchParams: { vista?: string }
-}) {
+export default async function AgendamentosAdminPage(
+  props: {
+    searchParams: Promise<{ vista?: string }>
+  }
+) {
+  const searchParams = await props.searchParams;
   const vista = searchParams.vista === 'agenda' ? 'agenda' : searchParams.vista === 'lista' ? 'lista' : 'quadro'
 
   /* ── Agenda (calendário) — comportamento inalterado ──────────────── */

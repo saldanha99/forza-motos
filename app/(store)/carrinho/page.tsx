@@ -92,7 +92,10 @@ export default function CarrinhoPage() {
             </div>
             {/* Calculador de frete */}
             <div className="mb-4">
-              <CalculadorFrete subtotal={subtotal()} />
+              <CalculadorFrete
+                subtotal={subtotal()}
+                items={items.map((item) => ({ productId: item.id, quantidade: item.quantidade }))}
+              />
             </div>
             <Link href="/checkout">
               <Button size="lg" className="w-full">Ir para Checkout</Button>

@@ -107,7 +107,7 @@ const SLIDES = [
     visual: 'brands',
     bgImg: '/images/hero/slide-entrega.jpg',
     accent1: { label: 'Frete grátis', value: 'ACIMA R$499 SP' },
-    accent2: { label: 'Parcelas sem juros', value: 'ATÉ 6×' },
+    accent2: { label: 'Pagamento via Pix', value: '5% DE DESCONTO' },
   },
 ]
 

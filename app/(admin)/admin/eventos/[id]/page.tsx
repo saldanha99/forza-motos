@@ -8,7 +8,8 @@ import {
   PageHeader, Card, CardHeader, Badge, THEAD_TH, TR_LINHA, TD_CELULA,
 } from '@/components/admin/ui/primitives'
 
-export default async function EditarEventoPage({ params }: { params: { id: string } }) {
+export default async function EditarEventoPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const evento = await prisma.evento.findUnique({
     where: { id: params.id },
     include: {

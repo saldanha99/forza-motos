@@ -2,9 +2,17 @@
 
 import Link from 'next/link'
 import { ChangeEvent, useState } from 'react'
-import { Camera, Download, ExternalLink, FileQuestion, Gift, QrCode, Save, Users } from 'lucide-react'
+import { Camera, Download, ExternalLink, FileQuestion, FileText, Gift, Package, QrCode, Save, Users, WalletCards } from 'lucide-react'
+import { DESAFIO_FOTO_ATIVO } from '@/lib/evento-pirelli/config'
 
-export function AdminEventoPirelli({ evento: inicial, qrs }: { evento: any; qrs: { titulo: string; descricao: string; url: string; svg: string }[] }) {
+const ROTULOS_CAIXA: Record<string, string> = {
+  PIX_MERCADO_PAGO: 'Pix Mercado Pago', MERCADO_PAGO: 'Mercado Pago', PIX_EXTERNO: 'Pix externo',
+  DINHEIRO: 'Dinheiro', CARTAO_CREDITO_MAQUININHA: 'Crédito maquininha',
+  CARTAO_DEBITO_MAQUININHA: 'Débito maquininha', OUTRO: 'Outro',
+}
+const moeda = (valor: number) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+
+export function AdminEventoPirelli({ evento: inicial, qrs, resumoCaixa }: { evento: any; qrs: { titulo: string; descricao: string; url: string; svg: string }[]; resumoCaixa: { total: number; lancamentos: number; porForma: Array<{ forma: string; total: number; lancamentos: number }> } }) {
   const [evento, setEvento] = useState(inicial)
   const [mensagem, setMensagem] = useState('')
   const [salvando, setSalvando] = useState(false)
@@ -24,6 +32,7 @@ export function AdminEventoPirelli({ evento: inicial, qrs }: { evento: any; qrs:
         dataInicio: dados.dataInicio ? new Date(dados.dataInicio).toISOString().slice(0, 16) : null,
         dataFim: dados.dataFim ? new Date(dados.dataFim).toISOString().slice(0, 16) : null,
         valorMinimoPneus: Number(dados.valorMinimoPneus),
+        valorCanecaAvulsa: Number(dados.valorCanecaAvulsa),
       })
       setMensagem('Configuração salva com sucesso.')
     } else {
@@ -65,11 +74,12 @@ export function AdminEventoPirelli({ evento: inicial, qrs }: { evento: any; qrs:
         </a>
       </header>
 
-      <nav className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <nav className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         {[
-          ['/admin/evento-pirelli/atendimento', 'Atendimento', Users],
-          ['/admin/evento-pirelli/leads', 'Leads', Users],
-          ['/admin/evento-pirelli/canecas', 'Canecas', Gift],
+          ['/admin/evento-pirelli/atendimento', 'PDV e atendimento', WalletCards],
+          ['/admin/evento-pirelli/leads', 'CRM do evento', Users],
+          ['/admin/evento-pirelli/produtos', 'Produtos e vendas', Package],
+          ['/admin/evento-pirelli/canecas', 'Canecas / impressão', Gift],
           ['/admin/evento-pirelli/fotos', 'Fotos', Camera],
           ['/admin/evento-pirelli/quiz', 'Quiz', FileQuestion],
         ].map(([href, label, Icon]: any) => (
@@ -84,10 +94,57 @@ export function AdminEventoPirelli({ evento: inicial, qrs }: { evento: any; qrs:
         ))}
       </nav>
 
+      <section className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="font-barlow text-2xl font-black text-brand-text">Fechamento financeiro do evento</h2>
+            <p className="mt-1 max-w-2xl text-sm text-brand-muted">Exporta todas as vendas de caneca e compras de pneus registradas no caixa, com forma de pagamento, valor, referência, operador e horário.</p>
+          </div>
+          <a href="/api/admin/evento-pirelli/export?tipo=caixa" className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white"><Download size={17} /> Baixar fechamento do caixa</a>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-2xl border border-emerald-500/20 bg-black/15 p-4">
+            <p className="font-barlow text-3xl font-black text-brand-text">{moeda(resumoCaixa.total)}</p>
+            <p className="text-xs text-brand-muted">Total recebido · {resumoCaixa.lancamentos} lançamentos</p>
+          </div>
+          {resumoCaixa.porForma.map((item) => <div key={item.forma} className="rounded-2xl border border-brand-border bg-black/10 p-4">
+            <p className="font-barlow text-2xl font-black text-brand-text">{moeda(item.total)}</p>
+            <p className="text-xs text-brand-muted">{ROTULOS_CAIXA[item.forma] ?? item.forma} · {item.lancamentos}</p>
+          </div>)}
+        </div>
+      </section>
+
       {/* QR Codes para Imprimir */}
       <section className="rounded-2xl bg-brand-surface border border-brand-border p-6 shadow-sm">
-        <h2 className="font-barlow text-2xl font-black text-brand-text mb-5">QR codes para imprimir</h2>
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="font-barlow text-2xl font-black text-brand-text">Banner principal — um único QR Code</h2>
+            <p className="mt-1 max-w-2xl text-sm text-brand-muted">Este é o arquivo recomendado para o evento. O QR abre a landing principal e o visitante escolhe caneca, produtos, quiz ou balanceamento.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href="/downloads/banner-principal-evento-pirelli-A2-300dpi.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-accent px-5 py-3 text-sm font-bold text-white transition-colors hover:brightness-110"
+            >
+              <FileText size={17} /> Abrir banner principal A2
+            </a>
+            <a
+              href="/downloads/banners-evento-pirelli-A2-300dpi.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-brand-border px-4 py-3 text-sm font-bold text-brand-text transition-colors hover:border-brand-accent"
+            >
+              <ExternalLink size={16} /> QRs específicos opcionais
+            </a>
+          </div>
+        </div>
+        <div className="mb-6 rounded-2xl border border-brand-accent/30 bg-brand-accent/10 p-4 text-sm text-brand-text">
+          <b>Destino do QR principal:</b> forzamotos.com.br/evento-pirelli. O cadastro só aparece quando a ação escolhida precisar identificar o participante.
+        </div>
+        <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-brand-muted">Atalhos diretos opcionais</h3>
+        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6">
           {qrs.map((qr) => (
             <div
               key={qr.titulo}
@@ -104,13 +161,7 @@ export function AdminEventoPirelli({ evento: inicial, qrs }: { evento: any; qrs:
                 <div dangerouslySetInnerHTML={{ __html: qr.svg }} className="w-full h-full" />
               </div>
 
-              {/* Botão de Impressão */}
-              <button
-                onClick={() => window.print()}
-                className="mt-4 w-full py-2.5 px-4 rounded-xl bg-red-50 hover:bg-red-100 text-[#d42b2b] font-bold text-xs uppercase tracking-wider inline-flex items-center justify-center gap-2 transition-colors"
-              >
-                <QrCode size={16} /> Imprimir esta página
-              </button>
+              <p className="mt-4 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#777]"><QrCode size={15} /> QR específico opcional</p>
             </div>
           ))}
         </div>
@@ -183,6 +234,18 @@ export function AdminEventoPirelli({ evento: inicial, qrs }: { evento: any; qrs:
           </label>
 
           <label className="text-sm font-medium text-brand-muted">
+            Caneca avulsa (R$)
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={evento.valorCanecaAvulsa}
+              onChange={(e) => setEvento({ ...evento, valorCanecaAvulsa: Number(e.target.value) })}
+              className="mt-1 block w-full rounded-xl bg-black/20 border border-brand-border p-3 text-brand-text text-sm outline-none focus:border-brand-accent transition-colors"
+            />
+          </label>
+
+          <label className="text-sm font-medium text-brand-muted">
             Operador
             <select
               value={evento.operadorValorMinimoPneus}
@@ -223,6 +286,54 @@ export function AdminEventoPirelli({ evento: inicial, qrs }: { evento: any; qrs:
           </label>
         </div>
 
+        <div className="mt-5 rounded-2xl border border-brand-border bg-black/10 p-4">
+          <div className="mb-3">
+            <h3 className="text-sm font-bold text-brand-text">Onde divulgar o evento</h3>
+            <p className="mt-1 text-xs text-brand-muted">A vitrine só será exibida enquanto o evento também estiver ativo e publicado.</p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="flex cursor-pointer items-start gap-3 text-sm text-brand-text">
+              <input
+                type="checkbox"
+                checked={Boolean(evento.exibirNaHome)}
+                onChange={(e) => setEvento({ ...evento, exibirNaHome: e.target.checked })}
+                className="mt-0.5 h-4 w-4 accent-brand-accent"
+              />
+              <span><b className="block">Exibir na home</b><span className="text-xs text-brand-muted">Inclui o Pirelli em “Próximos Eventos”.</span></span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-3 text-sm text-brand-text">
+              <input
+                type="checkbox"
+                checked={Boolean(evento.exibirEmEventos)}
+                onChange={(e) => setEvento({ ...evento, exibirEmEventos: e.target.checked })}
+                className="mt-0.5 h-4 w-4 accent-brand-accent"
+              />
+              <span><b className="block">Exibir na página de eventos</b><span className="text-xs text-brand-muted">Inclui o Pirelli no calendário público.</span></span>
+            </label>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 rounded-2xl border border-brand-border bg-black/10 p-4 md:grid-cols-2">
+          <label className="flex cursor-pointer items-start gap-3 text-sm text-brand-text">
+            <input
+              type="checkbox"
+              checked={Boolean(evento.inscricoesAntecipadasAbertas)}
+              onChange={(e) => setEvento({ ...evento, inscricoesAntecipadasAbertas: e.target.checked })}
+              className="mt-0.5 h-4 w-4 accent-brand-accent"
+            />
+            <span><b className="block">Experiências abertas agora</b><span className="text-xs text-brand-muted">Libera cadastro, quiz e balanceamento. A data final continua encerrando toda a experiência.{DESAFIO_FOTO_ATIVO ? ' O desafio da foto também está ativo.' : ''}</span></span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3 text-sm text-brand-text">
+            <input
+              type="checkbox"
+              checked={Boolean(evento.vendasAntecipadasAbertas)}
+              onChange={(e) => setEvento({ ...evento, vendasAntecipadasAbertas: e.target.checked })}
+              className="mt-0.5 h-4 w-4 accent-brand-accent"
+            />
+            <span><b className="block">Vendas abertas agora</b><span className="text-xs text-brand-muted">Libera ofertas e checkout próprio da caneca.</span></span>
+          </label>
+        </div>
+
         {mensagem && <p className="mt-4 text-sm text-brand-accent font-semibold">{mensagem}</p>}
 
         <button
@@ -239,7 +350,7 @@ export function AdminEventoPirelli({ evento: inicial, qrs }: { evento: any; qrs:
       <section className="rounded-2xl bg-brand-surface border border-brand-border p-6">
         <h2 className="font-barlow text-2xl font-black text-brand-text">Exportações</h2>
         <div className="flex flex-wrap gap-3 mt-4">
-          {['leads', 'quiz', 'canecas', 'fotos', 'compras'].map((tipo) => (
+          {['leads', 'quiz', 'canecas', 'fotos', 'compras', 'operacao'].map((tipo) => (
             <a
               key={tipo}
               href={`/api/admin/evento-pirelli/export?tipo=${tipo}`}

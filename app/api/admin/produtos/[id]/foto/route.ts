@@ -5,7 +5,8 @@ import { prisma } from '@/lib/prisma'
 import { put } from '@vercel/blob'
 
 /** PATCH { url: string } — salva URL externa ou do Blob */
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
@@ -16,10 +17,16 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
   const current = await prisma.product.findUnique({
     where: { id: params.id },
-    select: { estoque: true }
+    select: { estoque: true, preVenda: true, eventoPirelliId: true }
   })
+  if (!current) return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 })
+  if (current?.eventoPirelliId) {
+    return NextResponse.json({
+      error: 'Produto exclusivo do evento. Altere as imagens pela área Produtos do Evento Pirelli.',
+    }, { status: 409 })
+  }
   const estoque = current?.estoque ?? 0
-  const ativo = estoque > 0
+  const ativo = Boolean(current?.preVenda) || estoque > 0
 
   const produto = await prisma.product.update({
     where: { id: params.id },
@@ -36,10 +43,23 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 }
 
 /** POST FormData(file) — faz upload para Vercel Blob e salva */
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
+  }
+
+  // Bloqueia antes de ler o arquivo e antes de gerar custo no Blob.
+  const current = await prisma.product.findUnique({
+    where: { id: params.id },
+    select: { estoque: true, preVenda: true, eventoPirelliId: true },
+  })
+  if (!current) return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 })
+  if (current.eventoPirelliId) {
+    return NextResponse.json({
+      error: 'Produto exclusivo do evento. Altere as imagens pela área Produtos do Evento Pirelli.',
+    }, { status: 409 })
   }
 
   const formData = await req.formData()
@@ -51,12 +71,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const blob = await put(filename, file, { access: 'public' })
 
-  const current = await prisma.product.findUnique({
-    where: { id: params.id },
-    select: { estoque: true }
-  })
-  const estoque = current?.estoque ?? 0
-  const ativo = estoque > 0
+  const estoque = current.estoque
+  const ativo = current.preVenda || estoque > 0
 
   const produto = await prisma.product.update({
     where: { id: params.id },
@@ -73,10 +89,21 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 }
 
 /** DELETE — remove todas as imagens do produto */
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
+  }
+
+  const produto = await prisma.product.findUnique({
+    where: { id: params.id },
+    select: { eventoPirelliId: true },
+  })
+  if (produto?.eventoPirelliId) {
+    return NextResponse.json({
+      error: 'Produto exclusivo do evento. Altere as imagens pela área Produtos do Evento Pirelli.',
+    }, { status: 409 })
   }
 
   await prisma.product.update({

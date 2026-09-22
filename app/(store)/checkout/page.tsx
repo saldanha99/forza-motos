@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useCartStore } from '@/store/cart'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
@@ -8,9 +8,25 @@ import { Input } from '@/components/ui/Input'
 import { formatPrice } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
-import { Check, Truck, Zap, Gift } from 'lucide-react'
+import { Check, Gift, QrCode, Truck, Zap } from 'lucide-react'
+import {
+  calcularDescontoAvista,
+  DESCONTO_AVISTA_PERCENTUAL,
+  type MeioPagamentoCheckout,
+} from '@/lib/checkout/desconto-avista'
+import { novaChaveIdempotenciaCliente } from '@/lib/checkout/chave-idempotencia-cliente'
+import { cpfValido } from '@/lib/checkout/entrada'
 
 type Etapa = 'dados' | 'frete' | 'pagamento'
+
+const TEMPO_LIMITE_CHECKOUT_MS = 70_000
+
+function mensagemErroCheckout(error: unknown) {
+  if (error instanceof DOMException && ['AbortError', 'TimeoutError'].includes(error.name)) {
+    return 'O pagamento demorou mais que o esperado. Seu carrinho foi preservado; tente novamente.'
+  }
+  return error instanceof Error ? error.message : 'Erro ao processar pedido'
+}
 
 interface OpcaoFrete {
   id:             string
@@ -25,6 +41,7 @@ export default function CheckoutPage() {
   const { data: session } = useSession()
   const { items, subtotal, limpar, _hasHydrated } = useCartStore()
   const router = useRouter()
+  const checkoutTentativaId = useRef<string | null>(null)
 
   const [etapa, setEtapa]                   = useState<Etapa>('dados')
   const [loading, setLoading]               = useState(false)
@@ -35,6 +52,8 @@ export default function CheckoutPage() {
   const [cupomInput, setCupomInput]         = useState('')
   const [cupom, setCupom]                   = useState<{ codigo: string; desconto: number; descricao: string | null } | null>(null)
   const [loadingCupom, setLoadingCupom]     = useState(false)
+  const [nomeGravacaoEvento, setNomeGravacaoEvento] = useState('')
+  const meioPagamento: MeioPagamentoCheckout = 'PIX'
 
   const [form, setForm] = useState({
     nome:        session?.user?.name  ?? '',
@@ -48,7 +67,22 @@ export default function CheckoutPage() {
     bairro:      '',
     cidade:      '',
     estado:      '',
+    whatsappTransacionalAutorizado: false,
   })
+
+  const chaveCarrinho = items
+    .map((item) => `${item.id}:${item.quantidade}`)
+    .sort()
+    .join('|')
+
+  // Uma opção só é válida para o CEP e o carrinho exatos usados na cotação.
+  // Mudou qualquer um deles, o cliente precisa cotar e escolher novamente.
+  useEffect(() => {
+    setFreteOpcoes([])
+    setFreteSelecionado(null)
+    setCupom(null)
+    setEtapa((atual) => (atual === 'dados' ? atual : 'dados'))
+  }, [form.cep, chaveCarrinho])
 
   // Só redireciona após o store ter hidratado do localStorage.
   // Sem este guard, o useEffect disparava antes da hidratação e
@@ -60,7 +94,10 @@ export default function CheckoutPage() {
   if (!_hasHydrated) return null
   if (items.length === 0) return null
 
-  function updateForm(field: string, value: string) {
+  function updateForm(
+    field: Exclude<keyof typeof form, 'whatsappTransacionalAutorizado'>,
+    value: string,
+  ) {
     setForm((f) => ({ ...f, [field]: value }))
   }
 
@@ -83,25 +120,46 @@ export default function CheckoutPage() {
   }
 
   async function avancarParaFrete() {
-    if (!form.nome || !form.email || !form.cep || !form.rua || !form.numero) {
+    if (
+      !form.nome || !form.email || !form.telefone || !form.cep || !form.rua ||
+      !form.numero || !form.bairro || !form.cidade || !form.estado
+    ) {
       toast.error('Preencha todos os campos obrigatórios')
       return
     }
-    if (form.cpf.replace(/\D/g, '').length !== 11) {
-      toast.error('Informe um CPF válido (11 dígitos) para a nota fiscal')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      toast.error('Informe um e-mail válido.')
+      return
+    }
+    const telefone = form.telefone.replace(/\D/g, '')
+    if (telefone.length < 10 || telefone.length > 13) {
+      toast.error('Informe um telefone ou WhatsApp válido para a entrega.')
+      return
+    }
+    if (!cpfValido(form.cpf)) {
+      toast.error('Informe um CPF válido para a nota fiscal.')
       return
     }
     if (!form.estado) {
       toast.error('CEP não encontrado. Preencha o estado manualmente.')
       return
     }
-
     setLoadingFrete(true)
+    setFreteOpcoes([])
+    setFreteSelecionado(null)
     try {
       const cepLimpo = form.cep.replace(/\D/g, '')
-      const res = await fetch(
-        `/api/frete/calcular?cep=${cepLimpo}&subtotal=${subtotal()}`
-      )
+      const res = await fetch('/api/frete/cotar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cepDestino: cepLimpo,
+          items: items.map((item) => ({
+            productId: item.id,
+            quantidade: item.quantidade,
+          })),
+        }),
+      })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
 
@@ -109,6 +167,8 @@ export default function CheckoutPage() {
         ...op,
         gratis: op.preco === 0,
       }))
+
+      if (opcoes.length === 0) throw new Error('Nenhuma opção de entrega disponível para este CEP')
 
       setFreteOpcoes(opcoes)
       // Auto-seleciona se grátis ou única opção
@@ -151,49 +211,112 @@ export default function CheckoutPage() {
     setCupomInput('')
   }
 
+  function avancarParaPagamento() {
+    if (!freteSelecionado) {
+      toast.error('Selecione uma opção de frete para continuar.')
+      return
+    }
+    setEtapa('pagamento')
+  }
+
   async function finalizarPedido() {
     if (!freteSelecionado) return
+    if (ganhaCanecaEvento && !nomeGravacaoEvento.trim()) {
+      toast.error('Informe o nome que será gravado na caneca do evento.')
+      return
+    }
+    // Pix no Checkout Pro é assíncrono e o Mercado Pago não garante retorno
+    // automático para a loja. Abrimos a cobrança em outra aba ainda dentro do
+    // clique do usuário (evita bloqueio de popup) e mantemos a aba da Forza na
+    // tela segura que consulta o webhook/cron até a confirmação oficial.
+    const abaPagamento = window.open('about:blank', '_blank')
+    if (abaPagamento) {
+      abaPagamento.opener = null
+      abaPagamento.document.title = 'Abrindo pagamento seguro…'
+      abaPagamento.document.body.textContent = 'Abrindo o Pix no Mercado Pago…'
+    }
     setLoading(true)
     try {
+      const tentativaId = checkoutTentativaId.current ?? novaChaveIdempotenciaCliente()
+      checkoutTentativaId.current = tentativaId
       const res = await fetch('/api/pedidos', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(TEMPO_LIMITE_CHECKOUT_MS),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': tentativaId,
+        },
         body: JSON.stringify({
           items: items.map((i) => ({
-            productId:     i.id,
-            quantidade:    i.quantidade,
-            precoUnitario: i.preco,
+            productId:  i.id,
+            quantidade: i.quantidade,
           })),
           enderecoEntrega: form,
-          cpf:      form.cpf,
-          frete:    freteSelecionado.preco,
-          freteServico:        freteSelecionado.id,
-          freteTransportadora: freteSelecionado.transportadora,
-          fretePrazo:          freteSelecionado.prazo,
-          subtotal: subtotal(),
+          cpf: form.cpf,
+          // O servidor recota este ID e ignora preço/prazo do navegador.
+          freteServico: freteSelecionado.id,
           cupomCodigo: cupom?.codigo,
-          total:    subtotal() + freteSelecionado.preco - (cupom?.desconto ?? 0),
+          meioPagamento,
+          checkoutTentativaId: tentativaId,
+          eventoPirelliNomeGravacao: ganhaCanecaEvento ? nomeGravacaoEvento.trim().replace(/\s+/g, ' ') : undefined,
         }),
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      if (!res.ok) {
+        if (data.retrySafe) checkoutTentativaId.current = null
+        throw new Error(data.error)
+      }
 
       if (data.init_point) {
+        // Não limpe o store antes de sair: a mudança reativa para `items=[]`
+        // dispara o redirect de carrinho vazio. O carrinho só é limpo quando
+        // o servidor confirmar o pagamento oficial.
+        if (abaPagamento && !abaPagamento.closed) {
+          abaPagamento.location.replace(data.init_point)
+          window.location.assign(`/checkout/sucesso?token=${encodeURIComponent(tentativaId)}`)
+        } else {
+          // Fallback para navegadores que bloqueiam a nova aba. Nesse caso o
+          // botão "Voltar ao site" do Mercado Pago continua funcionando.
+          window.location.assign(data.init_point)
+        }
+      } else if (data.pagamentoPendente && data.orderNumber) {
+        abaPagamento?.close()
         limpar()
-        window.location.href = data.init_point
+        toast(data.message || 'Pedido recebido. Estamos confirmando o pagamento.', {
+          duration: 9000,
+          icon: '⏳',
+        })
+        router.push(`/rastrear?pedido=${encodeURIComponent(data.orderNumber)}`)
       } else {
-        router.push(`/checkout/sucesso?pedido=${data.orderNumber}`)
-        limpar()
+        throw new Error('Não foi possível iniciar o pagamento. Seu carrinho foi preservado.')
       }
-    } catch (e: any) {
-      toast.error(e.message || 'Erro ao processar pedido')
+    } catch (error) {
+      abaPagamento?.close()
+      toast.error(mensagemErroCheckout(error))
     } finally {
       setLoading(false)
     }
   }
 
-  const total      = Math.max(0, subtotal() + (freteSelecionado?.preco ?? 0) - (cupom?.desconto ?? 0))
+  const itensEvento = items.filter((item) => item.eventoPirelli)
+  const regraEvento = itensEvento[0]
+  const subtotalPneusEvento = itensEvento.reduce((totalPneus, item) => {
+    const categoria = (item.categoria ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+    return /^PNEUS?(?:\s|$)/.test(categoria) ? totalPneus + item.preco * item.quantidade : totalPneus
+  }, 0)
+  const minimoEvento = regraEvento?.valorMinimoBrindeEvento
+  const ganhaCanecaEvento = typeof minimoEvento === 'number' && (
+    regraEvento.operadorValorMinimoBrindeEvento === 'MAIOR_OU_IGUAL'
+      ? subtotalPneusEvento >= minimoEvento
+      : subtotalPneusEvento > minimoEvento
+  )
+  const limiteNomeEvento = regraEvento?.limiteNomeGravacaoEvento ?? 20
+  const subtotalProdutos = subtotal()
+  const descontoCupom = cupom?.desconto ?? 0
+  const descontoAvista = calcularDescontoAvista(subtotalProdutos, descontoCupom, meioPagamento)
+  const totalSemDescontoAvista = Math.max(0, subtotalProdutos + (freteSelecionado?.preco ?? 0) - descontoCupom)
+  const total = Math.max(0, totalSemDescontoAvista - descontoAvista)
   const etapas: Etapa[] = ['dados', 'frete', 'pagamento']
   const etapaIdx   = etapas.indexOf(etapa)
 
@@ -237,8 +360,23 @@ export default function CheckoutPage() {
                 onChange={(e) => updateForm('nome', e.target.value)} />
               <Input label="E-mail *" type="email" value={form.email}
                 onChange={(e) => updateForm('email', e.target.value)} />
-              <Input label="Telefone" value={form.telefone}
+              <Input label={itensEvento.length > 0 ? 'WhatsApp *' : 'Telefone / WhatsApp *'} value={form.telefone}
                 onChange={(e) => updateForm('telefone', e.target.value)} placeholder="(19) 99999-9999" />
+              <label className="flex items-start gap-3 rounded-lg border border-line bg-surface px-4 py-3 text-sm text-dim cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.whatsappTransacionalAutorizado}
+                  onChange={(e) => setForm((atual) => ({
+                    ...atual,
+                    whatsappTransacionalAutorizado: e.target.checked,
+                  }))}
+                  className="mt-0.5 h-4 w-4 accent-red-600"
+                />
+                <span>
+                  Quero receber no WhatsApp apenas atualizações deste pedido, como pagamento,
+                  postagem e entrega. Posso cancelar quando quiser respondendo PARE.
+                </span>
+              </label>
               <Input label="CPF *" value={form.cpf}
                 onChange={(e) => updateForm('cpf', e.target.value)} placeholder="000.000.000-00"
                 maxLength={14} />
@@ -254,12 +392,12 @@ export default function CheckoutPage() {
                   onChange={(e) => updateForm('numero', e.target.value)} />
                 <Input label="Complemento" value={form.complemento}
                   onChange={(e) => updateForm('complemento', e.target.value)} />
-                <Input label="Bairro" value={form.bairro}
+                <Input label="Bairro *" value={form.bairro}
                   onChange={(e) => updateForm('bairro', e.target.value)} />
-                <Input label="Cidade" value={form.cidade}
+                <Input label="Cidade *" value={form.cidade}
                   onChange={(e) => updateForm('cidade', e.target.value)} />
                 <div className="col-span-2 sm:col-span-1">
-                  <Input label="Estado" value={form.estado}
+                  <Input label="Estado *" value={form.estado}
                     onChange={(e) => updateForm('estado', e.target.value.toUpperCase())}
                     placeholder="SP" maxLength={2} />
                 </div>
@@ -310,7 +448,9 @@ export default function CheckoutPage() {
                       </p>
                       <p className="text-xs text-faint">
                         {op.id === 'retirada'
-                          ? 'Retire hoje mesmo — horário comercial'
+                          ? op.prazo > 0
+                            ? `Retirada após disponibilidade — até ${op.prazo} dias úteis`
+                            : 'Retire hoje mesmo — horário comercial'
                           : `Prazo: até ${op.prazo} dias úteis`}
                       </p>
                     </div>
@@ -326,14 +466,18 @@ export default function CheckoutPage() {
                   Voltar
                 </Button>
                 <Button
-                  onClick={() => freteSelecionado && setEtapa('pagamento')}
-                  disabled={!freteSelecionado}
+                  onClick={avancarParaPagamento}
                   className="flex-1"
                   size="lg"
                 >
                   Ir para Pagamento
                 </Button>
               </div>
+              {!freteSelecionado ? (
+                <p role="status" className="text-center text-xs font-medium text-amber-700">
+                  Selecione uma opção de frete acima para continuar.
+                </p>
+              ) : null}
             </div>
           )}
 
@@ -341,13 +485,34 @@ export default function CheckoutPage() {
           {etapa === 'pagamento' && (
             <div className="bg-card border border-line rounded-xl p-6 space-y-4">
               <h2 className="font-grotesk font-semibold text-xl text-ink">Pagamento</h2>
+              {ganhaCanecaEvento && (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 p-5">
+                  <p className="font-bold text-amber-950">Você ganhou uma caneca personalizada</p>
+                  <p className="mt-1 text-sm text-amber-900/70">Informe agora exatamente o nome que deve ser gravado.</p>
+                  <Input label="Nome para gravar *" value={nomeGravacaoEvento} onChange={(e) => setNomeGravacaoEvento(e.target.value)} maxLength={limiteNomeEvento} placeholder="Ex.: Maria Fernanda" />
+                  <p className="mt-1 text-xs text-amber-900/55">{nomeGravacaoEvento.trim().length}/{limiteNomeEvento} caracteres. Sem emojis.</p>
+                </div>
+              )}
+              <section aria-labelledby="forma-pagamento-pix" className="space-y-3">
+                <h3 id="forma-pagamento-pix" className="text-sm font-semibold text-ink">Forma de pagamento</h3>
+                <div className="flex items-center gap-3 rounded-xl border border-vermelho bg-[var(--vermelho-light)] p-4">
+                  <QrCode size={22} className="shrink-0 text-vermelho" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-ink">Pix</span>
+                    <span className="block text-xs font-medium text-green-600">
+                      Pagamento à vista · {DESCONTO_AVISTA_PERCENTUAL}% de desconto
+                    </span>
+                  </span>
+                  <strong className="shrink-0 text-sm text-ink">{formatPrice(total)}</strong>
+                </div>
+              </section>
               <div className="bg-surface border border-line rounded-xl p-5 text-sm text-dim">
                 <p>
                   Você será redirecionado para o{' '}
-                  <strong className="text-ink">Mercado Pago</strong> para concluir o pagamento com segurança.
+                  <strong className="text-ink">Mercado Pago</strong> para gerar e concluir o pagamento via Pix.
                 </p>
                 <p className="mt-2 text-xs text-faint">
-                  Aceitamos: PIX, cartão de crédito/débito e boleto bancário.
+                  Cartão e boleto estão desativados. A confirmação do Pix acontece automaticamente após o pagamento.
                 </p>
               </div>
               <div className="flex gap-3">
@@ -355,7 +520,7 @@ export default function CheckoutPage() {
                   Voltar
                 </Button>
                 <Button onClick={finalizarPedido} loading={loading} className="flex-1" size="lg">
-                  Pagar {formatPrice(total)}
+                  Pagar {formatPrice(total)} via Pix
                 </Button>
               </div>
             </div>
@@ -390,6 +555,12 @@ export default function CheckoutPage() {
                 <div className="flex justify-between text-green-600 font-semibold">
                   <span>Cupom {cupom.codigo}</span>
                   <span>−{formatPrice(cupom.desconto)}</span>
+                </div>
+              )}
+              {descontoAvista > 0 && (
+                <div className="flex justify-between text-green-600 font-semibold">
+                  <span>Desconto à vista ({DESCONTO_AVISTA_PERCENTUAL}%)</span>
+                  <span>−{formatPrice(descontoAvista)}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-ink text-base pt-1">

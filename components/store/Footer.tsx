@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { BadgeCheck, LockKeyhole, QrCode, ShieldCheck } from 'lucide-react'
 import { LogoSVG } from '@/components/store/LogoSVG'
 
 const COLS = [
@@ -39,6 +40,29 @@ const COLS = [
       { label: 'Lançamentos', href: '/produtos' },
       { label: 'Ofertas Exclusivas', href: '/produtos' },
     ],
+  },
+]
+
+const TRUST_ITEMS = [
+  {
+    icon: QrCode,
+    title: 'Pagamento via Pix',
+    description: 'Rápido, prático e com confirmação automática.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Processado pelo Mercado Pago',
+    description: 'O pagamento é concluído no ambiente do Mercado Pago.',
+  },
+  {
+    icon: LockKeyhole,
+    title: 'Conexão protegida',
+    description: 'Seus dados são enviados por uma conexão criptografada HTTPS.',
+  },
+  {
+    icon: BadgeCheck,
+    title: 'Loja identificada',
+    description: 'Forza Motos · CNPJ 00.857.031/0001-63.',
   },
 ]
 
@@ -133,21 +157,39 @@ export function Footer() {
       {/* Divider */}
       <div className="border-t border-[#222]" />
 
+      {/* Sinais verificáveis de confiança — não são certificações de terceiros. */}
+      <section aria-labelledby="footer-compra-segura" className="max-w-[1280px] mx-auto px-6 md:px-12 py-8">
+        <div className="mb-5 text-center sm:text-left">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d42b2b]">Compra segura</p>
+          <h3 id="footer-compra-segura" className="mt-1 font-barlow text-xl font-bold text-white">
+            Segurança e transparência em cada pedido
+          </h3>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {TRUST_ITEMS.map(({ icon: Icon, title, description }) => (
+            <div key={title} className="flex min-h-[104px] items-start gap-3 rounded-xl border border-[#2a2a2a] bg-[#181818] p-4">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#d42b2b]/10 text-[#e94a4a]">
+                <Icon size={22} strokeWidth={1.8} aria-hidden="true" />
+              </span>
+              <span>
+                <strong className="block font-barlow text-[14px] font-bold text-white">{title}</strong>
+                <span className="mt-1 block text-[11.5px] leading-relaxed text-[#777]">{description}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="border-t border-[#222]" />
+
       {/* Bottom bar */}
       <div className="max-w-[1280px] mx-auto px-6 md:px-12 py-[18px] flex flex-col sm:flex-row items-center justify-between gap-3 flex-wrap">
         <span className="text-[12px] text-[#555] font-inter">
           © {new Date().getFullYear()} Forza Motos – Todos os direitos reservados · CNPJ 00.857.031/0001-63
         </span>
-        <div className="flex gap-3 items-center flex-wrap justify-center">
-          {['Visa', 'Master', 'Pix', 'Boleto'].map((pay) => (
-            <span
-              key={pay}
-              className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-[4px] px-2.5 py-1 text-[11px] font-inter text-[#666] font-medium"
-            >
-              {pay}
-            </span>
-          ))}
-        </div>
+        <span className="rounded-[4px] border border-[#2a2a2a] bg-[#1e1e1e] px-2.5 py-1 font-inter text-[11px] font-medium text-[#888]">
+          Pagamento online: Pix
+        </span>
       </div>
     </footer>
   )

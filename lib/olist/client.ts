@@ -4,6 +4,7 @@
  */
 
 const BASE_URL = 'https://api.tiny.com.br/api2'
+const TIMEOUT_TINY_MS = 20_000
 
 function getToken(): string {
   const token = process.env.OLIST_TOKEN
@@ -26,9 +27,53 @@ export interface TinyResponse {
     pedidos?: any[]
     pedido?: any
     registros?: any[]
+    link_nfe?: string
     erros?: any[]
     erro?: string
   }
+}
+
+/**
+ * Alguns endpoints fiscais legados da API 2.0 respondem XML bruto e ignoram
+ * `formato=JSON`. Este helper mantém autenticação, timeout e limite de tamanho
+ * em um único lugar sem tentar interpretar o documento fiscal como JSON.
+ */
+export async function tinyFetchTexto(
+  endpoint: string,
+  params: Record<string, string | number> = {},
+  delayMs = 800,
+): Promise<string> {
+  if (!/^[a-z0-9.]+\.php$/i.test(endpoint)) {
+    throw new Error('Endpoint Tiny inválido')
+  }
+
+  await sleep(delayMs)
+  const body = new URLSearchParams({
+    token: getToken(),
+    ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])),
+  })
+
+  const res = await fetch(`${BASE_URL}/${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+    signal: AbortSignal.timeout(TIMEOUT_TINY_MS),
+  })
+
+  if (!res.ok) throw new Error(`Tiny HTTP ${res.status}`)
+
+  const tamanhoDeclarado = Number(res.headers.get('content-length') ?? 0)
+  const limiteBytes = 8 * 1024 * 1024
+  if (tamanhoDeclarado > limiteBytes) {
+    throw new Error('Documento fiscal da Olist excede o limite seguro')
+  }
+
+  const texto = await res.text()
+  if (!texto.trim()) throw new Error('Olist devolveu um documento fiscal vazio')
+  if (Buffer.byteLength(texto, 'utf8') > limiteBytes) {
+    throw new Error('Documento fiscal da Olist excede o limite seguro')
+  }
+  return texto
 }
 
 /** Faz uma requisição POST form-encoded para a API do Tiny */
@@ -49,6 +94,7 @@ export async function tinyFetch(
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body.toString(),
+    signal: AbortSignal.timeout(TIMEOUT_TINY_MS),
   })
 
   if (!res.ok) throw new Error(`Tiny HTTP ${res.status}`)

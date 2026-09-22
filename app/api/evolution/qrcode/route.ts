@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import { resolverQrDataUri } from '@/lib/evolution/qr'
 import { authOptions } from '@/lib/auth'
 import { getInstanciaAtiva } from '@/lib/evolution/instancia'
+import { obterUrlWebhookEvolution } from '@/lib/evolution/client'
 
 const BASE_URL  = process.env.EVOLUTION_API_URL   ?? ''
 const API_KEY   = process.env.EVOLUTION_API_KEY   ?? ''
@@ -16,6 +17,8 @@ const API_KEY   = process.env.EVOLUTION_API_KEY   ?? ''
 export const dynamic = 'force-dynamic'
 
 async function criarInstancia(INSTANCE: string) {
+  const webhookUrl = obterUrlWebhookEvolution()
+  const webhookSecret = process.env.EVOLUTION_WEBHOOK_SECRET?.trim()
   const res = await fetch(`${BASE_URL}/instance/create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: API_KEY },
@@ -23,9 +26,18 @@ async function criarInstancia(INSTANCE: string) {
       instanceName:  INSTANCE,
       integration:   'WHATSAPP-BAILEYS',
       qrcode:        true,
-      // Webhook configurado direto na criação
-      webhookUrl:    `${process.env.NEXTAUTH_URL ?? ''}/api/evolution/webhook`,
-      webhookEvents: ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'SEND_MESSAGE'],
+      // Formato atual da Evolution v2. O cron também confere/repara esta
+      // configuração, inclusive para instâncias criadas anteriormente.
+      ...(webhookUrl && webhookSecret ? {
+        webhook: {
+          enabled: true,
+          url: webhookUrl,
+          byEvents: false,
+          base64: false,
+          headers: { 'x-forza-webhook-secret': webhookSecret },
+          events: ['MESSAGES_UPSERT', 'MESSAGES_UPDATE'],
+        },
+      } : {}),
     }),
   })
   return res

@@ -5,6 +5,8 @@
 
 import { NextResponse } from 'next/server'
 import { processarFila } from '@/lib/evolution/queue'
+import { garantirWebhookEvolution } from '@/lib/evolution/client'
+import { processarFilaEmails } from '@/lib/email/queue'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -19,9 +21,17 @@ export async function GET(req: Request) {
   }
 
   try {
-    const resultado = await processarFila(20)
-    console.log(`[crm/queue] Enviadas: ${resultado.enviadas}, Falhas: ${resultado.falhas}`)
-    return NextResponse.json({ ok: true, ...resultado })
+    const [whatsapp, email, webhookEvolution] = await Promise.all([
+      processarFila(),
+      processarFilaEmails(10),
+      garantirWebhookEvolution(),
+    ])
+    console.log(
+      `[crm/queue] WhatsApp enviadas=${whatsapp.enviadas} falhas=${whatsapp.falhas}; ` +
+      `e-mails enviados=${email.enviadas} falhas=${email.falhas}; ` +
+      `webhook Evolution=${webhookEvolution ? 'ok' : 'não configurado'}`,
+    )
+    return NextResponse.json({ ok: true, whatsapp, email, webhookEvolution })
   } catch (e: any) {
     console.error('[crm/queue]', e)
     return NextResponse.json({ error: e.message }, { status: 500 })

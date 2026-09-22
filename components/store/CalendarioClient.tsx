@@ -8,16 +8,17 @@ import { Calendar, MapPin, Tag, ChevronRight, Users } from 'lucide-react'
 interface Evento {
   id: string
   titulo: string
-  slug: string
   descricao: string
   dataInicio: string
   dataFim: string | null
   local: string
   imagemUrl: string | null
   preco: number
+  etiquetaPreco: string | null
   categoria: string
   vagas: number | null
   destaque: boolean
+  href: string
 }
 
 function formatData(iso: string) {
@@ -38,7 +39,8 @@ function getMesKey(iso: string) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-function precoLabel(preco: number) {
+function precoLabel(preco: number, etiquetaPersonalizada: string | null) {
+  if (etiquetaPersonalizada) return { texto: etiquetaPersonalizada, cor: 'text-[#d42b2b] bg-red-50 border-red-200' }
   if (preco === 0) return { texto: 'Gratuito', cor: 'text-emerald-600 bg-emerald-50 border-emerald-200' }
   if (preco < 50) return { texto: `R$ ${preco.toFixed(2)}`, cor: 'text-blue-600 bg-blue-50 border-blue-200' }
   return { texto: `R$ ${preco.toFixed(2)}`, cor: 'text-[#d42b2b] bg-red-50 border-red-200' }
@@ -103,11 +105,11 @@ export function CalendarioClient({ eventos, categorias }: { eventos: Evento[]; c
                   {/* Grid de eventos */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                     {mesEventos.map((evento) => {
-                      const { texto: precoTexto, cor: precoCor } = precoLabel(evento.preco)
+                      const { texto: precoTexto, cor: precoCor } = precoLabel(evento.preco, evento.etiquetaPreco)
                       return (
                         <Link
                           key={evento.id}
-                          href={`/eventos/${evento.slug}`}
+                          href={evento.href}
                           className="group flex flex-col bg-white border border-[#eee] hover:border-[#d42b2b]/40 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
                         >
                           {/* Imagem */}

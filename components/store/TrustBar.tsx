@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { Truck, Zap, ShieldCheck, Wrench } from 'lucide-react'
+import { Truck, Zap, QrCode, Wrench } from 'lucide-react'
 
 const ITEMS = [
   {
@@ -15,9 +15,9 @@ const ITEMS = [
     sub: 'Despacho no mesmo dia útil',
   },
   {
-    icon: ShieldCheck,
-    title: 'Pagamento Seguro',
-    sub: 'Compra 100% protegida',
+    icon: QrCode,
+    title: 'Pagamento via Pix',
+    sub: 'Processado pelo Mercado Pago',
   },
   {
     icon: Wrench,

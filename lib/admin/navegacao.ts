@@ -83,7 +83,7 @@ export const TITULOS: Record<string, { titulo: string; subtitulo: string }> = {
   '/admin/pedidos':       { titulo: 'Pedidos',        subtitulo: 'Da confirmação do pagamento até a entrega — arraste o card para mudar a etapa' },
   '/admin/agendamentos':  { titulo: 'Agendamentos',   subtitulo: 'Serviços do box rápido: confirmar, executar e concluir' },
   '/admin/eventos':       { titulo: 'Eventos',        subtitulo: 'Encontros e passeios com venda de ingresso' },
-  '/admin/evento-pirelli': { titulo: 'Evento Pirelli',  subtitulo: 'Ação presencial: cadastro de visitante, quiz, brinde de caneca e fotos' },
+  '/admin/evento-pirelli': { titulo: 'Evento Pirelli',  subtitulo: 'Ação presencial: ofertas, vendas, visitantes, quiz, brindes e fotos' },
   '/admin/cupons':        { titulo: 'Cupons',         subtitulo: 'Descontos ativos e regras de uso na loja' },
   '/admin/produtos':      { titulo: 'Produtos',       subtitulo: 'Catálogo sincronizado com o Olist' },
   '/admin/motos':         { titulo: 'Motos',          subtitulo: 'Modelos e as medidas de fábrica usadas na busca por placa' },

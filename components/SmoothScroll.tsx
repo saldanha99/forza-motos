@@ -15,7 +15,7 @@
  * se comportam melhor com scroll nativo.
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ReactLenis, useLenis } from 'lenis/react'
 
 /** Barra de progresso vermelha no topo da página */
@@ -58,10 +58,18 @@ function VelocityTracker() {
 }
 
 export function SmoothScroll({ children }: { children: React.ReactNode }) {
-  const prefersReduced =
-    typeof window !== 'undefined'
-      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      : false
+  // O primeiro render precisa ser idêntico no servidor e no navegador. A
+  // preferência real é aplicada logo após a hidratação e continua reagindo a
+  // mudanças feitas pelo usuário nas configurações do sistema.
+  const [prefersReduced, setPrefersReduced] = useState(false)
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const atualizar = () => setPrefersReduced(media.matches)
+    atualizar()
+    media.addEventListener('change', atualizar)
+    return () => media.removeEventListener('change', atualizar)
+  }, [])
 
   return (
     <ReactLenis

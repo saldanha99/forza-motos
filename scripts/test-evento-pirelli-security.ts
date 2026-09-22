@@ -5,14 +5,15 @@ import { randomUUID } from 'node:crypto'
 import { prisma } from '@/lib/prisma'
 import {
   buscarAtendimento,
+  atualizarFotoEvento,
   criarElegibilidadeDeCaneca,
   eventoDisponivel,
   escaparCelulaCsv,
   linhasCsvLeads,
   montarCsv,
+  normalizarRespostaQuizTexto,
   obterEventoPirelli,
   paraBooleano,
-  reconciliarElegibilidadeQuiz,
   registrarCompraCaneca,
   revogarElegibilidadeFotoVencedora,
 } from '@/lib/evento-pirelli'
@@ -46,11 +47,44 @@ const whatsapps: string[] = []
 async function registrar(nomeCompleto: string, whatsappRaw: string, extra: any = {}) {
   whatsapps.push(whatsappRaw)
   const resposta = await registroPOST(req('http://qa/api/evento-pirelli/registro', {
-    nomeCompleto, nomeGravacao: nomeCompleto.slice(0, 15), whatsapp: whatsappRaw, confirmouNome: true, chaveSubmissao: randomUUID(), ...extra,
+    nomeCompleto,
+    whatsapp: whatsappRaw,
+    email: `qa-${randomUUID()}@example.com`,
+    enderecoCep: '13010000',
+    enderecoRua: 'Rua QA',
+    enderecoNumero: '100',
+    enderecoComplemento: '',
+    enderecoBairro: 'Centro',
+    enderecoCidade: 'Campinas',
+    enderecoEstado: 'SP',
+    motoMarca: 'Honda',
+    motoModelo: 'CB 500X',
+    motoAno: 2024,
+    chaveSubmissao: randomUUID(),
+    ...extra,
   }))
   const dados = await resposta.json()
   if (dados?.visitante?.id) visitanteIds.push(dados.visitante.id)
   return { status: resposta.status, dados }
+}
+
+function cadastroCompleto(nomeCompleto: string, whatsapp: string, chaveSubmissao = randomUUID()) {
+  return {
+    nomeCompleto,
+    whatsapp,
+    email: `qa-${randomUUID()}@example.com`,
+    enderecoCep: '13010000',
+    enderecoRua: 'Rua QA',
+    enderecoNumero: '100',
+    enderecoComplemento: '',
+    enderecoBairro: 'Centro',
+    enderecoCidade: 'Campinas',
+    enderecoEstado: 'SP',
+    motoMarca: 'Honda',
+    motoModelo: 'CB 500X',
+    motoAno: 2024,
+    chaveSubmissao,
+  }
 }
 
 async function main() {
@@ -63,9 +97,10 @@ async function main() {
   }
 
   const eventoOriginal = await obterEventoPirelli()
-  if (!eventoOriginal.ativo || !eventoOriginal.publicado) {
-    await prisma.eventoPirelli.update({ where: { id: eventoOriginal.id }, data: { ativo: true, publicado: true } })
-  }
+  await prisma.eventoPirelli.update({
+    where: { id: eventoOriginal.id },
+    data: { ativo: true, publicado: true, dataInicio: null, dataFim: null },
+  })
   const evento = await obterEventoPirelli()
 
   try {
@@ -78,7 +113,7 @@ async function main() {
 
       // Novo POST, MESMO whatsapp, chaveSubmissao DIFERENTE (simula estranho com o telefone).
       const r2 = await registroPOST(req('http://qa/api/evento-pirelli/registro', {
-        nomeCompleto: 'Estranho Tentando', nomeGravacao: 'Estranho', whatsapp: wa, confirmouNome: true, chaveSubmissao: randomUUID(),
+        ...cadastroCompleto('Estranho Tentando', wa),
       }))
       const dados2 = await r2.json()
       assert.equal(r2.status, 409)
@@ -90,7 +125,7 @@ async function main() {
       const waConc = whatsappFixture(2)
       const chaveConc = randomUUID()
       whatsapps.push(waConc)
-      const corpo = { nomeCompleto: 'QA Concorrencia', nomeGravacao: 'QA Conc', whatsapp: waConc, confirmouNome: true, chaveSubmissao: chaveConc }
+      const corpo = cadastroCompleto('QA Concorrencia', waConc, chaveConc)
       const [c1, c2] = await Promise.all([
         registroPOST(req('http://qa/api/evento-pirelli/registro', corpo)).then((r) => r.json()),
         registroPOST(req('http://qa/api/evento-pirelli/registro', corpo)).then((r) => r.json()),
@@ -119,12 +154,17 @@ async function main() {
       console.log('OK #6 — paraBooleano trata "false" como falso; registro grava consentimento corretamente')
     }
 
-    // ---------- #2: quiz perfeito é atômico e sempre gera exatamente uma caneca ----------
+    // ---------- #2: quiz é cronometrado e classifica sem premiar antes da apuração ----------
     {
       const perguntas = await prisma.eventoPirelliQuizPergunta.findMany({ where: { eventoId: evento.id, ativa: true }, include: { opcoes: { where: { ativa: true } } } })
       assert.ok(perguntas.length > 0, 'evento precisa ter perguntas ativas para este teste')
       const respostasPerfeitas: Record<string, string> = {}
       for (const p of perguntas) {
+        if (p.tipo === 'TEXTO') {
+          assert.ok(p.respostaCorretaTexto, `pergunta aberta ${p.id} sem gabarito`)
+          respostasPerfeitas[p.id] = '  Forza-Motos!  '
+          continue
+        }
         const certa = p.opcoes.find((o) => o.correta)
         assert.ok(certa, `pergunta ${p.id} sem opção correta`)
         respostasPerfeitas[p.id] = certa!.id
@@ -133,26 +173,53 @@ async function main() {
       // Caminho feliz via rota real.
       const feliz = await registrar('QA Quiz Feliz', whatsappFixture(5))
       const codigoFeliz = feliz.dados.visitante.codigoQr
+      const aberturaQuiz = await quizGET(req(`http://qa/api/evento-pirelli/quiz?codigo=${codigoFeliz}`, undefined, 'GET'))
+      assert.equal(aberturaQuiz.status, 200)
       const respostaQuiz = await quizPOST(req('http://qa/api/evento-pirelli/quiz', { codigo: codigoFeliz, respostas: respostasPerfeitas }))
       const dadosQuiz = await respostaQuiz.json()
       assert.equal(respostaQuiz.status, 200)
-      assert.equal(dadosQuiz.elegivelCaneca, true)
+      assert.equal(dadosQuiz.classificadoQuiz, true)
       const canecaFeliz = await prisma.eventoPirelliCaneca.findUnique({ where: { visitanteId: feliz.dados.visitante.id } })
       const elegFeliz = await prisma.eventoPirelliElegibilidadeCaneca.count({ where: { visitanteId: feliz.dados.visitante.id, origem: 'QUIZ_PERFEITO' } })
-      assert.ok(canecaFeliz, 'quiz perfeito deve gerar exatamente uma caneca')
-      assert.equal(elegFeliz, 1)
-      // Retry na tentativa única não duplica nem apaga a elegibilidade.
+      assert.equal(canecaFeliz, null, 'a apuração ainda não confirmou o vencedor')
+      assert.equal(elegFeliz, 0)
+      // Retry na tentativa única não reabre o cronômetro.
       const segundaTentativa = await quizPOST(req('http://qa/api/evento-pirelli/quiz', { codigo: codigoFeliz, respostas: respostasPerfeitas }))
       assert.equal(segundaTentativa.status, 409)
-      assert.equal(await prisma.eventoPirelliElegibilidadeCaneca.count({ where: { visitanteId: feliz.dados.visitante.id, origem: 'QUIZ_PERFEITO' } }), 1)
-      console.log('OK #2a — quiz perfeito via rota real gera exatamente uma caneca; retry não duplica')
+      assert.equal(await prisma.eventoPirelliElegibilidadeCaneca.count({ where: { visitanteId: feliz.dados.visitante.id, origem: 'QUIZ_PERFEITO' } }), 0)
+      console.log('OK #2a — quiz perfeito entra no ranking; prêmio aguarda apuração e retry não reabre')
+
+      const perguntaAberta = perguntas.find((pergunta) => pergunta.tipo === 'TEXTO')
+      assert.ok(perguntaAberta, 'quiz oficial precisa ter a pergunta final aberta')
+      assert.equal(normalizarRespostaQuizTexto(' Forza-Motos! '), normalizarRespostaQuizTexto('FORZA MOTOS'))
+
+      const respostaErrada = await registrar('QA Quiz Final Errada', whatsappFixture(15))
+      const quasePerfeitas = { ...respostasPerfeitas, [perguntaAberta!.id]: 'Outra loja' }
+      await quizGET(req(`http://qa/api/evento-pirelli/quiz?codigo=${respostaErrada.dados.visitante.codigoQr}`, undefined, 'GET'))
+      const tentativaErrada = await quizPOST(req('http://qa/api/evento-pirelli/quiz', { codigo: respostaErrada.dados.visitante.codigoQr, respostas: quasePerfeitas }))
+      const dadosErrados = await tentativaErrada.json()
+      assert.equal(tentativaErrada.status, 200)
+      assert.equal(dadosErrados.classificadoQuiz, false)
+      assert.equal(await prisma.eventoPirelliCaneca.count({ where: { visitanteId: respostaErrada.dados.visitante.id } }), 0)
+      console.log('OK #2d — resposta final aceita variações de escrita; resposta errada não libera caneca')
 
       // Falha simulada na 2ª etapa: prova que a transação é atômica (rollback da tentativa).
       const falhaVisitante = await registrar('QA Quiz Falha Simulada', whatsappFixture(6))
       const maxima = perguntas.reduce((total, p) => total + p.pontos, 0)
       const respostasCriadas = perguntas.map((p) => {
+        if (p.tipo === 'TEXTO') {
+          return {
+            perguntaId: p.id,
+            opcaoId: null,
+            respostaTexto: respostasPerfeitas[p.id],
+            enunciadoSnapshot: p.enunciado,
+            opcaoSnapshot: respostasPerfeitas[p.id],
+            corretaSnapshot: true,
+            pontosGanhos: p.pontos,
+          }
+        }
         const opcao = p.opcoes.find((o) => o.id === respostasPerfeitas[p.id])!
-        return { perguntaId: p.id, opcaoId: opcao.id, enunciadoSnapshot: p.enunciado, opcaoSnapshot: opcao.texto, corretaSnapshot: opcao.correta, pontosGanhos: opcao.correta ? p.pontos : 0 }
+        return { perguntaId: p.id, opcaoId: opcao.id, respostaTexto: null, enunciadoSnapshot: p.enunciado, opcaoSnapshot: opcao.texto, corretaSnapshot: opcao.correta, pontosGanhos: opcao.correta ? p.pontos : 0 }
       })
       let falhouComoEsperado = false
       try {
@@ -167,14 +234,6 @@ async function main() {
       assert.equal(tentativaOrfa, null, 'com transação atômica, falha na 2ª etapa também desfaz a tentativa (retry continua possível)')
       console.log('OK #2b — falha simulada na 2ª etapa desfaz a tentativa inteira (nenhum estado órfão)')
 
-      // Self-heal: tentativa perfeita pré-existente sem elegibilidade (estado legado quebrado).
-      const reconciliar = await registrar('QA Reconciliacao', whatsappFixture(7))
-      await prisma.eventoPirelliQuizTentativa.create({ data: { visitanteId: reconciliar.dados.visitante.id, pontuacao: maxima, pontuacaoMaxima: maxima, acertouTodas: true, respostas: { create: respostasCriadas } } })
-      assert.equal(await prisma.eventoPirelliElegibilidadeCaneca.count({ where: { visitanteId: reconciliar.dados.visitante.id } }), 0)
-      await reconciliarElegibilidadeQuiz(reconciliar.dados.visitante.id)
-      const canecaReconciliada = await prisma.eventoPirelliCaneca.findUnique({ where: { visitanteId: reconciliar.dados.visitante.id } })
-      assert.ok(canecaReconciliada, 'self-heal deve recriar a caneca para uma tentativa perfeita órfã')
-      console.log('OK #2c — reconciliarElegibilidadeQuiz recupera tentativa perfeita legada sem elegibilidade')
     }
 
     // ---------- #3: busca de atendimento por nome não devolve pessoa arbitrária ----------
@@ -203,8 +262,9 @@ async function main() {
     {
       const comprador = await registrar('QA Comprador Caneca', whatsappFixture(11))
       const chaveIdemp = randomUUID()
-      const c1 = await registrarCompraCaneca({ eventoId: evento.id, visitanteId: comprador.dados.visitante.id, quantidade: 2, nomeGravacaoSnapshot: 'QA Comprador', chaveIdempotencia: chaveIdemp })
-      const c2 = await registrarCompraCaneca({ eventoId: evento.id, visitanteId: comprador.dados.visitante.id, quantidade: 2, nomeGravacaoSnapshot: 'QA Comprador', chaveIdempotencia: chaveIdemp })
+      const dadosCompra = { eventoId: evento.id, visitanteId: comprador.dados.visitante.id, quantidade: 2, nomeGravacaoSnapshot: 'QA Comprador', chaveIdempotencia: chaveIdemp, formaPagamento: 'DINHEIRO' as const, valorUnitarioSnapshot: 89, valorPago: 178, pagamentoConfirmadoEm: new Date(), pagamentoConfirmadoPor: 'QA' }
+      const c1 = await registrarCompraCaneca(dadosCompra)
+      const c2 = await registrarCompraCaneca(dadosCompra)
       assert.equal(c1.id, c2.id, 'mesma chave de idempotência deve devolver a mesma venda')
       const totalVendas = await prisma.eventoPirelliCompraCaneca.count({ where: { visitanteId: comprador.dados.visitante.id } })
       assert.equal(totalVendas, 1, 'duplo clique/retry não pode criar uma segunda venda')
@@ -223,7 +283,7 @@ async function main() {
       const fotoUnica = await registrar('QA Vencedor Foto Unico', whatsappFixture(12))
       await criarElegibilidadeDeCaneca({ visitanteId: fotoUnica.dados.visitante.id, origem: 'FOTO_VENCEDORA', validadoPor: 'QA' })
       const participacao = await prisma.eventoPirelliParticipacaoFoto.create({
-        data: { visitanteId: fotoUnica.dados.visitante.id, instagram: 'qa_foto_unica', declarouMarcacoes: true, status: 'VENCEDOR' },
+        data: { visitanteId: fotoUnica.dados.visitante.id, instagram: 'qa_foto_unica', declarouMarcacoes: true, declarouHashtag: true, declarouPerfilPublico: true, status: 'VENCEDOR' },
       })
       let elegA = await prisma.eventoPirelliElegibilidadeCaneca.findUniqueOrThrow({ where: { visitanteId_origem: { visitanteId: fotoUnica.dados.visitante.id, origem: 'FOTO_VENCEDORA' } } })
       assert.equal(elegA.revogadoEm, null)
@@ -295,10 +355,70 @@ async function main() {
       console.log('OK #10 — export de leads expõe consentimento de marketing por visitante')
     }
 
+    // ---------- #11: fluxo oficial da foto + balanceamento ----------
+    {
+      const participanteA = await registrar('QA Foto Ranking A', whatsappFixture(16))
+      const participanteB = await registrar('QA Foto Ranking B', whatsappFixture(17))
+
+      const fotoIncompleta = await participacoesPOST(req('http://qa/api/evento-pirelli/participacoes', {
+        codigo: participanteA.dados.visitante.codigoQr,
+        tipo: 'foto',
+        instagram: 'qa_ranking_a',
+        declarouMarcacoes: true,
+        declarouHashtag: false,
+        declarouPerfilPublico: true,
+      }))
+      assert.equal(fotoIncompleta.status, 400, 'foto sem hashtag deve ser rejeitada')
+
+      for (const [participante, instagram] of [[participanteA, 'qa_ranking_a'], [participanteB, 'qa_ranking_b']] as const) {
+        const resposta = await participacoesPOST(req('http://qa/api/evento-pirelli/participacoes', {
+          codigo: participante.dados.visitante.codigoQr,
+          tipo: 'foto',
+          instagram,
+          declarouMarcacoes: true,
+          declarouHashtag: true,
+          declarouPerfilPublico: true,
+        }))
+        assert.equal(resposta.status, 200)
+      }
+
+      const [fotoA, fotoB] = await Promise.all([
+        prisma.eventoPirelliParticipacaoFoto.findUniqueOrThrow({ where: { visitanteId: participanteA.dados.visitante.id } }),
+        prisma.eventoPirelliParticipacaoFoto.findUniqueOrThrow({ where: { visitanteId: participanteB.dados.visitante.id } }),
+      ])
+      await atualizarFotoEvento({ id: fotoA.id, status: 'FINALISTA', curtidasApuradas: 20, observacao: null, operador: 'QA' })
+      await atualizarFotoEvento({ id: fotoB.id, status: 'FINALISTA', curtidasApuradas: 30, observacao: null, operador: 'QA' })
+      await assert.rejects(
+        atualizarFotoEvento({ id: fotoA.id, status: 'VENCEDOR', curtidasApuradas: 20, observacao: null, operador: 'QA' }),
+        /mais curtidas/,
+      )
+      await atualizarFotoEvento({ id: fotoB.id, status: 'VENCEDOR', curtidasApuradas: 30, observacao: null, operador: 'QA' })
+      await atualizarFotoEvento({ id: fotoA.id, status: 'VENCEDOR', curtidasApuradas: 40, observacao: null, operador: 'QA' })
+      const vencedoras = await prisma.eventoPirelliParticipacaoFoto.count({ where: { status: 'VENCEDOR', visitante: { eventoId: evento.id } } })
+      assert.equal(vencedoras, 1, 'deve existir somente uma foto vencedora no evento')
+
+      const balanceamento = await participacoesPOST(req('http://qa/api/evento-pirelli/participacoes', {
+        codigo: participanteA.dados.visitante.codigoQr,
+        tipo: 'balanceamento',
+        horario: 'Manhã',
+      }))
+      assert.equal(balanceamento.status, 200)
+      assert.equal((await prisma.eventoPirelliBalanceamento.findUniqueOrThrow({ where: { visitanteId: participanteA.dados.visitante.id } })).status, 'INTERESSE')
+      console.log('OK #11 — foto exige regras oficiais, ranking mantém uma vencedora e balanceamento registra o período')
+    }
+
     console.log('\nTODOS OS TESTES PASSARAM')
   } finally {
     // Restaura o evento ao estado original e apaga todas as fixtures criadas.
-    await prisma.eventoPirelli.update({ where: { id: evento.id }, data: { ativo: eventoOriginal.ativo, publicado: eventoOriginal.publicado } })
+    await prisma.eventoPirelli.update({
+      where: { id: evento.id },
+      data: {
+        ativo: eventoOriginal.ativo,
+        publicado: eventoOriginal.publicado,
+        dataInicio: eventoOriginal.dataInicio,
+        dataFim: eventoOriginal.dataFim,
+      },
+    })
 
     const leads = await prisma.crmLead.findMany({ where: { whatsapp: { in: whatsapps.map((w) => `55${w}`) } }, select: { id: true } })
     const leadIds = leads.map((l) => l.id)

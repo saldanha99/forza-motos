@@ -36,7 +36,8 @@ function validarRedirect(from: string, to: string, statusCode: number): string |
 }
 
 /** PATCH — edita qualquer campo do redirect (from, to, statusCode, ativo, notas). */
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
@@ -89,7 +90,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 /** DELETE — remove o redirect. */
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })

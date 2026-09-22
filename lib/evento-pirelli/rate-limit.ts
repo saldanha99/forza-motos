@@ -3,7 +3,9 @@ import { prisma } from '@/lib/prisma'
 import { origemDaRequisicao } from '@/lib/ip-cliente'
 
 export const PREFIXO_RATE_LIMIT_REGISTRO_PIRELLI = 'rate_limit:evento_pirelli_registro:'
-const JANELA_MS = 60_000
+export const PREFIXO_RATE_LIMIT_RECUPERACAO_PIRELLI = 'rate_limit:evento_pirelli_recuperacao:'
+const JANELA_REGISTRO_MS = 60_000
+const JANELA_RECUPERACAO_MS = 10 * 60_000
 
 /**
  * O público real está no estande, atrás de um único IP de NAT (Wi-Fi da loja ou
@@ -16,6 +18,11 @@ export const LIMITE_REGISTRO_POR_IP = 20
 export const LIMITE_REGISTRO_POR_WHATSAPP = 5
 
 export type EscopoLimiteRegistro = 'ip' | 'whatsapp'
+export type EscopoLimiteRecuperacao =
+  | 'solicitar-ip'
+  | 'solicitar-whatsapp'
+  | 'confirmar-ip'
+  | 'confirmar-whatsapp'
 
 type Estado = { inicio: number; tentativas: number }
 
@@ -31,9 +38,9 @@ export function ipDoRegistro(req: Request) {
 }
 
 /** Hash impede guardar IP/telefone em claro numa tabela de configuração. */
-function chavePersistida(escopo: EscopoLimiteRegistro, identidade: string) {
+function chavePersistida(prefixo: string, escopo: string, identidade: string) {
   const hash = createHash('sha256').update(`${escopo}:${identidade}`).digest('hex')
-  return `${PREFIXO_RATE_LIMIT_REGISTRO_PIRELLI}${escopo}:${hash}`
+  return `${prefixo}${escopo}:${hash}`
 }
 
 /**
@@ -43,13 +50,15 @@ function chavePersistida(escopo: EscopoLimiteRegistro, identidade: string) {
  * restart/deploy no meio do evento. Falha de banco propaga para o chamador
  * (fail-closed) em vez de liberar a rajada.
  */
-export async function consumirLimiteRegistro(
-  escopo: EscopoLimiteRegistro,
+async function consumirLimitePersistido(
+  prefixo: string,
+  escopo: string,
   identidade: string,
   limite: number,
+  janelaMs: number,
   agora = Date.now(),
 ) {
-  const chave = chavePersistida(escopo, identidade)
+  const chave = chavePersistida(prefixo, escopo, identidade)
   const inicial = JSON.stringify({ inicio: agora, tentativas: 0 } satisfies Estado)
 
   return prisma.$transaction(async (tx) => {
@@ -69,13 +78,45 @@ export async function consumirLimiteRegistro(
     } catch {
       estado = { inicio: agora, tentativas: 0 }
     }
-    if (agora - estado.inicio >= JANELA_MS) estado = { inicio: agora, tentativas: 0 }
+    if (agora - estado.inicio >= janelaMs) estado = { inicio: agora, tentativas: 0 }
     if (estado.tentativas >= limite) return false
 
     estado.tentativas += 1
     await tx.setting.update({ where: { key: chave }, data: { value: JSON.stringify(estado) } })
     return true
   })
+}
+
+export function consumirLimiteRegistro(
+  escopo: EscopoLimiteRegistro,
+  identidade: string,
+  limite: number,
+  agora = Date.now(),
+) {
+  return consumirLimitePersistido(
+    PREFIXO_RATE_LIMIT_REGISTRO_PIRELLI,
+    escopo,
+    identidade,
+    limite,
+    JANELA_REGISTRO_MS,
+    agora,
+  )
+}
+
+export function consumirLimiteRecuperacao(
+  escopo: EscopoLimiteRecuperacao,
+  identidade: string,
+  limite: number,
+  agora = Date.now(),
+) {
+  return consumirLimitePersistido(
+    PREFIXO_RATE_LIMIT_RECUPERACAO_PIRELLI,
+    escopo,
+    identidade,
+    limite,
+    JANELA_RECUPERACAO_MS,
+    agora,
+  )
 }
 
 /**
@@ -90,4 +131,14 @@ export async function limparJanelasAntigasDoRegistro(agora = Date.now()) {
       updatedAt: { lt: new Date(agora - 24 * 60 * 60_000) },
     },
   }).catch((erro) => console.error('[evento-pirelli/rate-limit] limpeza falhou:', erro))
+}
+
+export async function limparJanelasAntigasDaRecuperacao(agora = Date.now()) {
+  if (Math.random() >= 0.02) return
+  await prisma.setting.deleteMany({
+    where: {
+      key: { startsWith: PREFIXO_RATE_LIMIT_RECUPERACAO_PIRELLI },
+      updatedAt: { lt: new Date(agora - 24 * 60 * 60_000) },
+    },
+  }).catch((erro) => console.error('[evento-pirelli/recuperacao/rate-limit] limpeza falhou:', erro))
 }

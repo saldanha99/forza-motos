@@ -16,7 +16,7 @@ const SKU = 'TESTE-FLUXO-R1'
 async function criar() {
   const produto = await prisma.product.upsert({
     where: { sku: SKU },
-    update: { ativo: true, estoque: 10, preco: 1 },
+    update: { ativo: true, ocultoManual: false, estoque: 10, preco: 1 },
     create: {
       sku: SKU,
       nome: 'Produto Teste — Validação de Checkout (R$ 1)',
@@ -28,6 +28,7 @@ async function criar() {
       categoria: 'Teste',
       marca: 'Forza',
       ativo: true,
+      ocultoManual: false,
       temImagem: true, // passa no filtro da vitrine mesmo sem foto real
       imagens: [],
       peso: 0.1,

@@ -18,6 +18,7 @@
  */
 
 import type { Dimensoes } from './dimensoes'
+import { exigirChaveNfe, exigirInscricaoEstadual } from './nfe'
 
 export interface CotacaoInput {
   cepDestino: string
@@ -25,8 +26,18 @@ export interface CotacaoInput {
   dimensoes: Dimensoes
   /** Valor total do pedido (para seguro). Em reais. */
   valorTotal: number
-  /** Filtra apenas alguns serviços. Default: todos. */
-  servicos?: number[]
+}
+
+/** Serviços oferecidos pela loja: Correios PAC (1) e SEDEX (2). */
+export const SERVICOS_CORREIOS_LOJA = [1, 2] as const
+const IDS_SERVICOS_CORREIOS_LOJA = new Set<number>(SERVICOS_CORREIOS_LOJA)
+
+/** Defesa adicional caso a API devolva um serviço fora do filtro solicitado. */
+export function servicoCorreiosHabilitado(input: {
+  id: number
+  companyId?: number
+}): boolean {
+  return IDS_SERVICOS_CORREIOS_LOJA.has(Number(input.id)) && Number(input.companyId) === 1
 }
 
 export interface CotacaoResultado {
@@ -57,8 +68,46 @@ const getMeBaseUrl = () =>
 const getMeUserAgent = () =>
   process.env.MELHOR_ENVIO_USER_AGENT || 'Forza Motos caio@forzamotos.com.br'
 
+// Muito abaixo do lease de 5 minutos: uma rede travada não pode permitir que
+// outro processo adquira o lease enquanto a primeira chamada ainda está viva.
+const TIMEOUT_PREPARO_MS = 30_000
+const TIMEOUT_CONSULTA_MS = 8_000
+const MAX_PDF_BYTES = 20 * 1024 * 1024
+const MAX_JSON_PDF_BYTES = 64 * 1024
+const MAX_REDIRECTS_PDF = 3
+
+export class ErroMelhorEnvio extends Error {
+  constructor(
+    message: string,
+    public readonly status: number | null,
+    public readonly caminho: string,
+  ) {
+    super(message)
+    this.name = 'ErroMelhorEnvio'
+  }
+}
+
+/** Erros em que a API pode ter processado a compra antes de a resposta falhar. */
+export function resultadoCompraPodeSerIncerto(error: unknown): boolean {
+  if (!(error instanceof ErroMelhorEnvio)) return true
+  return error.status === null || error.status === 408 || error.status === 425 ||
+    error.status === 429 || error.status >= 500
+}
+
 function limparCEP(cep: string): string {
   return cep.replace(/\D/g, '')
+}
+
+/**
+ * O fluxo atual não coleta agência nem XML fiscal no checkout. Serviços que
+ * exigem esses campos não devem ser oferecidos até a integração ser ampliada.
+ */
+const SERVICOS_COM_DADOS_ADICIONAIS = new Set([12, 15, 16, 22])
+const EMPRESAS_COM_DADOS_ADICIONAIS = new Set([6, 9, 12])
+
+export function servicoCompativelComFluxo(input: { id: number; companyId?: number }): boolean {
+  return !SERVICOS_COM_DADOS_ADICIONAIS.has(Number(input.id)) &&
+    !EMPRESAS_COM_DADOS_ADICIONAIS.has(Number(input.companyId))
 }
 
 /**
@@ -89,7 +138,7 @@ export async function cotarMelhorEnvio(input: CotacaoInput): Promise<CotacaoResu
       receipt: false,
       own_hand: false,
     },
-    ...(input.servicos && { services: input.servicos.join(',') }),
+    services: SERVICOS_CORREIOS_LOJA.join(','),
   }
 
   const res = await fetch(`${getMeBaseUrl()}/me/shipment/calculate`, {
@@ -110,17 +159,26 @@ export async function cotarMelhorEnvio(input: CotacaoInput): Promise<CotacaoResu
 
   const data = (await res.json()) as any[]
 
-  return data.map((s) => ({
+  return data.filter((s) => (
+    servicoCorreiosHabilitado({
+      id: Number(s.id),
+      companyId: s.company?.id == null ? undefined : Number(s.company.id),
+    }) &&
+    servicoCompativelComFluxo({
+      id: Number(s.id),
+      companyId: s.company?.id == null ? undefined : Number(s.company.id),
+    })
+  )).map((s) => ({
     id: s.id,
     name: s.name,
     company: s.company?.name || 'Desconhecida',
     picture: s.company?.picture || '',
-    price: Number(s.price ?? 0),
-    deliveryTime: Number(s.delivery_time ?? s.custom_delivery_time ?? 0),
+    price: Number(s.custom_price ?? s.price ?? 0),
+    deliveryTime: Number(s.custom_delivery_time ?? s.delivery_time ?? 0),
     isSameDay: Boolean(s.delivery_range?.min === 0),
     available: !s.error,
     error: s.error,
-  }))
+  })).filter(servicoCompativelComFluxo)
 }
 
 /**
@@ -130,8 +188,12 @@ export async function cotarMelhorEnvio(input: CotacaoInput): Promise<CotacaoResu
 export async function adicionarAoCarrinhoME(input: {
   servicoId: number
   cepDestino: string
+  /** Chave fiscal do documento emitido para esta venda comercial. */
+  nfeChave: string
   dimensoes: Dimensoes
   valorTotal: number
+  produtos: Array<{ nome: string; quantidade: number; valorUnitario: number }>
+  referencia: { tag: string; url?: string | null }
   destinatario: {
     nome: string
     email: string
@@ -149,6 +211,9 @@ export async function adicionarAoCarrinhoME(input: {
 }) {
   const token = process.env.MELHOR_ENVIO_TOKEN
   if (!token) throw new Error('MELHOR_ENVIO_TOKEN não configurado')
+
+  const nfeChave = exigirChaveNfe(input.nfeChave)
+  const inscricaoEstadual = exigirInscricaoEstadual(process.env.LOJA_INSCRICAO_ESTADUAL)
 
   // Documentação: https://docs.melhorenvio.com.br/reference/inserir-frete-no-carrinho
   //
@@ -169,6 +234,8 @@ export async function adicionarAoCarrinhoME(input: {
       city: process.env.LOJA_CIDADE || 'Campinas',
       state_abbr: process.env.LOJA_UF || 'SP',
       postal_code: limparCEP(process.env.MELHOR_ENVIO_CEP_ORIGEM || ''),
+      company_document: limparCEP(process.env.LOJA_CNPJ || '00857031000163'),
+      state_register: inscricaoEstadual,
     },
     to: {
       name: input.destinatario.nome,
@@ -183,13 +250,11 @@ export async function adicionarAoCarrinhoME(input: {
       city: input.destinatario.enderecoCompleto.cidade,
       state_abbr: input.destinatario.enderecoCompleto.estado,
     },
-    products: [
-      {
-        name: 'Pedido Forza Motos',
-        quantity: 1,
-        unitary_value: input.valorTotal,
-      },
-    ],
+    products: input.produtos.map((produto) => ({
+      name: produto.nome.slice(0, 255),
+      quantity: produto.quantidade,
+      unitary_value: produto.valorUnitario,
+    })),
     volumes: [
       {
         height: input.dimensoes.altura,
@@ -204,6 +269,10 @@ export async function adicionarAoCarrinhoME(input: {
       own_hand: false,
       reverse: false,
       non_commercial: false,
+      invoice: { key: nfeChave },
+      platform: 'Forza Motos',
+      reminder: input.referencia.tag,
+      tags: [{ tag: input.referencia.tag, url: input.referencia.url ?? null }],
     },
   }
 
@@ -216,6 +285,7 @@ export async function adicionarAoCarrinhoME(input: {
       'User-Agent': getMeUserAgent(),
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(TIMEOUT_PREPARO_MS),
   })
 
   if (!res.ok) {
@@ -227,6 +297,73 @@ export async function adicionarAoCarrinhoME(input: {
 }
 
 /**
+ * Recupera um envio já inserido antes de uma queda entre a resposta do ME e a
+ * persistência local. A tag do pedido é estável e também facilita conferência
+ * manual no painel do Melhor Envio.
+ */
+export async function buscarEnvioNoCarrinhoPorTag(tag: string): Promise<string | null> {
+  const token = process.env.MELHOR_ENVIO_TOKEN
+  if (!token) throw new Error('MELHOR_ENVIO_TOKEN não configurado')
+
+  const res = await fetch(`${getMeBaseUrl()}/me/cart`, {
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      'User-Agent': getMeUserAgent(),
+    },
+    signal: AbortSignal.timeout(TIMEOUT_PREPARO_MS),
+  })
+  if (!res.ok) {
+    const texto = await res.text()
+    throw new Error(`Melhor Envio (listar carrinho) ${res.status}: ${texto.slice(0, 200)}`)
+  }
+
+  const resposta = await res.json()
+  const itens: any[] = Array.isArray(resposta)
+    ? resposta
+    : Array.isArray(resposta?.data)
+      ? resposta.data
+      : Array.isArray(resposta?.results)
+        ? resposta.results
+        : []
+
+  const encontrado = itens.find((item) => {
+    const tags = Array.isArray(item?.tags)
+      ? item.tags
+      : Array.isArray(item?.options?.tags)
+        ? item.options.tags
+        : []
+    return tags.some((entrada: any) => String(entrada?.tag ?? entrada) === tag)
+  })
+  return encontrado?.id ? String(encontrado.id) : null
+}
+
+/** Consulta o estado remoto para recuperar uma compra cujo HTTP/DB foi incerto. */
+export async function consultarEnvioME(id: string): Promise<any | null> {
+  const token = process.env.MELHOR_ENVIO_TOKEN
+  if (!token) throw new Error('MELHOR_ENVIO_TOKEN não configurado')
+
+  const res = await fetch(`${getMeBaseUrl()}/me/orders/${encodeURIComponent(id)}`, {
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      'User-Agent': getMeUserAgent(),
+    },
+    signal: AbortSignal.timeout(TIMEOUT_CONSULTA_MS),
+  })
+  if (res.status === 404) return null
+  const texto = await res.text()
+  if (!res.ok) {
+    throw new Error(`Melhor Envio (consultar etiqueta) ${res.status}: ${texto.slice(0, 200)}`)
+  }
+  try {
+    return JSON.parse(texto)
+  } catch {
+    return {}
+  }
+}
+
+/**
  * Chamada autenticada genérica ao Melhor Envio — usada pelos passos de envio
  * (checkout/generate/print/tracking), que compartilham headers e tratamento de erro.
  */
@@ -234,20 +371,33 @@ async function meFetch(caminho: string, body: unknown): Promise<any> {
   const token = process.env.MELHOR_ENVIO_TOKEN
   if (!token) throw new Error('MELHOR_ENVIO_TOKEN não configurado')
 
-  const res = await fetch(`${getMeBaseUrl()}${caminho}`, {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      'User-Agent': getMeUserAgent(),
-    },
-    body: JSON.stringify(body),
-  })
+  let res: Response
+  try {
+    res = await fetch(`${getMeBaseUrl()}${caminho}`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'User-Agent': getMeUserAgent(),
+      },
+      body: JSON.stringify(body),
+    })
+  } catch (error) {
+    throw new ErroMelhorEnvio(
+      `Melhor Envio (${caminho}) não respondeu: ${error instanceof Error ? error.message : 'falha de rede'}`,
+      null,
+      caminho,
+    )
+  }
 
   const texto = await res.text()
   if (!res.ok) {
-    throw new Error(`Melhor Envio (${caminho}) ${res.status}: ${texto.slice(0, 300)}`)
+    throw new ErroMelhorEnvio(
+      `Melhor Envio (${caminho}) ${res.status}: ${texto.slice(0, 300)}`,
+      res.status,
+      caminho,
+    )
   }
   try {
     return JSON.parse(texto)
@@ -283,4 +433,184 @@ export async function imprimirEtiquetasME(ids: string[]): Promise<{ url?: string
  */
 export async function rastrearEtiquetasME(ids: string[]): Promise<Record<string, any>> {
   return meFetch('/me/shipment/tracking', { orders: ids })
+}
+
+function hostPdfMelhorEnvioPermitido(hostname: string): boolean {
+  const host = hostname.toLowerCase()
+  if (host === 'melhorenvio.com.br' || host.endsWith('.melhorenvio.com.br')) return true
+  return host === 's3.amazonaws.com' ||
+    /\.s3(?:[.-][a-z0-9-]+)?\.amazonaws\.com$/.test(host)
+}
+
+/**
+ * A API antiga de impressão pode responder JSON no formato `["https://..."]`
+ * mesmo quando o cliente pede PDF. Só aceitamos destinos HTTPS do Melhor
+ * Envio/S3 e caminhos de PDF, evitando transformar este download em SSRF.
+ */
+export function extrairUrlPdfMelhorEnvio(payload: unknown): string | null {
+  let candidata: unknown = payload
+  if (Array.isArray(payload)) candidata = payload[0]
+  else if (payload && typeof payload === 'object') {
+    const objeto = payload as Record<string, unknown>
+    candidata = objeto.url ?? objeto.pdf ?? objeto.link ??
+      (Array.isArray(objeto.data) ? objeto.data[0] : objeto.data)
+  }
+  if (typeof candidata !== 'string') return null
+
+  try {
+    const url = new URL(candidata)
+    const caminhoPdf = url.pathname.toLowerCase()
+    if (url.protocol !== 'https:' || !hostPdfMelhorEnvioPermitido(url.hostname)) return null
+    if (!caminhoPdf.endsWith('.pdf') && !caminhoPdf.includes('/pdf/')) return null
+    return url.toString()
+  } catch {
+    return null
+  }
+}
+
+function conteudoEhPdf(conteudo: ArrayBuffer): boolean {
+  const inicio = new Uint8Array(conteudo.slice(0, 5))
+  return inicio.length === 5 && String.fromCharCode(...inicio) === '%PDF-'
+}
+
+async function lerComLimite(
+  resposta: Response,
+  limite: number,
+  caminho: string,
+): Promise<ArrayBuffer> {
+  const tamanhoInformado = Number(resposta.headers.get('content-length') ?? 0)
+  if (Number.isFinite(tamanhoInformado) && tamanhoInformado > limite) {
+    throw new ErroMelhorEnvio('Arquivo da etiqueta excede o tamanho permitido', 502, caminho)
+  }
+  if (!resposta.body) return new ArrayBuffer(0)
+
+  const leitor = resposta.body.getReader()
+  const partes: Uint8Array[] = []
+  let total = 0
+  while (true) {
+    const { done, value } = await leitor.read()
+    if (done) break
+    total += value.byteLength
+    if (total > limite) {
+      await leitor.cancel().catch(() => {})
+      throw new ErroMelhorEnvio('Arquivo da etiqueta excede o tamanho permitido', 502, caminho)
+    }
+    partes.push(value)
+  }
+
+  const conteudo = new Uint8Array(total)
+  let offset = 0
+  for (const parte of partes) {
+    conteudo.set(parte, offset)
+    offset += parte.byteLength
+  }
+  return conteudo.buffer
+}
+
+async function baixarUrlPdfSeguro(urlInicial: string, caminho: string): Promise<Response> {
+  let urlAtual = urlInicial
+  for (let tentativa = 0; tentativa <= MAX_REDIRECTS_PDF; tentativa += 1) {
+    const urlValidada = extrairUrlPdfMelhorEnvio(urlAtual)
+    if (!urlValidada) {
+      throw new ErroMelhorEnvio('O download da etiqueta apontou para um destino inválido', 502, caminho)
+    }
+
+    let resposta: Response
+    try {
+      resposta = await fetch(urlValidada, {
+        headers: { 'Accept': 'application/pdf' },
+        redirect: 'manual',
+        signal: AbortSignal.timeout(TIMEOUT_PREPARO_MS),
+      })
+    } catch (error) {
+      throw new ErroMelhorEnvio(
+        `O arquivo temporário da etiqueta não respondeu: ${error instanceof Error ? error.message : 'falha de rede'}`,
+        null,
+        caminho,
+      )
+    }
+
+    if (![301, 302, 303, 307, 308].includes(resposta.status)) return resposta
+    const location = resposta.headers.get('location')
+    if (!location) {
+      throw new ErroMelhorEnvio('Redirecionamento do PDF sem destino', 502, caminho)
+    }
+    urlAtual = new URL(location, urlValidada).toString()
+  }
+  throw new ErroMelhorEnvio('O download da etiqueta excedeu o limite de redirecionamentos', 502, caminho)
+}
+
+/**
+ * Baixa o PDF pelo servidor para não expor o token nem depender de uma sessão
+ * do administrador aberta no site do Melhor Envio.
+ */
+export async function baixarEtiquetaPdfME(id: string): Promise<{
+  conteudo: ArrayBuffer
+  contentType: string
+}> {
+  const token = process.env.MELHOR_ENVIO_TOKEN
+  if (!token) throw new Error('MELHOR_ENVIO_TOKEN não configurado')
+
+  const caminho = `/me/imprimir/pdf/${encodeURIComponent(id)}`
+  let res: Response
+  try {
+    res = await fetch(`${getMeBaseUrl()}${caminho}`, {
+      headers: {
+        'Accept': 'application/pdf',
+        'Authorization': `Bearer ${token}`,
+        'User-Agent': getMeUserAgent(),
+      },
+      signal: AbortSignal.timeout(TIMEOUT_PREPARO_MS),
+    })
+  } catch (error) {
+    throw new ErroMelhorEnvio(
+      `Melhor Envio (${caminho}) não respondeu: ${error instanceof Error ? error.message : 'falha de rede'}`,
+      null,
+      caminho,
+    )
+  }
+
+  if (!res.ok) {
+    const texto = await res.text()
+    throw new ErroMelhorEnvio(
+      `Melhor Envio (${caminho}) ${res.status}: ${texto.slice(0, 300)}`,
+      res.status,
+      caminho,
+    )
+  }
+
+  const contentType = (res.headers.get('content-type') || '').toLowerCase()
+  if (contentType.includes('application/pdf') || contentType.includes('application/octet-stream')) {
+    const conteudo = await lerComLimite(res, MAX_PDF_BYTES, caminho)
+    if (!conteudoEhPdf(conteudo)) {
+      throw new ErroMelhorEnvio('Melhor Envio devolveu um arquivo que não é PDF', 502, caminho)
+    }
+    return { conteudo, contentType: 'application/pdf' }
+  }
+
+  const texto = new TextDecoder().decode(await lerComLimite(res, MAX_JSON_PDF_BYTES, caminho))
+  let payload: unknown
+  try {
+    payload = JSON.parse(texto)
+  } catch {
+    throw new ErroMelhorEnvio('Melhor Envio não devolveu o PDF da etiqueta', 502, caminho)
+  }
+  const urlPdf = extrairUrlPdfMelhorEnvio(payload)
+  if (!urlPdf) {
+    throw new ErroMelhorEnvio('Melhor Envio devolveu um link de PDF inválido', 502, caminho)
+  }
+
+  const download = await baixarUrlPdfSeguro(urlPdf, caminho)
+  if (!download.ok) {
+    throw new ErroMelhorEnvio(
+      `O arquivo temporário da etiqueta respondeu ${download.status}`,
+      download.status,
+      caminho,
+    )
+  }
+  const conteudo = await lerComLimite(download, MAX_PDF_BYTES, caminho)
+  if (!conteudoEhPdf(conteudo)) {
+    throw new ErroMelhorEnvio('O arquivo temporário devolvido não é um PDF válido', 502, caminho)
+  }
+  return { conteudo, contentType: 'application/pdf' }
 }

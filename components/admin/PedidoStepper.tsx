@@ -18,12 +18,14 @@ export function PedidoStepper({
   pedidoId,
   status,
   olistOrderId,
+  olistSyncStatus,
   trackingCode,
   freteServico,
 }: {
   pedidoId: string
   status: string
   olistOrderId: string | null
+  olistSyncStatus: string | null
   trackingCode: string | null
   freteServico: string | null
 }) {
@@ -38,6 +40,7 @@ export function PedidoStepper({
 
   const pago = status !== 'AGUARDANDO_PAGAMENTO'
   const noOlist = Boolean(olistOrderId)
+  const olistIncerto = olistSyncStatus === 'INCERTO' || olistSyncStatus?.startsWith('PROCESSANDO:')
   const separando = ['SEPARANDO', 'ENVIADO', 'ENTREGUE'].includes(status)
   const enviado = ['ENVIADO', 'ENTREGUE'].includes(status)
   const entregue = status === 'ENTREGUE'
@@ -45,7 +48,18 @@ export function PedidoStepper({
 
   const steps = [
     { done: pago, icon: CircleDollarSign, titulo: 'Pagamento', detalhe: pago ? 'Aprovado' : 'Aguardando cliente pagar' },
-    { done: noOlist, icon: Cloud, titulo: 'Olist / NF', detalhe: noOlist ? `Pedido no ERP` : pago ? 'NÃO replicado — agir!' : 'Replica após pagamento' },
+    {
+      done: noOlist,
+      icon: Cloud,
+      titulo: 'Olist / NF',
+      detalhe: noOlist
+        ? 'Pedido no ERP'
+        : olistIncerto
+          ? 'Confirmação pendente'
+          : pago
+            ? 'Não replicado — agir!'
+            : 'Replica após pagamento',
+    },
     { done: separando, icon: PackageOpen, titulo: 'Separação', detalhe: separando ? 'Em separação/embalado' : 'Separar no painel Olist' },
     {
       done: enviado,
@@ -109,10 +123,13 @@ export function PedidoStepper({
       {pago && !noOlist && (
         <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-brand-hair">
           <p className="text-xs text-brand-danger flex-1 min-w-[200px]">
-            ⚠️ Pagamento aprovado mas o pedido <strong>não está no Olist</strong> — sem NF e sem baixa de
-            estoque no ERP. Replique agora:
+            {olistIncerto ? (
+              <>⚠️ O recebimento pelo Olist está <strong>incerto</strong>. Primeiro reconcilie; só reenvie após conferir que a venda não existe no ERP.</>
+            ) : (
+              <>⚠️ Pagamento aprovado mas o pedido <strong>não está no Olist</strong> — sem NF e sem baixa de estoque no ERP. Replique agora:</>
+            )}
           </p>
-          <ReplicarOlistButton pedidoId={pedidoId} />
+          <ReplicarOlistButton pedidoId={pedidoId} incerto={Boolean(olistIncerto)} />
         </div>
       )}
     </Card>

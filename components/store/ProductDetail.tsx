@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { ShoppingCart, MessageCircle, ChevronLeft, ChevronRight, ZoomIn, X } from 'lucide-react'
+import { ShoppingCart, MessageCircle, ChevronLeft, ChevronRight, ZoomIn, X, CalendarClock, PackageCheck } from 'lucide-react'
 import { formatPrice, whatsappLink } from '@/lib/utils'
 import { useCartStore } from '@/store/cart'
 import { ProductReviews } from './ProductReviews'
@@ -22,6 +22,16 @@ interface Produto {
   compatibilidadeMotos: any
   preVenda?: boolean
   prazoEntregaDias?: number | null
+  limitePorPedidoEvento?: number | null
+}
+
+type OfertaEvento = {
+  titulo: string
+  disponivel: boolean
+  limitePorPedido: number | null
+  valorMinimoBrinde: number
+  operadorValorMinimoBrinde: 'MAIOR_QUE' | 'MAIOR_OU_IGUAL'
+  limiteNomeGravacao: number
 }
 
 // ── Placeholder SVG (sem imagem) ──────────────────────────────────────────────
@@ -296,10 +306,13 @@ function Galeria({ imagens, disc }: { imagens: string[]; disc: number | null }) 
 export function ProductDetail({
   produto,
   seletorTamanho,
+  ofertaEvento,
 }: {
   produto: Produto
   /** Seletor de tamanho renderizado pelo server (variações da mesma família) */
   seletorTamanho?: React.ReactNode
+  /** Campanha calculada no servidor; o cliente usa apenas para bloquear a UX. */
+  ofertaEvento?: OfertaEvento | null
 }) {
   const imagens = Array.isArray(produto.imagens) ? produto.imagens : []
   const adicionarItem = useCartStore((s) => s.adicionarItem)
@@ -313,9 +326,12 @@ export function ProductDetail({
     ? produto.compatibilidadeMotos
     : []
 
-  const disponivel = produto.estoque > 0 || Boolean(produto.preVenda)
+  const produtoDisponivel = produto.estoque > 0 || Boolean(produto.preVenda)
+  const podeComprar = produtoDisponivel && (!ofertaEvento || ofertaEvento.disponivel)
+  const limiteEvento = ofertaEvento?.limitePorPedido ?? produto.limitePorPedidoEvento ?? null
 
   function handleAddToCart() {
+    if (!podeComprar) return
     adicionarItem(
       {
         id: produto.id,
@@ -323,8 +339,18 @@ export function ProductDetail({
         slug: produto.slug,
         preco: precoPromo ?? preco,
         imagem: imagens[0],
-        // Pré-venda não tem teto de estoque
-        estoque: produto.preVenda ? undefined : produto.estoque,
+        // O limite comercial da ação é refletido na interface. Preço,
+        // campanha e quantidade são validados novamente pelo servidor.
+        estoque: produto.preVenda
+          ? limiteEvento ?? undefined
+          : limiteEvento
+            ? Math.min(produto.estoque, limiteEvento)
+            : produto.estoque,
+        eventoPirelli: Boolean(ofertaEvento),
+        categoria: produto.categoria,
+        valorMinimoBrindeEvento: ofertaEvento?.valorMinimoBrinde,
+        operadorValorMinimoBrindeEvento: ofertaEvento?.operadorValorMinimoBrinde,
+        limiteNomeGravacaoEvento: ofertaEvento?.limiteNomeGravacao,
       },
       quantidade
     )
@@ -356,6 +382,21 @@ export function ProductDetail({
             {produto.nome}
           </h1>
 
+          {ofertaEvento && (
+            <div className={`mb-6 rounded-2xl border p-4 ${ofertaEvento.disponivel ? 'border-[#f2c300]/50 bg-[#fff9d9]' : 'border-[#ddd] bg-[#f6f6f6]'}`}>
+              <p className={`flex items-center gap-2 font-barlow text-sm font-black uppercase tracking-[0.08em] ${ofertaEvento.disponivel ? 'text-[#9b210f]' : 'text-[#666]'}`}>
+                {ofertaEvento.disponivel ? <PackageCheck size={18} /> : <CalendarClock size={18} />}
+                {ofertaEvento.disponivel ? 'Oferta exclusiva do evento Pirelli' : 'Disponível durante o evento'}
+              </p>
+              <p className="mt-2 text-[13px] leading-relaxed text-[#555]">
+                {ofertaEvento.disponivel
+                  ? 'Pré-venda com condição especial: confirme a compra agora e escolha entrega ou retirada na Forza Motos depois. O produto não é entregue no estande.'
+                  : `Esta é uma prévia da condição especial de ${ofertaEvento.titulo}. A compra será liberada somente durante a janela oficial da ação.`}
+              </p>
+              {limiteEvento ? <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-[#777]">Limite de {limiteEvento} {limiteEvento === 1 ? 'unidade' : 'unidades'} por pedido</p> : null}
+            </div>
+          )}
+
           {/* Seletor de tamanho (variações da família) */}
           {seletorTamanho}
 
@@ -374,14 +415,14 @@ export function ProductDetail({
                     -{disc}%
                   </span>
                 </div>
-                <p className="font-inter text-[12px] text-[#888] mt-1">ou em 6x sem juros no cartão</p>
+                <p className="font-inter text-[12px] font-medium text-green-700 mt-1">5% de desconto no Pix</p>
               </>
             ) : (
               <>
                 <div className="font-barlow font-black text-[44px] leading-none tracking-[-1px] text-[#111]">
                   {formatPrice(preco)}
                 </div>
-                <p className="font-inter text-[12px] text-[#888] mt-1">ou em 6x sem juros no cartão</p>
+                <p className="font-inter text-[12px] font-medium text-green-700 mt-1">5% de desconto no Pix</p>
               </>
             )}
           </div>
@@ -391,7 +432,11 @@ export function ProductDetail({
             <div className="flex items-center gap-2 mb-6">
               <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
               <span className="text-[13px] font-inter text-blue-700">
-                Pré-venda{produto.prazoEntregaDias ? ` · postagem em até ${produto.prazoEntregaDias} dias úteis` : ''}
+                {ofertaEvento ? 'Oferta do evento · ' : ''}Pré-venda{produto.prazoEntregaDias
+                  ? ofertaEvento
+                    ? ` · entrega ou retirada em até ${produto.prazoEntregaDias} dias úteis`
+                    : ` · postagem em até ${produto.prazoEntregaDias} dias úteis`
+                  : ''}
               </span>
             </div>
           ) : produto.estoque > 0 ? (
@@ -409,12 +454,16 @@ export function ProductDetail({
           {/* Calcular frete — acompanha a quantidade escolhida, senão a cotação
               sairia sempre pelo valor de uma unidade só */}
           <div className="mb-6">
-            <CalculadorFrete subtotal={(precoPromo ?? preco) * quantidade} compact />
+            <CalculadorFrete
+              subtotal={(precoPromo ?? preco) * quantidade}
+              items={[{ productId: produto.id, quantidade }]}
+              compact
+            />
           </div>
 
           {/* Quantidade — limitada ao estoque (pré-venda: até 10) */}
-          {disponivel && (() => {
-            const maxQtd = produto.preVenda ? 10 : produto.estoque
+          {podeComprar && (() => {
+            const maxQtd = limiteEvento ?? (produto.preVenda ? 10 : produto.estoque)
             return (
             <div className="flex items-center gap-4 mb-4">
               <span className="font-inter text-[13px] text-[#555]">Quantidade:</span>
@@ -439,9 +488,9 @@ export function ProductDetail({
                   +
                 </button>
               </div>
-              {!produto.preVenda && quantidade >= maxQtd && (
+              {quantidade >= maxQtd && (
                 <span className="font-inter text-[12px] text-[#d42b2b]">
-                  Máximo disponível em estoque
+                  {limiteEvento ? 'Limite por pedido atingido' : 'Máximo disponível em estoque'}
                 </span>
               )}
             </div>
@@ -452,14 +501,14 @@ export function ProductDetail({
           <div className="flex flex-col sm:flex-row gap-3 mb-8">
             <button
               onClick={handleAddToCart}
-              disabled={!disponivel}
+              disabled={!podeComprar}
               className="flex-1 flex items-center justify-center gap-2 font-barlow font-bold text-[17px] uppercase tracking-[0.5px] text-white py-[14px] px-6 transition-colors disabled:opacity-40 active:scale-[0.98]"
               style={{ background: '#d42b2b', borderRadius: 3 }}
-              onMouseEnter={(e) => { if (disponivel) (e.currentTarget as HTMLButtonElement).style.background = '#b82222' }}
+              onMouseEnter={(e) => { if (podeComprar) (e.currentTarget as HTMLButtonElement).style.background = '#b82222' }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#d42b2b' }}
             >
               <ShoppingCart size={18} />
-              COMPRAR AGORA
+              {podeComprar ? 'COMPRAR AGORA' : ofertaEvento && !ofertaEvento.disponivel ? 'DISPONÍVEL DURANTE O EVENTO' : 'INDISPONÍVEL'}
             </button>
 
             <a href={whatsLink} target="_blank" rel="noopener noreferrer" className="flex-1">

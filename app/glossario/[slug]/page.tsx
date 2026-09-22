@@ -12,9 +12,10 @@ import { CtaAgendamento } from '@/components/glossario/CtaAgendamento'
 import { CtaOfertaInline } from '@/components/glossario/CtaOfertaInline'
 import { CtaWhatsapp } from '@/components/glossario/CtaWhatsapp'
 
-interface Props { params: { slug: string } }
+interface Props { params: Promise<{ slug: string }> }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const params = await props.params;
   const termo = await buscarTermoPorSlug(params.slug)
   if (!termo) return { title: 'Não encontrado' }
   const base = SEO_CONFIG.siteUrl.replace(/\/+$/, '')
@@ -30,7 +31,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function TermoPage({ params }: Props) {
+export default async function TermoPage(props: Props) {
+  const params = await props.params;
   const termo = await buscarTermoPorSlug(params.slug)
   if (!termo) notFound()
   const cfg = SEO_CONFIG

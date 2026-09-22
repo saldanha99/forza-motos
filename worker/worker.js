@@ -144,7 +144,10 @@ async function jobEstoque() {
   const produtos = await prisma.product.findMany({
     // ehPai=false: estoque do pai é derivado dos filhos (jobVariacoes)
     where: { tinyId: { not: null }, ehPai: false },
-    select: { id: true, tinyId: true, sku: true, temImagem: true, estoque: true, mantidoManual: true, ocultoManual: true },
+    select: {
+      id: true, tinyId: true, sku: true, temImagem: true, estoque: true,
+      estoqueReservado: true, preVenda: true, mantidoManual: true, ocultoManual: true,
+    },
     // 999 primeiro (nunca verificados), depois os mais desatualizados
     orderBy: [{ updatedAt: 'asc' }],
   })
@@ -158,8 +161,11 @@ async function jobEstoque() {
       // Eurolaqui é bloqueado — MAS se o admin marcou p/ manter, fica disponível (999)
       const novo = fornecedor === 'eurolaqui' && p.mantidoManual ? 10 : base // 10 = nominal p/ item mantido sob encomenda
       if (novo !== p.estoque) mudaram++
+      // Olist é fonte do saldo FÍSICO. Pedidos ainda não pagos ficam na coluna
+      // local estoqueReservado, que este worker nunca sobrescreve.
+      const disponivel = novo - p.estoqueReservado
       // Admin ocultou manualmente → nunca reativa
-      const ativo = !p.ocultoManual && p.temImagem && novo > 0
+      const ativo = !p.ocultoManual && p.temImagem && (p.preVenda || disponivel > 0)
       await prisma.product.update({
         where: { id: p.id },
         data: { estoque: novo, fornecedor, ativo },
@@ -196,7 +202,10 @@ async function jobImagens() {
         { temImagem: false, imagensVerificadas: true, updatedAt: { lt: seteAtras } },
       ],
     },
-    select: { id: true, tinyId: true, sku: true, estoque: true, ocultoManual: true, fornecedor: true },
+    select: {
+      id: true, tinyId: true, sku: true, estoque: true, estoqueReservado: true,
+      preVenda: true, ocultoManual: true, fornecedor: true,
+    },
     orderBy: { updatedAt: 'asc' },
   })
   if (pendentes.length === 0) { log('[imagens] nada pendente'); return { ok: 0 } }
@@ -234,7 +243,11 @@ async function jobImagens() {
           imagensVerificadas: true,
           temImagem,
           // respeita ocultação manual e Eurolaqui bloqueado
-          ativo: !p.ocultoManual && p.fornecedor !== 'eurolaqui' && tinyAtivo && temImagem && p.estoque > 0,
+          ativo:
+            !p.ocultoManual &&
+            p.fornecedor !== 'eurolaqui' &&
+            temImagem &&
+            (p.preVenda || (tinyAtivo && p.estoque - p.estoqueReservado > 0)),
           descricao: descricao || undefined,
           ...(categoria && { categoria }),
           ...(detalhe.marca && { marca: detalhe.marca }),
@@ -364,8 +377,6 @@ const fs = require('fs')
 const path = require('path')
 const IMG_DIR = process.env.IMG_DIR ?? '/imagens'
 const IMG_BASE = process.env.IMG_BASE_URL ?? 'https://www.forzamotos.com.br/imagens'
-const BLOB_HOST = 'blob.vercel-storage.com' // legado: migração one-shot esvaziou
-
 const urlLocal = (u) => typeof u === 'string' && u.startsWith(`${IMG_BASE}/`)
 
 async function baixarImagem(url) {
@@ -531,17 +542,25 @@ async function jobVariacoes() {
     // Agrega dados dos filhos no pai
     const filhos = await prisma.product.findMany({
       where: { variacaoDe: pai.sku },
-      select: { preco: true, precoPromocional: true, estoque: true, ativo: true, imagens: true, temImagem: true },
+      select: {
+        preco: true, precoPromocional: true, estoque: true, estoqueReservado: true,
+        preVenda: true, ativo: true, imagens: true, temImagem: true,
+      },
     })
     if (filhos.length === 0) continue
     familias++
 
-    const ativos = filhos.filter((f) => f.ativo && f.estoque > 0)
+    const ativos = filhos.filter(
+      (f) => f.ativo && (f.preVenda || f.estoque - f.estoqueReservado > 0),
+    )
     const base = ativos.length > 0 ? ativos : filhos
     const precoMin = Math.min(
       ...base.map((f) => Number(f.precoPromocional ?? f.preco)).filter((v) => v > 0),
     )
-    const estoqueTotal = ativos.reduce((acc, f) => acc + f.estoque, 0)
+    const estoqueTotal = ativos.reduce(
+      (acc, f) => acc + Math.max(0, f.estoque - f.estoqueReservado),
+      0,
+    )
 
     // Pai sem foto herda as fotos do 1º filho que tem
     let imagens = undefined

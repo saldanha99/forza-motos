@@ -25,7 +25,8 @@ function normalizar(valor: unknown): { ok: true; medida: string | null } | { ok:
   return { ok: true, medida: formatarMedidaNeutra(m) }
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -72,7 +73,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   return NextResponse.json(moto)
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })

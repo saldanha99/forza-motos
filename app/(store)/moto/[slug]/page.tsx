@@ -9,7 +9,7 @@ import { SITE_URL } from '@/lib/schema'
 import { faixaAnoLabel, motoNomeCompleto } from '@/lib/moto'
 import { Bike, Search } from 'lucide-react'
 
-interface Props { params: { slug: string } }
+interface Props { params: Promise<{ slug: string }> }
 
 async function getMoto(slug: string) {
   return prisma.moto.findUnique({
@@ -22,7 +22,8 @@ async function getMoto(slug: string) {
   })
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const params = await props.params;
   const moto = await getMoto(params.slug)
   if (!moto) return { title: 'Moto não encontrada' }
   const nome = motoNomeCompleto(moto)
@@ -33,7 +34,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function MotoPage({ params }: Props) {
+export default async function MotoPage(props: Props) {
+  const params = await props.params;
   const moto = await getMoto(params.slug)
   if (!moto) notFound()
 

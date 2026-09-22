@@ -1,31 +1,38 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { replicarPedidoOlist } from '@/lib/olist/sync-orders'
-import { adicionarPedidoAoCarrinho } from '@/lib/frete/envio-me'
 import { triggerIndexing } from '@/lib/seo/indexing'
 import { SEO_CONFIG } from '@/lib/seo/config'
-import { verificarEstoqueTiny, restaurarEstoquePedido } from '@/lib/tiny/verificar-estoque'
 import { validarAssinaturaMP } from '@/lib/mercadopago'
+import { processarPagamentoPedido } from '@/lib/checkout/webhook-pagamento'
+import { cancelarPedidoComCompensacao } from '@/lib/checkout/reserva'
+import {
+  consultarPagamentoMP,
+  ErroConsultaPagamentoMP,
+  ErroValidacaoPagamentoMP,
+  validarRecebedorPagamentoMP,
+} from '@/lib/checkout/mercadopago-webhook'
+import { efeitosPedidoConfirmado } from '@/lib/checkout/efeitos-pedido-confirmado'
 import { enfileirarMensagem } from '@/lib/evolution/queue'
-import { normalizarWhatsApp, enviarMensagem } from '@/lib/evolution/client'
-import { enviarEmailConfirmacao, enviarEmailIngresso } from '@/lib/email/send'
+import { enviarMensagem } from '@/lib/evolution/client'
+import { processarPagamentoEvento } from '@/lib/eventos/pagamento'
+import { notificarAprovacaoEvento } from '@/lib/eventos/notificacoes'
+import { EventoCheckoutError } from '@/lib/eventos/checkout'
+import { reverterBeneficiosPedidoPirelliCancelado } from '@/lib/checkout/beneficios-evento-pirelli'
+import { bloquearVisitanteEvento } from '@/lib/evento-pirelli'
 
 /**
  * Webhook do Mercado Pago.
  *
- * Eventos:
- *   - payment (status: approved | rejected | cancelled | pending)
+ * Contrato de resposta (ver Fix P1.4):
+ *   - 200 só quando o evento foi efetivamente processado ou é irrelevante.
+ *   - 401 para assinatura inválida.
+ *   - 5xx para QUALQUER falha recuperável (MP fora do ar, banco indisponível).
+ *     Um 200 prematuro faz o MP nunca reentregar, e o evento se perde.
  *
- * Quando approved:
- *   1. Atualiza Order.status = CONFIRMADO
- *   2. Replica o pedido no Olist (com idempotência — só se olistOrderId for null)
- *   3. Dispara re-indexação da página do pedido no Google
- *
- * Idempotência:
- *   - O MP pode reenviar o webhook (retry policy do MP)
- *   - Verificamos olistOrderId antes de replicar para evitar duplicação
- *   - Verificamos status atual antes de atualizar para evitar tracking duplicado
+ * A máquina de estados do pedido vive em lib/checkout/webhook-pagamento.ts;
+ * aqui ficam só o transporte e os efeitos colaterais (Olist, e-mail, WhatsApp).
  */
+
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -44,8 +51,8 @@ export async function POST(req: Request) {
     if (!paymentId) return NextResponse.json({ ok: true })
 
     // Valida a assinatura HMAC do Mercado Pago (anti-spoofing/replay).
-    // Se MERCADOPAGO_WEBHOOK_SECRET não estiver configurado, apenas registra
-    // um aviso e segue (não quebra o fluxo enquanto o segredo não é setado).
+    // Fail-closed: sem MERCADOPAGO_WEBHOOK_SECRET configurado o endpoint
+    // rejeita tudo (ver lib/mercadopago.ts).
     const assinaturaOk = validarAssinaturaMP({
       xSignature: req.headers.get('x-signature'),
       xRequestId: req.headers.get('x-request-id'),
@@ -56,400 +63,314 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'assinatura inválida' }, { status: 401 })
     }
 
-    // Consulta detalhes do pagamento no MP
-    const token = process.env.MERCADOPAGO_ACCESS_TOKEN
-    const res = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    const payment = await res.json()
+    // Consulta e normaliza a representação oficial. A normalização também
+    // resolve preference_id via merchant order quando o GET de payment não a
+    // traz diretamente.
+    const payment = await consultarPagamentoMP(String(paymentId))
+    if (!payment) {
+      // A notificação pode vencer a consistência do GET. 5xx força reentrega;
+      // um ACK aqui poderia perder definitivamente um pagamento real.
+      throw new ErroConsultaPagamentoMP(`Pagamento assinado ${paymentId} ainda não localizado`, 404)
+    }
+    await validarRecebedorPagamentoMP(payment)
 
-    const externalRef = payment.external_reference as string | undefined
+    const externalRef = payment.external_reference
     if (!externalRef) return NextResponse.json({ ok: true })
 
-    // ── PAGAMENTO DE INGRESSO (external_reference = "evento_<inscricaoId>") ──
+    // ── PAGAMENTO DE INGRESSO ─────────────────────────────────────────────
     if (externalRef.startsWith('evento_')) {
-      const inscricaoId = externalRef.replace('evento_', '')
-
-      if (payment.status === 'approved') {
-        const inscricao = await prisma.eventoInscricao.findUnique({
-          where: { id: inscricaoId },
-          include: { evento: true },
-        })
-        if (!inscricao || inscricao.status === 'PAGO') {
-          return NextResponse.json({ ok: true })
-        }
-
-        await prisma.eventoInscricao.update({
-          where: { id: inscricaoId },
-          data: { status: 'PAGO', mpPagamentoId: String(paymentId) },
-        })
-
-        const totalFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-          Number(inscricao.total),
+      const resultadoEvento = await processarPagamentoEvento(payment)
+      if (resultadoEvento.tipo === 'evento_desconhecido') {
+        await alertarAdmin(
+          `🚨 *PAGAMENTO DE EVENTO ÓRFÃO — Forza Motos*\n\n` +
+            `Pagamento: ${payment.id}\nReferência: ${externalRef}\n\n` +
+            `A inscrição interna não foi localizada; investigar antes de reconhecer a notificação.`,
         )
-        const dataEvento = inscricao.evento.dataInicio
-          ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeStyle: 'short' }).format(
-              new Date(inscricao.evento.dataInicio),
-            )
-          : 'A confirmar'
-        const localEvento = inscricao.evento.local ?? 'Campinas/SP'
-
-        // E-mail de confirmação do ingresso
-        await enviarEmailIngresso({
-          para: inscricao.email,
-          nomeCliente: inscricao.nome,
-          tituloEvento: inscricao.evento.titulo,
-          dataEvento,
-          localEvento,
-          quantidade: inscricao.quantidade,
-          total: Number(inscricao.total),
-        }).catch((e) => console.error('[mp-webhook] Falha ao enviar e-mail ingresso:', e))
-
-        // WhatsApp para o lead
-        const tel = inscricao.telefone
-        if (tel) {
-          const wa = normalizarWhatsApp(tel)
-          await enfileirarMensagem({
-            whatsapp: wa,
-            nome: inscricao.nome,
-            tipo: 'INGRESSO_CONFIRMADO',
-            payload: {
-              tituloEvento: inscricao.evento.titulo,
-              quantidade: inscricao.quantidade,
-              total: totalFmt,
-            },
-          }).catch(() => {})
-        }
-
-        // Notifica admin
-        const adminPhone = process.env.ADMIN_WHATSAPP ?? '5519974049445'
-        const garupaTxt = inscricao.temGarupa ? `Sim (${inscricao.nomeGarupa || 'Nome não informado'})` : 'Não (Solo)'
-        const motoTxt = inscricao.motoModelo ? `🏍️ Moto: ${inscricao.motoModelo}\n` : ''
-        const acomodacaoTxt = inscricao.tipoAcomodacao ? `🛏️ Quarto: ${inscricao.tipoAcomodacao}\n` : ''
-        await enfileirarMensagem({
-          whatsapp: adminPhone,
-          nome: 'Admin',
-          tipo: 'MANUAL',
-          payload: {
-            conteudo:
-              `🎟️ *NOVO INGRESSO PAGO — Forza Motos*\n\n` +
-              `🏁 Evento: ${inscricao.evento.titulo}\n` +
-              `👤 Nome: ${inscricao.nome}\n` +
-              `📧 E-mail: ${inscricao.email}\n` +
-              `📱 Tel: ${inscricao.telefone}\n` +
-              motoTxt +
-              `👥 Garupa: ${garupaTxt}\n` +
-              acomodacaoTxt +
-              `🎟️ Ingressos: ${inscricao.quantidade}\n` +
-              `💰 Total: ${totalFmt}`,
-          },
-        }).catch(() => {})
+        throw new ErroValidacaoPagamentoMP('INSCRICAO_INTERNA_DESCONHECIDA')
       }
 
-      return NextResponse.json({ ok: true, tipo: 'evento', status: payment.status })
+      if (
+        resultadoEvento.notificarAprovacao &&
+        process.env.POS_PAGAMENTO_INTEGRACOES_HABILITADAS !== 'false'
+      ) {
+        await notificarAprovacaoEvento(resultadoEvento.inscricao)
+      }
+      if (
+        resultadoEvento.reembolsoAgendado &&
+        process.env.POS_PAGAMENTO_INTEGRACOES_HABILITADAS !== 'false'
+      ) {
+        await alertarAdmin(
+          `⚠️ *ESTORNO DE EVENTO AGENDADO — Forza Motos*\n\n` +
+            `Inscrição: ${resultadoEvento.inscricao.id}\n` +
+            `Pagamento: ${payment.id}\n` +
+          `A outbox durável continuará tentando até confirmação.`,
+        )
+      }
+      if (
+        resultadoEvento.statusPagamentoAlterado &&
+        ['in_mediation', 'charged_back', 'refunded'].includes(payment.status) &&
+        process.env.POS_PAGAMENTO_INTEGRACOES_HABILITADAS !== 'false'
+      ) {
+        const rotulo = payment.status === 'in_mediation'
+          ? 'DISPUTA ABERTA'
+          : payment.status === 'charged_back'
+            ? 'CHARGEBACK'
+            : 'ESTORNO CONFIRMADO'
+        await alertarAdmin(
+          `🚨 *${rotulo} EM PAGAMENTO DE EVENTO*\n\n` +
+            `Evento: ${resultadoEvento.inscricao.evento.titulo}\n` +
+            `Inscrição: ${resultadoEvento.inscricao.id}\n` +
+            `Participante: ${resultadoEvento.inscricao.nome}\n` +
+            `Pagamento: ${payment.id}\nStatus: ${payment.status}\n\n` +
+            `Conferir imediatamente no painel do Mercado Pago.`,
+        )
+      }
+      return NextResponse.json({
+        ok: true,
+        tipo: 'evento',
+        status: resultadoEvento.status,
+        reembolsoAgendado: resultadoEvento.reembolsoAgendado,
+      })
     }
 
     // ── PAGAMENTO DE PEDIDO (ecommerce) ───────────────────────────────────
     const orderId = externalRef
 
-    // ── PAGAMENTO APROVADO ─────────────────────────────────────────────────
-    if (payment.status === 'approved') {
-      const order = await prisma.order.findUnique({
-        where: { id: orderId },
-        select: {
-          id: true, status: true, olistOrderId: true, orderNumber: true, total: true,
-          items: { select: { productId: true, quantidade: true, precoUnitario: true, product: { select: { nome: true } } } },
-        },
-      })
-      if (!order) return NextResponse.json({ ok: true })
-
-      // Já está em estado final — nada a fazer (idempotência)
-      const statusFinais = ['CONFIRMADO', 'SEPARANDO', 'ENVIADO', 'ENTREGUE', 'CANCELADO']
-      if (statusFinais.includes(order.status)) {
-        return NextResponse.json({ ok: true, status: order.status })
+    // A máquina central valida external_reference, BRL, valor, preferência e
+    // recebedor antes de registrar QUALQUER status financeiro.
+    const resultado = await processarPagamentoPedido(orderId, String(paymentId), payment)
+    if (resultado.tipo === 'pedido_desconhecido') {
+      if (/^c[a-z0-9]{20,35}$/i.test(orderId)) {
+        await alertarAdmin(
+          `🚨 *PAGAMENTO ÓRFÃO — Forza Motos*\n\n` +
+            `Pagamento: ${paymentId}\nReferência interna: ${orderId}\n\n` +
+            `O pedido não foi localizado. Investigar antes de reconhecer a notificação.`,
+        )
+        throw new ErroValidacaoPagamentoMP('PEDIDO_INTERNO_DESCONHECIDO')
       }
-
-      // 1) Verificação final de estoque no Tiny antes de confirmar o pedido
-      //    Garante que, mesmo que o produto tenha sido vendido no físico
-      //    entre o checkout e o pagamento, não entregamos o que não temos.
-      // atualizarBanco:false → só checa disponibilidade; NÃO reverte a reserva
-      // de estoque feita na criação do pedido (evita oversell — ver Fix #4).
-      const verificacao = await verificarEstoqueTiny(
-        order.items.map((i) => ({ productId: i.productId, quantidade: i.quantidade })),
-        { atualizarBanco: false },
-      ).catch(() => ({ ok: true, esgotados: [] })) // em caso de falha na API, libera
-
-      if (!verificacao.ok) {
-        // Estoque insuficiente: cancela e solicita reembolso automático no MP
-        const nomes = verificacao.esgotados.map((e) => e.nome).join(', ')
-        console.warn(`[mp-webhook] ⚠️ Estoque insuficiente após pagamento — pedido ${order.orderNumber}: ${nomes}`)
-
-        await prisma.order.update({
-          where: { id: orderId },
-          data: {
-            status: 'CANCELADO',
-            tracking: {
-              create: {
-                status: 'CANCELADO',
-                descricao: `⚠️ Pedido cancelado automaticamente: produto(s) esgotado(s) no estoque físico após confirmação do pagamento. Estornando: ${nomes}. Entre em contato com o cliente.`,
-              },
-            },
-          },
-        })
-
-        // Solicita reembolso total no Mercado Pago
-        try {
-          await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}/refunds`, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({}), // corpo vazio = reembolso total
-          })
-          console.log(`[mp-webhook] Reembolso solicitado para pagamento ${paymentId}`)
-        } catch (e) {
-          console.error('[mp-webhook] Falha ao solicitar reembolso:', e)
-        }
-
-        return NextResponse.json({ ok: true, status: 'cancelled_no_stock' })
-      }
-
-      // 2) Estoque OK — confirma o pedido
-      const orderComUser = await prisma.order.update({
-        where: { id: orderId },
-        data: {
-          status: 'CONFIRMADO',
-          pagamentoMetodo: payment.payment_method_id,
-          tracking: {
-            create: {
-              status: 'CONFIRMADO',
-              descricao: `Pagamento aprovado via ${payment.payment_method_id}.`,
-            },
-          },
-        },
-        include: {
-          user: { select: { nome: true, telefone: true, email: true } },
-        },
-        // campos extras para e-mail
-        // (subtotal, frete, total, freteTransportadora, fretePrazo, enderecoEntrega já existem no model)
-      })
-
-      // Dispara WhatsApp de confirmação se o usuário tem telefone
-      if (orderComUser.user?.telefone) {
-        const wa = normalizarWhatsApp(orderComUser.user.telefone)
-        const lead = await prisma.crmLead.findFirst({ where: { whatsapp: wa } })
-        await enfileirarMensagem({
-          whatsapp: wa,
-          nome: orderComUser.user.nome ?? 'Cliente',
-          tipo: 'PEDIDO_CONFIRMADO',
-          leadId: lead?.id,
-          userId: orderComUser.userId ?? undefined,
-          payload: { numeroPedido: order.orderNumber },
-        }).catch(() => {})
-      }
-
-      // 3) E-mail de confirmação para o cliente
-      const emailCliente = orderComUser.user?.email ?? (orderComUser.enderecoEntrega as any)?.email
-      if (emailCliente) {
-        await enviarEmailConfirmacao({
-          para: emailCliente,
-          nomeCliente: orderComUser.user?.nome ?? 'Cliente',
-          numeroPedido: order.orderNumber,
-          itens: order.items.map((i: { product: { nome: string } | null; quantidade: number; precoUnitario: unknown }) => ({
-            nome: i.product?.nome ?? 'Produto',
-            quantidade: i.quantidade,
-            precoUnitario: Number(i.precoUnitario),
-          })),
-          subtotal: Number(orderComUser.subtotal ?? 0),
-          frete: Number(orderComUser.frete ?? 0),
-          total: Number(orderComUser.total ?? 0),
-          freteTransportadora: orderComUser.freteTransportadora,
-          fretePrazo: orderComUser.fretePrazo,
-        }).catch((e) => console.error('[mp-webhook] Falha ao enviar e-mail confirmação:', e))
-      }
-
-      // 4) Replica no Olist — só se ainda não foi replicado (idempotência).
-      // Roda ANTES do aviso ao admin, para a mensagem refletir o resultado real.
-      let replicadoOk = Boolean(order.olistOrderId)
-      if (!order.olistOrderId) {
-        try {
-          await replicarPedidoOlist(orderId)
-          replicadoOk = true
-          console.log(`[mp-webhook] Pedido ${order.orderNumber} replicado no Olist`)
-        } catch (e) {
-          console.error('[mp-webhook] Falha ao replicar Olist:', e)
-          await prisma.order.update({
-            where: { id: orderId },
-            data: {
-              tracking: {
-                create: {
-                  status: 'CONFIRMADO',
-                  descricao: `⚠️ Pagamento aprovado mas replicação no Olist falhou: ${String(e).slice(0, 200)}. Tentar novamente manualmente.`,
-                },
-              },
-            },
-          })
-        }
-      }
-
-      // 4.1) Prepara o envio no Melhor Envio — SÓ coloca no carrinho, não compra
-      // etiqueta (isso é clique do admin). Falha aqui não pode derrubar o
-      // pagamento: o pedido está pago e o envio pode ser refeito no painel.
-      let envioMe = 'sem envio ME'
-      try {
-        const r = await adicionarPedidoAoCarrinho(orderId)
-        envioMe = r.melhorEnvioId
-          ? `📮 Envio no carrinho do Melhor Envio (${r.melhorEnvioId}) — falta comprar a etiqueta.`
-          : `📮 Sem envio ME: ${r.motivo}`
-        console.log(`[mp-webhook] ${order.orderNumber}: ${envioMe}`)
-      } catch (e) {
-        envioMe = `⚠️ Falha ao preparar envio no Melhor Envio: ${String(e).slice(0, 150)}`
-        console.error('[mp-webhook] Falha ao preparar envio ME:', e)
-      }
-
-      // 5) Notifica admin via WhatsApp — com o status verdadeiro da replicação
-      const adminPhone = process.env.ADMIN_WHATSAPP ?? '5519974049445'
-      const itensTexto = order.items
-        .map((i: { productId: string; quantidade: number; product: { nome: string } | null }) =>
-          `  • ${i.product?.nome ?? i.productId} (${i.quantidade}x)`)
-        .join('\n')
-      const totalFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-        Number(orderComUser.total ?? 0),
-      )
-      const statusOlist = replicadoOk
-        ? `✅ Replicado no Olist.\n👉 Separar, embalar e despachar!`
-        : `🚨 *FALHA ao replicar no Olist* — pedido NÃO está no ERP.\n👉 Replicar manualmente no painel admin antes de despachar!`
-      await enfileirarMensagem({
-        whatsapp: adminPhone,
-        nome: 'Admin',
-        tipo: 'MANUAL',
-        payload: {
-          conteudo:
-            `🛒 *NOVO PEDIDO PAGO — Forza Motos*\n\n` +
-            `📦 Pedido: ${order.orderNumber}\n` +
-            `👤 Cliente: ${orderComUser.user?.nome ?? 'Guest'}\n` +
-            `💳 Forma: ${payment.payment_method_id}\n` +
-            `💰 Total: ${totalFmt}\n\n` +
-            `Itens:\n${itensTexto}\n\n` +
-            statusOlist + `\n\n${envioMe}`,
-        },
-      }).catch((e) => console.error('[mp-webhook] Falha ao notificar admin:', e))
-
-      return NextResponse.json({ ok: true, status: 'approved' })
+      return NextResponse.json({ ok: true, ignored: 'external_reference_not_internal' })
     }
 
     // ── CHARGEBACK / DISPUTA / ESTORNO ─────────────────────────────────────
-    // charged_back = dono do cartão contestou (golpe do cartão clonado);
-    // in_mediation = comprador abriu reclamação; refunded = estorno efetivado.
-    // O dinheiro é tratado pelo MP — aqui a missão é AVISAR o admin na hora
-    // (responder a disputa no prazo com NF + rastreio é o que garante a
-    // cobertura do Programa de Proteção ao Vendedor) e registrar no pedido.
     if (
       payment.status === 'charged_back' ||
       payment.status === 'in_mediation' ||
       payment.status === 'refunded'
     ) {
+      const pedido = await prisma.order.findUnique({
+        where: { id: orderId },
+        select: {
+          orderNumber: true,
+          status: true,
+          total: true,
+          trackingCode: true,
+          eventoPirelliVisitanteId: true,
+        },
+      })
+      if (!pedido) throw new ErroValidacaoPagamentoMP('PEDIDO_INTERNO_DESCONHECIDO')
+
       const marcador = `DISPUTA:${payment.status}`
-      // Idempotência: MP reenvia webhooks — só alerta 1x por tipo de evento
+      const rotulo =
+        payment.status === 'charged_back'
+          ? '🚨 CHARGEBACK (possível cartão clonado)'
+          : payment.status === 'in_mediation'
+            ? '⚠️ DISPUTA aberta pelo comprador'
+            : '↩️ ESTORNO efetivado'
+
+      // Se esta era a cobrança extra de uma duplicidade, sua reversão fecha
+      // apenas o estorno extra; a compra principal continua válida.
+      const outroPagamentoAprovado = await prisma.pagamentoTentativa.findFirst({
+        where: {
+          orderId,
+          status: 'approved',
+          paymentId: { not: String(paymentId) },
+        },
+        select: { paymentId: true },
+      })
+      const reversaoDeCobrancaExtra = Boolean(outroPagamentoAprovado)
+
+      if (
+        (payment.status === 'refunded' || payment.status === 'charged_back') &&
+        !reversaoDeCobrancaExtra
+      ) {
+        if (pedido.status === 'AGUARDANDO_PAGAMENTO') {
+          await cancelarPedidoComCompensacao(
+            orderId,
+            `${rotulo} — recursos reservados devolvidos; não despachar.`,
+          )
+        } else {
+          // Estoque físico não é somado: o Olist pode já ter movimentado a
+          // venda. A operação fica cancelada e exige conferência física.
+          await prisma.$transaction(async (tx) => {
+            if (pedido.eventoPirelliVisitanteId) {
+              await bloquearVisitanteEvento(tx, pedido.eventoPirelliVisitanteId)
+            }
+            const cancelado = await tx.order.updateMany({
+              where: { id: orderId, status: { in: ['CONFIRMADO', 'SEPARANDO'] } },
+              data: { status: 'CANCELADO', pagamentoResultadoIncerto: false },
+            })
+            if (!cancelado.count) return
+            await reverterBeneficiosPedidoPirelliCancelado(tx, orderId, {
+              por: 'Mercado Pago',
+              motivo: `${rotulo} — pagamento ${paymentId}.`,
+            })
+          })
+        }
+      }
+
+      // Este update não depende do marcador de comunicação. Se o processo cair
+      // após gravar o tracking, uma reentrega ainda conclui a outbox.
+      if (payment.status === 'refunded') {
+        await prisma.reembolsoPagamento.updateMany({
+          where: { paymentId: String(paymentId), status: 'PENDENTE' },
+          data: { status: 'CONCLUIDO', concluidoEm: new Date(), proximaTentativaEm: null },
+        })
+      }
+
       const jaRegistrado = await prisma.orderTracking.findFirst({
         where: { orderId, status: marcador },
         select: { id: true },
       })
       if (!jaRegistrado) {
-        const pedido = await prisma.order.findUnique({
-          where: { id: orderId },
-          select: { orderNumber: true, status: true, total: true, trackingCode: true },
+        await prisma.orderTracking.create({
+          data: {
+            orderId,
+            status: marcador,
+            descricao: `${rotulo} — pagamento ${paymentId}. Conferir no painel do Mercado Pago.`,
+          },
         })
-        if (pedido) {
-          const rotulo =
-            payment.status === 'charged_back'
-              ? '🚨 CHARGEBACK (possível cartão clonado)'
-              : payment.status === 'in_mediation'
-                ? '⚠️ DISPUTA aberta pelo comprador'
-                : '↩️ ESTORNO efetivado'
 
-          await prisma.orderTracking.create({
-            data: {
-              orderId,
-              status: marcador,
-              descricao: `${rotulo} — pagamento ${paymentId}. Responder no painel MP com NF + rastreio.`,
-            },
-          })
-
-          const aindaNaoDespachado = ['AGUARDANDO_PAGAMENTO', 'CONFIRMADO', 'SEPARANDO'].includes(pedido.status)
-          const totalFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
-            .format(Number(pedido.total ?? 0))
+        if (process.env.POS_PAGAMENTO_INTEGRACOES_HABILITADAS !== 'false') {
+          const aindaNaoDespachado = ['AGUARDANDO_PAGAMENTO', 'CONFIRMADO', 'SEPARANDO']
+            .includes(pedido.status)
+          const totalFmt = new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+          }).format(Number(pedido.total ?? 0))
+          const instrucao = reversaoDeCobrancaExtra
+            ? '\n✅ A compra principal permanece válida; esta era a cobrança extra.\n'
+            : aindaNaoDespachado
+              ? '\n⛔ *NÃO DESPACHAR este pedido!*\n'
+              : `\n📦 Pedido já despachado${pedido.trackingCode ? ` (rastreio ${pedido.trackingCode})` : ''}.\n`
           const msg =
             `${rotulo} — *Forza Motos*\n\n` +
             `📦 Pedido: ${pedido.orderNumber}\n` +
             `💰 Valor: ${totalFmt}\n` +
-            (aindaNaoDespachado ? `\n⛔ *NÃO DESPACHAR este pedido!*\n` : `\n📦 Pedido já despachado${pedido.trackingCode ? ` (rastreio ${pedido.trackingCode})` : ''}.\n`) +
-            `\n👉 Responder a disputa no painel do Mercado Pago DENTRO DO PRAZO, ` +
-            `anexando NF e código de rastreio — é isso que garante a cobertura ` +
-            `do Programa de Proteção ao Vendedor.\n` +
-            `https://www.mercadopago.com.br/reclamos-ventas`
+            instrucao +
+            '\n👉 Conferir a ocorrência no painel do Mercado Pago e anexar NF/rastreio quando solicitado.\n' +
+            'https://www.mercadopago.com.br/reclamos-ventas'
 
           const adminPhone = process.env.ADMIN_WHATSAPP ?? '5519974049445'
-          // Envio direto (urgente); se falhar, cai na fila (processada a cada 5min)
-          const direto = await enviarMensagem({ whatsapp: adminPhone, mensagem: msg }).catch(() => ({ ok: false }))
+          const direto = await enviarMensagem({
+            whatsapp: adminPhone,
+            mensagem: msg,
+          }).catch(() => ({ ok: false }))
           if (!direto.ok) {
             await enfileirarMensagem({
               whatsapp: adminPhone,
               nome: 'Admin',
               tipo: 'MANUAL',
               payload: { conteudo: msg },
-            }).catch((e) => console.error('[mp-webhook] Falha ao enfileirar alerta de disputa:', e))
+            }).catch((error) => console.error('[mp-webhook] Falha ao enfileirar alerta:', error))
           }
         }
       }
       return NextResponse.json({ ok: true, status: payment.status })
     }
 
-    // ── PAGAMENTO REJEITADO / CANCELADO ────────────────────────────────────
-    if (payment.status === 'rejected' || payment.status === 'cancelled') {
-      // updateMany com WHERE condicional é atômico no banco:
-      // se count=0, outra instância do webhook já cancelou → sem ação.
-      // Evita race condition quando o MP dispara múltiplos retries simultâneos.
-      const statusFinaisParaCancelar = ['CANCELADO', 'CONFIRMADO', 'SEPARANDO', 'ENVIADO', 'ENTREGUE']
-      const atualizado = await prisma.order.updateMany({
-        where: { id: orderId, status: { notIn: statusFinaisParaCancelar as any } },
-        data: { status: 'CANCELADO' },
-      })
-
-      if (atualizado.count > 0) {
-        // Esta instância "ganhou" o lock — restaura estoque e cria tracking
-        const orderItens = await prisma.order.findUnique({
-          where: { id: orderId },
-          select: { items: { select: { productId: true, quantidade: true } } },
-        })
-        if (orderItens) {
-          // Devolve ao estoque a reserva feita na criação do pedido.
-          // O pedido nunca chegou ao Olist (replicação só em 'approved'),
-          // então o saldo físico continua existindo — restaurar é seguro.
-          await restaurarEstoquePedido(orderItens.items)
-
-          await prisma.orderTracking.create({
-            data: {
-              orderId,
-              status: 'CANCELADO',
-              descricao: `Pagamento ${payment.status}. Estoque reservado devolvido.`,
-            },
-          })
-
-          // Sinaliza ao Google que a página do pedido (se publicada) não existe mais
-          triggerIndexing(`${SEO_CONFIG.siteUrl}/pedidos/${orderId}`, {
-            action: 'URL_DELETED',
-            origem: 'mp-webhook-cancel',
-          })
-        }
+    if (resultado.tipo === 'ja_processado') {
+      // Se o processo caiu entre a confirmação e um efeito externo, a
+      // reentrega completa apenas os efeitos ainda sem marcador.
+      if (payment.status === 'approved') {
+        await efeitosPedidoConfirmado(orderId, payment.payment_method_id)
       }
+      return NextResponse.json({ ok: true, status: 'already_processed', pedido: resultado.status })
     }
 
-    return NextResponse.json({ ok: true, status: payment.status })
+    if (resultado.tipo === 'tentativa_nao_aprovada') {
+      // Nada é desfeito aqui: a reserva só volta na expiração (reconciliação).
+      return NextResponse.json({ ok: true, status: resultado.status, tentativaRegistrada: resultado.novo })
+    }
+
+    if (resultado.tipo === 'aprovado_apos_encerramento') {
+      await alertarAdmin(
+        `🚨 *PAGAMENTO APROVADO SOBRE PEDIDO ENCERRADO — Forza Motos*\n\n` +
+          `📦 Pedido: ${orderId}\n` +
+          `💳 Pagamento: ${paymentId}\n` +
+          `↩️ Estorno: ${resultado.estorno}\n\n` +
+          `👉 Conferir no painel do MP; o estorno é reconciliado automaticamente ` +
+          `enquanto estiver PENDENTE.`,
+      )
+      return NextResponse.json({ ok: true, status: 'refund_scheduled', estorno: resultado.estorno })
+    }
+
+    if (resultado.tipo === 'aprovacao_duplicada') {
+      await alertarAdmin(
+        `🚨 *COBRANÇA DUPLICADA — Forza Motos*\n\n` +
+          `📦 Pedido: ${orderId}\n` +
+          `💳 Pagamento extra: ${paymentId}\n` +
+          `↩️ Estorno: ${resultado.estorno}\n\n` +
+          `A cobrança principal foi preservada; apenas a cobrança extra será devolvida.`,
+      )
+      return NextResponse.json({ ok: true, status: 'duplicate_refund_scheduled', estorno: resultado.estorno })
+    }
+
+    if (resultado.tipo === 'metodo_pagamento_invalido') {
+      await alertarAdmin(
+        `🚨 *MEIO DE PAGAMENTO INCOMPATÍVEL — Forza Motos*\n\n` +
+          `📦 Pedido: ${orderId}\n` +
+          `💳 Meio recebido: ${resultado.metodo}\n` +
+          `✅ Modalidade esperada: ${resultado.esperado}\n` +
+          `↩️ Estorno: ${resultado.estorno}\n\n` +
+          `O pagamento foi incompatível com a modalidade usada para calcular o total.`,
+      )
+      return NextResponse.json({ ok: true, status: 'invalid_method_refund_scheduled', estorno: resultado.estorno })
+    }
+
+    if (resultado.tipo === 'cancelado_sem_estoque') {
+      console.warn(`[mp-webhook] ⚠️ Estoque insuficiente após pagamento — pedido ${orderId}: ${resultado.nomes}`)
+      await alertarAdmin(
+        `🚨 *PEDIDO PAGO SEM ESTOQUE — Forza Motos*\n\n` +
+          `📦 Pedido: ${orderId}\n` +
+          `💳 Pagamento: ${paymentId}\n` +
+          `📦 Esgotado(s): ${resultado.nomes}\n` +
+          `↩️ Estorno: ${resultado.estorno}\n\n` +
+          (resultado.estorno === 'CONCLUIDO'
+            ? `✅ Estorno total confirmado pelo Mercado Pago.`
+            : `⚠️ Estorno NÃO confirmado ainda — a reconciliação continua tentando. Acompanhar no painel do MP.`),
+      )
+      triggerIndexing(`${SEO_CONFIG.siteUrl}/pedidos/${orderId}`, {
+        action: 'URL_DELETED',
+        origem: 'mp-webhook-cancel',
+      })
+      return NextResponse.json({ ok: true, status: 'cancelled_no_stock', estorno: resultado.estorno })
+    }
+
+    // ── CONFIRMADO: efeitos colaterais ────────────────────────────────────
+    await efeitosPedidoConfirmado(orderId, payment.payment_method_id)
+    return NextResponse.json({ ok: true, status: 'approved' })
   } catch (e) {
     console.error('Webhook MP erro:', e)
-    // Sempre 200 — MP fica retentando se receber não-200
-    return NextResponse.json({ ok: true })
+    if (e instanceof EventoCheckoutError) {
+      return NextResponse.json({ error: e.code }, { status: e.status })
+    }
+    if (e instanceof ErroValidacaoPagamentoMP) {
+      return NextResponse.json({ error: 'pagamento divergente' }, { status: 409 })
+    }
+    if (e instanceof ErroConsultaPagamentoMP) {
+      return NextResponse.json({ error: 'Mercado Pago temporariamente indisponível' }, { status: 503 })
+    }
+    // 5xx faz o MP reentregar. Nunca ACK sobre falha recuperável (Fix P1.4).
+    return NextResponse.json({ error: 'falha ao processar webhook' }, { status: 500 })
   }
+}
+
+async function alertarAdmin(mensagem: string) {
+  const adminPhone = process.env.ADMIN_WHATSAPP ?? '5519974049445'
+  await enfileirarMensagem({
+    whatsapp: adminPhone,
+    nome: 'Admin',
+    tipo: 'MANUAL',
+    payload: { conteudo: mensagem },
+  }).catch((e) => console.error('[mp-webhook] Falha ao notificar admin:', e))
 }

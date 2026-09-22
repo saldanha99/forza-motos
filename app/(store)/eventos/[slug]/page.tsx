@@ -11,16 +11,20 @@ import { EventoGaleria } from '@/components/store/EventoGaleria'
 import { Calendar, MapPin, Tag, Users, ArrowLeft, ExternalLink } from 'lucide-react'
 
 interface Props {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const params = await props.params;
   const evento = await prisma.evento.findUnique({ where: { slug: params.slug } })
   if (!evento) return { title: 'Evento não encontrado' }
 
   return {
     title: `${evento.titulo} — Forza Motos`,
     description: evento.descricao.slice(0, 160),
+    robots: evento.ocultoListagem
+      ? { index: false, follow: false, nocache: true }
+      : undefined,
     alternates: { canonical: `${SITE_URL}/eventos/${evento.slug}` },
     openGraph: {
       title: evento.titulo,
@@ -131,7 +135,8 @@ function formatarConteudoEvento(conteudo: string): string {
   return result
 }
 
-export default async function EventoDetailPage({ params }: Props) {
+export default async function EventoDetailPage(props: Props) {
+  const params = await props.params;
   const evento = await prisma.evento.findUnique({
     where: { slug: params.slug, publicado: true, ativo: true },
   })
@@ -139,6 +144,28 @@ export default async function EventoDetailPage({ params }: Props) {
   if (!evento) notFound()
 
   const preco = Number(evento.preco)
+  const agora = new Date()
+  const ocupacao = evento.vagas === null
+    ? null
+    : await prisma.eventoInscricao.aggregate({
+        where: {
+          eventoId: evento.id,
+          OR: [
+            { status: 'PAGO' },
+            {
+              status: 'PENDENTE',
+              OR: [
+                { reservaExpiraEm: { gt: agora } },
+                { pagamentoResultadoIncerto: true },
+              ],
+            },
+          ],
+        },
+        _sum: { quantidade: true },
+      })
+  const vagasRestantes = evento.vagas === null
+    ? null
+    : Math.max(0, evento.vagas - (ocupacao?._sum.quantidade ?? 0))
 
   // WhatsApp com texto pré-preenchido para inscrição
   const waMsg = encodeURIComponent(`Olá! Tenho interesse no evento "${evento.titulo}" (${new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(evento.dataInicio)}). Gostaria de mais informações!`)
@@ -245,10 +272,16 @@ export default async function EventoDetailPage({ params }: Props) {
                     {evento.endereco && <p className="text-xs text-[#888] mt-0.5">{evento.endereco}</p>}
                   </div>
                 </div>
-                {evento.vagas && (
+                {vagasRestantes !== null && (
                   <div className="flex items-center gap-2.5 text-sm text-[#555] font-inter">
                     <Users size={15} className="text-[#d42b2b] shrink-0" />
-                    <span><strong className="text-[#333]">{evento.vagas}</strong> vagas disponíveis</span>
+                    <span>
+                      {vagasRestantes > 0 ? (
+                        <><strong className="text-[#333]">{vagasRestantes}</strong> vagas restantes</>
+                      ) : (
+                        <strong className="text-[#d42b2b]">Vagas esgotadas</strong>
+                      )}
+                    </span>
                   </div>
                 )}
               </div>
@@ -274,6 +307,7 @@ export default async function EventoDetailPage({ params }: Props) {
                     titulo={evento.titulo}
                     gratuito={preco === 0}
                     opcoesVaga={Array.isArray(evento.opcoesVaga) ? (evento.opcoesVaga as { label: string; preco: number }[]) : []}
+                    vagasRestantes={vagasRestantes}
                   />
                 )}
                 <a

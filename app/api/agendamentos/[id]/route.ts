@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
@@ -29,7 +30,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   return NextResponse.json(agendamento)
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })

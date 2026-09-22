@@ -2,26 +2,40 @@
  * Função principal de cotação de frete.
  *
  * Estratégia em camadas (degrade gracefully):
- *   1. Tenta Melhor Envio (todas transportadoras integradas)
- *   2. Se falhar, usa fallback hardcoded (lib/correios.ts)
+ *   1. Tenta Melhor Envio (somente Correios PAC e SEDEX)
+ *   2. Se falhar ou não houver serviço disponível, oferece apenas retirada
  *
- * Use SEMPRE este módulo no checkout, nunca chame lib/correios.ts ou
- * lib/frete/melhor-envio.ts diretamente.
+ * Use SEMPRE este módulo no checkout, nunca chame lib/frete/melhor-envio.ts
+ * diretamente.
  */
 
 import { prisma } from '@/lib/prisma'
-import { cotarMelhorEnvio, type CotacaoResultado } from './melhor-envio'
+import {
+  cotarMelhorEnvio,
+  type CotacaoResultado,
+} from './melhor-envio'
 import { dimensoesDoCarrinho } from './dimensoes'
 import { aplicarFreteGratisSP } from './regras'
-import { calcularFrete as fallbackFrete } from '@/lib/correios'
+import { calcularSubtotalServidor, normalizarItensCotacao } from './cotacao-segura'
+import { resumirPreVenda } from '@/lib/checkout/prevenda'
 
 export interface ItemCotacao {
   productId: string
   quantidade: number
 }
 
+export class ErroCotacaoFrete extends Error {
+  constructor(
+    message: string,
+    public readonly status = 400,
+  ) {
+    super(message)
+    this.name = 'ErroCotacaoFrete'
+  }
+}
+
 export interface FreteOpcao {
-  /** ID do serviço no Melhor Envio (ou código se fallback). Salve em Order.freteServico */
+  /** ID do serviço com origem preservada. Salve em Order.freteServico. */
   id: string
   /** Nome legível mostrado ao cliente */
   nome: string
@@ -33,20 +47,45 @@ export interface FreteOpcao {
   preco: number
   /** Prazo em dias úteis */
   prazo: number
+  /** Parcela do prazo referente à disponibilidade da pré-venda. */
+  prazoDisponibilidade?: number
+  /** Parcela informada pela transportadora, sem a pré-venda. */
+  prazoTransporte?: number
   /** Origem da cotação — útil pra debug */
   fonte: 'melhor-envio' | 'fallback' | 'loja'
 }
 
 /** Retirada na loja física — sempre disponível, sem custo */
-export function opcaoRetirada(): FreteOpcao {
+export function opcaoRetirada(prazoDisponibilidade = 0): FreteOpcao {
+  const prazo = Number.isInteger(prazoDisponibilidade) && prazoDisponibilidade > 0
+    ? prazoDisponibilidade
+    : 0
   return {
     id: 'retirada',
-    nome: 'Retirar na loja',
+    nome: prazo > 0 ? 'Retirar na loja após disponibilidade' : 'Retirar na loja',
     transportadora: 'R. Funilense, 110 — Campinas/SP',
     preco: 0,
-    prazo: 0,
+    prazo,
+    prazoDisponibilidade: prazo,
+    prazoTransporte: 0,
     fonte: 'loja',
   }
+}
+
+/** Soma a promessa da pré-venda ao prazo logístico sem perder as parcelas. */
+export function somarPrazoDisponibilidade(
+  opcoes: FreteOpcao[],
+  prazoDisponibilidade: number,
+): FreteOpcao[] {
+  const disponibilidade = Number.isInteger(prazoDisponibilidade) && prazoDisponibilidade > 0
+    ? prazoDisponibilidade
+    : 0
+  return opcoes.map((opcao) => ({
+    ...opcao,
+    prazoTransporte: opcao.prazo,
+    prazoDisponibilidade: disponibilidade,
+    prazo: opcao.prazo + disponibilidade,
+  }))
 }
 
 /**
@@ -57,24 +96,64 @@ export function opcaoRetirada(): FreteOpcao {
 export async function cotarFrete(input: {
   cepDestino: string
   items: ItemCotacao[]
-  valorTotal: number
 }): Promise<FreteOpcao[]> {
-  // 1) Busca produtos e calcula dimensões agregadas
+  const cepDestino = input.cepDestino.replace(/\D/g, '')
+  if (cepDestino.length !== 8) {
+    throw new ErroCotacaoFrete('CEP inválido')
+  }
+  let items: ItemCotacao[]
+  try {
+    items = normalizarItensCotacao(input.items)
+  } catch (error) {
+    throw new ErroCotacaoFrete(error instanceof Error ? error.message : 'Carrinho inválido')
+  }
+
+  // 1) Busca preço e dimensões no banco. `valorTotal` nunca vem do browser: ele
+  // define tanto o seguro quanto a regra promocional de frete grátis.
   const produtos = await prisma.product.findMany({
-    where: { id: { in: input.items.map((i) => i.productId) } },
+    where: { id: { in: items.map((i) => i.productId) } },
     select: {
       id: true,
+      ativo: true,
+      preco: true,
+      precoPromocional: true,
       categoria: true,
       peso: true,
       altura: true,
       largura: true,
       comprimento: true,
+      preVenda: true,
+      prazoEntregaDias: true,
     },
   })
 
-  const itemsComProduto = input.items
+  if (produtos.length !== items.length || produtos.some((produto) => !produto.ativo)) {
+    throw new ErroCotacaoFrete('Um ou mais produtos não estão disponíveis')
+  }
+
+  const produtosPorId = new Map(produtos.map((produto) => [produto.id, produto]))
+  const resumoPreVenda = resumirPreVenda(produtos.map((produto) => ({
+    preVenda: produto.preVenda,
+    prazoEntregaDias: produto.prazoEntregaDias,
+  })))
+  const prazoDisponibilidade = resumoPreVenda.prazoMaximoDias ?? 0
+  let valorTotal: number
+  try {
+    valorTotal = calcularSubtotalServidor(
+      items,
+      produtos.map((produto) => ({
+        id: produto.id,
+        preco: Number(produto.preco),
+        precoPromocional: produto.precoPromocional ? Number(produto.precoPromocional) : null,
+      })),
+    )
+  } catch (error) {
+    throw new ErroCotacaoFrete(error instanceof Error ? error.message : 'Preço de produto inválido', 500)
+  }
+
+  const itemsComProduto = items
     .map((i) => {
-      const produto = produtos.find((p) => p.id === i.productId)
+      const produto = produtosPorId.get(i.productId)
       if (!produto) return null
       return {
         quantidade: i.quantidade,
@@ -94,9 +173,9 @@ export async function cotarFrete(input: {
   // 2) Tenta Melhor Envio
   try {
     const resultados: CotacaoResultado[] = await cotarMelhorEnvio({
-      cepDestino: input.cepDestino,
+      cepDestino,
       dimensoes,
-      valorTotal: input.valorTotal,
+      valorTotal,
     })
 
     const opcoes: FreteOpcao[] = resultados
@@ -111,30 +190,22 @@ export async function cotarFrete(input: {
         fonte: 'melhor-envio' as const,
       }))
       .sort((a, b) => a.preco - b.preco)
+      .slice(0, 4)
 
     if (opcoes.length > 0) {
       return [
-        ...aplicarFreteGratisSP(opcoes, input.cepDestino, input.valorTotal),
-        opcaoRetirada(),
+        ...aplicarFreteGratisSP(
+          somarPrazoDisponibilidade(opcoes, prazoDisponibilidade),
+          cepDestino,
+          valorTotal,
+        ),
+        opcaoRetirada(prazoDisponibilidade),
       ]
     }
-    // Se vazio, cai pro fallback
+    // Sem PAC ou SEDEX real para a rota, oferece apenas retirada.
   } catch (e) {
-    console.warn('[frete] Melhor Envio falhou, usando fallback:', e)
+    console.warn('[frete] Melhor Envio falhou; oferecendo apenas retirada:', e)
   }
 
-  // 3) Fallback — tabela hardcoded por região
-  const fallback = await fallbackFrete(input.cepDestino, dimensoes.peso, input.valorTotal)
-  const opcoesFallback = fallback.map((f) => ({
-    id: f.codigo,
-    nome: f.servico,
-    transportadora: 'Correios',
-    preco: f.valor,
-    prazo: f.prazo,
-    fonte: 'fallback' as const,
-  }))
-  return [
-    ...aplicarFreteGratisSP(opcoesFallback, input.cepDestino, input.valorTotal),
-    opcaoRetirada(),
-  ]
+  return [opcaoRetirada(prazoDisponibilidade)]
 }

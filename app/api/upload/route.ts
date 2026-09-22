@@ -31,7 +31,8 @@ export async function POST(req: Request) {
   }
 
   const nome = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
-  const dir = path.join(IMG_DIR, pasta)
+  // O destino é um volume externo controlado; não é uma dependência do bundle.
+  const dir = path.join(/* turbopackIgnore: true */ IMG_DIR, pasta)
   await mkdir(dir, { recursive: true })
   await writeFile(path.join(dir, nome), Buffer.from(await file.arrayBuffer()))
 

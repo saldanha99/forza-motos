@@ -14,11 +14,12 @@ export async function generateStaticParams() {
   return MODELOS_MOTOS.map((m) => ({ modelo: m.slug }))
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { modelo: string }
-}): Promise<Metadata> {
+export async function generateMetadata(
+  props: {
+    params: Promise<{ modelo: string }>
+  }
+): Promise<Metadata> {
+  const params = await props.params;
   const modelo = getModelo(params.modelo)
   if (!modelo) return {}
 
@@ -43,11 +44,12 @@ export async function generateMetadata({
   }
 }
 
-export default async function PneusModeloPage({
-  params,
-}: {
-  params: { modelo: string }
-}) {
+export default async function PneusModeloPage(
+  props: {
+    params: Promise<{ modelo: string }>
+  }
+) {
+  const params = await props.params;
   const modelo = getModelo(params.modelo)
   if (!modelo) notFound()
 

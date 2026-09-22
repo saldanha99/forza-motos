@@ -15,7 +15,8 @@ async function exigirAdmin() {
   return session && session.user.role === 'ADMIN'
 }
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   if (!(await exigirAdmin())) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const vinculos = await prisma.produtoMoto.findMany({
@@ -25,7 +26,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   return NextResponse.json(vinculos.map((v) => v.product))
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   if (!(await exigirAdmin())) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const body = await req.json().catch(() => ({}))
