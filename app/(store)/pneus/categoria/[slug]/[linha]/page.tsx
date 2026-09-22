@@ -65,7 +65,7 @@ export default async function PneusPorLinhaPage(props: {
 
   const [produtos, linhas] = await Promise.all([
     prisma.product.findMany({
-      where: filtroProdutosDoSegmento(segmento.id, linhaAtual.nome),
+      where: filtroProdutosDoSegmento(segmento.id, linhaAtual.rotulos),
       orderBy: [{ medidaAro: 'asc' }, { medidaLargura: 'asc' }, { nome: 'asc' }],
       take: 60,
       select: SELECT_CARD,

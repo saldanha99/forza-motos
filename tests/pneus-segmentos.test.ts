@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-import { slugLinha } from '../lib/pneus/segmentos'
+import { slugLinha, filtroProdutosDoSegmento } from '../lib/pneus/segmentos'
 
 test('slug da linha aguenta acento, caixa e pontuação', () => {
   assert.equal(slugLinha('Angel GT'), 'angel-gt')
@@ -55,4 +55,29 @@ test('a vitrine de pneus só conta produto publicado', () => {
   for (const campo of ['ativo: true', 'temImagem: true', 'ocultoManual: false', 'eventoPirelliId: null']) {
     assert.ok(filtro.includes(campo), `filtro de vitrine precisa de ${campo}`)
   }
+})
+
+test('grafias diferentes da mesma linha viram um card só', () => {
+  // O campo é digitado a mão em cada produto. Sem juntar por slug, "Angel GT" e
+  // "angel gt" viravam dois cards apontando para o mesmo link — e um deles
+  // nunca abriria.
+  const lib = readFileSync('lib/pneus/segmentos.ts', 'utf8')
+  const corpo = lib.slice(lib.indexOf('export async function listarLinhas'))
+  assert.match(corpo, /porSlug/, 'listarLinhas precisa agrupar pelo slug')
+  assert.doesNotMatch(
+    corpo.slice(0, corpo.indexOf('export function filtroProdutosDoSegmento')),
+    /slug: slugLinha\(g\.pneuLinha\)/,
+    'não pode voltar a montar uma linha por registro do groupBy',
+  )
+  assert.equal(slugLinha('Angel GT'), slugLinha('angel  gt'))
+})
+
+test('a página da linha filtra por todas as grafias, não por uma', () => {
+  const filtro = filtroProdutosDoSegmento('seg1', ['Angel GT', 'angel gt'])
+  assert.deepEqual((filtro as { pneuLinha?: unknown }).pneuLinha, { in: ['Angel GT', 'angel gt'] })
+
+  // Sem linha, o filtro não pode restringir por pneuLinha — senão a página do
+  // segmento mostraria só produto classificado.
+  assert.equal('pneuLinha' in filtroProdutosDoSegmento('seg1'), false)
+  assert.equal('pneuLinha' in filtroProdutosDoSegmento('seg1', []), false)
 })

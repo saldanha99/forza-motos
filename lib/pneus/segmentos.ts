@@ -19,10 +19,15 @@ export interface SegmentoPneu {
 }
 
 export interface LinhaPneu {
-  /** Rótulo como o admin escreveu (ex.: "Angel GT") */
+  /** Rótulo exibido — o mais usado entre as grafias que caem no mesmo slug */
   nome: string
   slug: string
   produtos: number
+  /**
+   * Todas as grafias que o admin digitou e que resolvem para este slug.
+   * "Angel GT", "angel gt" e "Angel  GT" são a mesma linha para o cliente.
+   */
+  rotulos: string[]
 }
 
 /** Slug estável a partir do nome da linha — é o que vai para a URL. */
@@ -81,9 +86,15 @@ export async function getSegmento(slug: string) {
 }
 
 /**
- * Linhas de pneu dentro de um segmento, agrupadas pelo rótulo do admin.
- * Produtos sem linha preenchida não somem da loja — eles caem em "Outros
- * modelos" na página do segmento.
+ * Linhas de pneu dentro de um segmento.
+ *
+ * O agrupamento é pelo slug, e não pelo texto cru: o campo é digitado a mão
+ * produto a produto, então "Angel GT" e "angel gt" iam virar dois cards que
+ * levam ao mesmo link — um deles ficaria inalcançável. Aqui as grafias se
+ * juntam e a mais usada vira o rótulo exibido.
+ *
+ * Produto sem linha preenchida não some da loja: ele continua na listagem do
+ * segmento, só não ganha subcategoria.
  */
 export async function listarLinhas(segmentoId: string): Promise<LinhaPneu[]> {
   try {
@@ -93,13 +104,28 @@ export async function listarLinhas(segmentoId: string): Promise<LinhaPneu[]> {
       _count: { _all: true },
     })
 
-    return grupos
-      .filter((g): g is typeof g & { pneuLinha: string } => Boolean(g.pneuLinha?.trim()))
-      .map((g) => ({
-        nome: g.pneuLinha.trim(),
-        slug: slugLinha(g.pneuLinha),
-        produtos: g._count._all,
-      }))
+    const porSlug = new Map<string, { candidatos: Map<string, number>; produtos: number }>()
+
+    for (const grupo of grupos) {
+      const rotulo = grupo.pneuLinha?.trim()
+      if (!rotulo) continue
+      const slug = slugLinha(rotulo)
+      if (!slug) continue
+
+      const atual = porSlug.get(slug) ?? { candidatos: new Map<string, number>(), produtos: 0 }
+      atual.candidatos.set(rotulo, (atual.candidatos.get(rotulo) ?? 0) + grupo._count._all)
+      atual.produtos += grupo._count._all
+      porSlug.set(slug, atual)
+    }
+
+    return [...porSlug.entries()]
+      .map(([slug, { candidatos, produtos }]) => {
+        // Desempate por ordem alfabética para o rótulo não dançar entre deploys.
+        const rotulos = [...candidatos.entries()]
+          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'pt-BR'))
+          .map(([rotulo]) => rotulo)
+        return { nome: rotulos[0], slug, produtos, rotulos }
+      })
       .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
   } catch (e) {
     console.warn('[pneus] linhas indisponíveis:', (e as Error)?.message)
@@ -107,19 +133,22 @@ export async function listarLinhas(segmentoId: string): Promise<LinhaPneu[]> {
   }
 }
 
-/** Filtro de produtos de um segmento, opcionalmente restrito a uma linha. */
-export function filtroProdutosDoSegmento(segmentoId: string, linhaNome?: string) {
+/**
+ * Filtro de produtos de um segmento, opcionalmente restrito a uma linha.
+ * Recebe todas as grafias da linha para não perder produto por diferença de
+ * caixa ou espaço na digitação.
+ */
+export function filtroProdutosDoSegmento(segmentoId: string, rotulosLinha?: string[]) {
   return {
     ...PRODUTO_PUBLICADO,
     pneuSegmentoId: segmentoId,
-    ...(linhaNome ? { pneuLinha: linhaNome } : {}),
+    ...(rotulosLinha?.length ? { pneuLinha: { in: rotulosLinha } } : {}),
   }
 }
 
 /**
- * Resolve o slug de linha de volta para o rótulo salvo. A URL carrega o slug,
- * mas o banco guarda o texto do admin — comparar por slug evita depender de
- * acento e caixa exatos.
+ * Resolve o slug da URL de volta para a linha, com todas as grafias que ela
+ * juntou. A URL carrega o slug; o banco guarda o texto que o admin digitou.
  */
 export async function acharLinhaPeloSlug(
   segmentoId: string,
