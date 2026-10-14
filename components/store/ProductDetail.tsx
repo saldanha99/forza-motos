@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { ShoppingCart, MessageCircle, ChevronLeft, ChevronRight, ZoomIn, X, CalendarClock, PackageCheck } from 'lucide-react'
 import { formatPrice, whatsappLink } from '@/lib/utils'
-import { calcularPrecoVitrine } from '@/lib/checkout/vitrine-preco'
+import { calcularPrecoVitrine, CARTAO_ONDE_PARCELA } from '@/lib/checkout/vitrine-preco'
 import { FRETE_GRATIS_MIN, ESTADO_FRETE_GRATIS } from '@/lib/frete/regras'
 import { useCartStore } from '@/store/cart'
 import { ProductReviews } from './ProductReviews'
@@ -433,17 +433,25 @@ export function ProductDetail({
 
             {precoVitrine.mostrarParcelamento && (
               <p className="font-inter text-[13px] text-[#555] mt-1.5">
-                ou {formatPrice(precoVitrine.cheio)} em até{' '}
+                ou {formatPrice(precoVitrine.cheio)} em{' '}
                 <strong className="text-[#111]">
                   {precoVitrine.parcelas}x de {formatPrice(precoVitrine.valorParcela)}
                 </strong>{' '}
-                no cartão
+                no cartão{' '}
+                {/* O checkout online fecha no Pix: dizer onde o cartão é aceito
+                    evita o cliente descobrir no fim do funil. */}
+                <span className="text-[#999]">({CARTAO_ONDE_PARCELA})</span>
               </p>
             )}
 
-            {temFreteGratisSP && (
+            {temFreteGratisSP ? (
               <p className="font-inter text-[12.5px] font-semibold text-green-700 mt-2">
                 🎉 Frete grátis para {ESTADO_FRETE_GRATIS}
+              </p>
+            ) : (
+              <p className="font-inter text-[12.5px] text-[#666] mt-2">
+                Frete grátis para {ESTADO_FRETE_GRATIS} em pedidos a partir de{' '}
+                {formatPrice(FRETE_GRATIS_MIN)}
               </p>
             )}
           </div>

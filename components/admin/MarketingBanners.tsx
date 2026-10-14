@@ -11,7 +11,7 @@
  */
 import { useState } from 'react'
 import toast from 'react-hot-toast'
-import { ImagePlus, RotateCcw, Loader2, ExternalLink, Ruler } from 'lucide-react'
+import { ImagePlus, RotateCcw, Loader2, ExternalLink, Ruler, ImageOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   Card, Badge, Botao, BOTAO_BASE, BOTAO_VARIANTE, BOTAO_TAMANHO,
@@ -28,7 +28,8 @@ interface Slot {
   dica: string
   dimensao: string
   proporcao: string
-  fallback: string
+  /** Foto padrão versionada no repo; null = slot começa vazio */
+  fallback: string | null
   imagemUrl: string | null
 }
 
@@ -109,6 +110,9 @@ export function MarketingBanners({
       {itens.map((slot) => {
         const urlAtual = slot.imagemUrl ?? slot.fallback
         const customizado = Boolean(slot.imagemUrl)
+        // Sem imagem nenhuma o site desenha a própria arte — o preview precisa
+        // dizer isso, senão o quadro vazio parece defeito.
+        const semImagem = !urlAtual
         const ocupado = salvando === slot.chave
         return (
           <Card key={slot.chave} className="overflow-hidden">
@@ -117,12 +121,22 @@ export function MarketingBanners({
                 (não um token que troca de tema) para representar fielmente
                 como a arte aparece na loja. */}
             <div className="relative bg-brand-sidebar" style={{ aspectRatio: slot.proporcao }}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- URL dinâmica do storage próprio */}
-              <img
-                src={urlAtual}
-                alt={slot.nome}
-                className="absolute inset-0 h-full w-full object-cover"
-              />
+              {semImagem ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 text-center">
+                  <ImageOff size={22} className="text-brand-muted" />
+                  <p className="text-xs font-semibold text-brand-muted">Sem foto</p>
+                  <p className="text-[11px] leading-snug text-brand-muted">
+                    O site desenha a arte da marca aqui. Envie uma foto para substituir.
+                  </p>
+                </div>
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element -- URL dinâmica do storage próprio */
+                <img
+                  src={urlAtual}
+                  alt={slot.nome}
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              )}
               {customizado && (
                 <Badge tom="success" className="absolute left-2 top-2">
                   Personalizado
@@ -178,18 +192,20 @@ export function MarketingBanners({
                     disabled={ocupado}
                   >
                     <RotateCcw size={13} />
-                    Restaurar padrão
+                    {slot.fallback ? 'Restaurar padrão' : 'Remover foto'}
                   </Botao>
                 )}
 
-                <a
-                  href={urlAtual}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-auto inline-flex items-center gap-1 text-xs text-brand-muted hover:text-brand-text"
-                >
-                  <ExternalLink size={12} /> ver imagem
-                </a>
+                {urlAtual && (
+                  <a
+                    href={urlAtual}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-auto inline-flex items-center gap-1 text-xs text-brand-muted hover:text-brand-text"
+                  >
+                    <ExternalLink size={12} /> ver imagem
+                  </a>
+                )}
               </div>
             </div>
           </Card>

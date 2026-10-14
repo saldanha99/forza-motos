@@ -26,8 +26,11 @@ const CATALOGO_REAL: [string, string, string][] = [
   ['PNEU METZELER ME STREET 90/90-18 TL 57P', 'esportivo-street', 'ME Street'],
   ['PNEU METZELER CRUISETEC 130/90B16 TL 73H', 'custom', 'Cruisetec'],
   ['PNEU METZELER MARATHON ME888 180/55B18 TL 80H', 'custom', 'Marathon ME888'],
+  // Mesma linha com a grafia espaçada que aparece no menu da loja.
+  ['PNEU METZELER ME 888 MARATHON 140/90-15 76H', 'custom', 'Marathon ME888'],
   ['PNEU MICHELIN SCORCHER 11 240/40R18', 'custom', 'Scorcher'],
   ['PNEU MICHELIN CITY GRIP 2 140/70-14', 'scooter', 'City Grip 2'],
+  ['PNEU PIRELLI MT60 120/80-18 TL 62T', 'big-trail', 'MT60'],
   // O combo do evento traz "ROSSO III" sem o "DIABLO" e com brinde no nome.
   ['PNEU PIRELLI ROSSO III 150/60R17 + CANECA TÉRMICA 700ML', 'esportivo-street', 'Diablo Rosso III'],
 ]

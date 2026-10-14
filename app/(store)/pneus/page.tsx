@@ -9,12 +9,12 @@ import { Breadcrumb } from '@/components/store/Breadcrumb'
 import { FAQSection } from '@/components/store/FAQSection'
 import { MARCAS_PNEUS } from '@/lib/menu-loja'
 import { getBannerUrls } from '@/lib/marketing'
+import { ArteSlot } from '@/components/store/ArteSlot'
 import { BuscaPorPlaca } from '@/components/store/BuscaPorPlaca'
 import { BuscaPorMedida } from '@/components/store/BuscaPorMedida'
 import { getIndiceMedidas } from '@/lib/indice-medidas'
 import { CheckCircle2, Wrench, Clock, Shield, Award, Zap, CalendarDays, Gift, MapPin, ArrowRight } from 'lucide-react'
 import { SITE_URL } from '@/lib/schema'
-import { LogoPirelli, LogoMichelin, LogoMetzeler } from '@/components/store/BrandLogo'
 import { EVENTO_PIRELLI_SLUG } from '@/lib/evento-pirelli'
 import { listarSegmentos } from '@/lib/pneus/segmentos'
 
@@ -150,9 +150,15 @@ export default async function PneusPage(props: { searchParams?: Promise<{ evento
 
       {/* Hero */}
       <section className="relative overflow-hidden" style={{ color: '#fff', padding: '64px 0 56px' }}>
-        <Image src={banners['hero-pneus']} alt="" fill sizes="100vw" className="object-cover object-center" priority />
-        {/* Arte já é escura com o pneu à direita — overlay só no lado do texto */}
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(8,8,14,0.88) 0%, rgba(8,8,14,0.55) 45%, rgba(8,8,14,0.10) 100%)' }} />
+        {banners['hero-pneus'] ? (
+          <>
+            <Image src={banners['hero-pneus'] as string} alt="" fill sizes="100vw" className="object-cover object-center" priority />
+            {/* Foto costuma ser escura à direita — overlay mais forte só no lado do texto */}
+            <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(8,8,14,0.88) 0%, rgba(8,8,14,0.55) 45%, rgba(8,8,14,0.10) 100%)' }} />
+          </>
+        ) : (
+          <ArteSlot icone="pneus" vinheta={false} />
+        )}
         <div className="relative z-10 max-w-[1280px] mx-auto px-6 md:px-12 grid md:grid-cols-2 gap-10 items-center">
           <div>
             {/* Badge credenciada */}
@@ -198,22 +204,22 @@ export default async function PneusPage(props: { searchParams?: Promise<{ evento
         </div>
       </section>
 
-      {/* Marcas credenciadas — logos reais */}
+      {/* Marcas credenciadas — em texto: os logos das fabricantes saíram do site */}
       <section className="py-10 bg-white border-b border-[#f0f0f0]">
         <div className="max-w-[1280px] mx-auto px-6 md:px-12">
-          <p className="text-center text-[11px] font-semibold tracking-[2.5px] text-[#999] uppercase mb-8">
+          <p className="text-center text-[11px] font-semibold tracking-[2.5px] text-[#999] uppercase mb-6">
             Marcas credenciadas oficialmente
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-10 md:gap-16">
-            <div className="opacity-80 hover:opacity-100 transition-opacity">
-              <LogoPirelli height={30} />
-            </div>
-            <div className="opacity-80 hover:opacity-100 transition-opacity">
-              <LogoMetzeler height={30} />
-            </div>
-            <div className="opacity-80 hover:opacity-100 transition-opacity">
-              <LogoMichelin height={30} />
-            </div>
+          <div className="flex flex-wrap items-center justify-center gap-8 md:gap-14">
+            {['Pirelli', 'Metzeler', 'Michelin'].map((marca) => (
+              <Link
+                key={marca}
+                href={`/produtos?busca=${encodeURIComponent(marca)}&categoria=Pneus`}
+                className="font-barlow font-black text-[24px] md:text-[30px] uppercase tracking-[1px] text-[#111] hover:text-[#d42b2b] transition-colors"
+              >
+                {marca}
+              </Link>
+            ))}
           </div>
           <p className="text-center text-[12px] text-[#aaa] mt-6 font-inter">
             Garantia oficial de fábrica em todos os pneus

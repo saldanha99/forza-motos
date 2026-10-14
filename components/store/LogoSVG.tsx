@@ -1,5 +1,7 @@
 import Image from 'next/image'
 
+type Variante = 'horizontal' | 'empilhado'
+
 interface LogoSVGProps {
   /**
    * true = contexto escuro (cabeçalho e rodapé pretos).
@@ -8,22 +10,38 @@ interface LogoSVGProps {
    * marca e a deixava com cara de selo colado.
    */
   dark?: boolean
+  /**
+   * `horizontal` = emblema ao lado do letreiro (cabeçalho). É a versão que dá
+   * presença à marca numa faixa baixa: na vertical, a mesma altura espreme o
+   * "FORZA MOTOS" a ponto de não se ler — foi o que o cliente apontou.
+   * `empilhado` = arte original, emblema sobre o letreiro (rodapé).
+   */
+  variante?: Variante
   height?: number
   className?: string
 }
 
-// Proporção real do arquivo: 1200×795. Usar 4/3 aqui reservava menos largura
-// do que a marca precisa e, com objectFit "contain", o logo saía menor que a
-// altura pedida — era parte do "logo pequeno demais".
-const PROPORCAO = 1200 / 795
+// Proporção real de cada arquivo. Usar a proporção errada aqui reserva menos
+// largura do que a marca precisa e, com objectFit "contain", o logo sai menor
+// que a altura pedida.
+const ARTE: Record<Variante, { src: string; proporcao: number }> = {
+  horizontal: { src: '/images/logo-forza-horizontal.png', proporcao: 1567 / 300 },
+  empilhado: { src: '/images/logo-forza.png', proporcao: 1200 / 795 },
+}
 
 /** Logo oficial da Forza Motos (PNG com transparência). */
-export function LogoSVG({ dark = false, height = 40, className = '' }: LogoSVGProps) {
-  const width = Math.round(height * PROPORCAO)
+export function LogoSVG({
+  dark = false,
+  variante = 'empilhado',
+  height = 40,
+  className = '',
+}: LogoSVGProps) {
+  const { src, proporcao } = ARTE[variante]
+  const width = Math.round(height * proporcao)
 
   return (
     <Image
-      src="/images/logo-forza.png"
+      src={src}
       alt="Forza Motos"
       width={width}
       height={height}

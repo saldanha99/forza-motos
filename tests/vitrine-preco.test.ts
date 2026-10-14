@@ -6,6 +6,7 @@ import {
   calcularPrecoVitrine,
   MAX_PARCELAS_VITRINE,
   CARTAO_PARCELADO_ATIVO,
+  CARTAO_ONDE_PARCELA,
 } from '../lib/checkout/vitrine-preco'
 import { DESCONTO_AVISTA_PERCENTUAL, calcularDescontoAvista } from '../lib/checkout/desconto-avista'
 
@@ -49,18 +50,28 @@ test('preço zero não quebra nem anuncia parcela', () => {
   assert.equal(p.mostrarParcelamento, false)
 })
 
-test('parcelamento só é anunciado quando o cartão existe no checkout', () => {
-  // Hoje o checkout aceita só Pix. Enquanto MEIOS_PAGAMENTO_CHECKOUT não tiver
-  // cartão, a vitrine não pode prometer parcela.
+test('parcela anunciada sem cartão no checkout tem que dizer onde se paga', () => {
+  // A loja pediu o "6x no cartão" na ficha, mas o checkout online fecha só no
+  // Pix. Anunciar a parcela é permitido; anunciar SEM dizer onde o cartão é
+  // aceito não é — o cliente descobriria no fim do funil e desistiria.
   const desconto = readFileSync('lib/checkout/desconto-avista.ts', 'utf8')
   const temCartaoNoCheckout = /MEIOS_PAGAMENTO_CHECKOUT\s*=\s*\[[^\]]*CREDITO/.test(desconto)
 
-  assert.equal(
-    CARTAO_PARCELADO_ATIVO,
-    temCartaoNoCheckout,
-    'ligue CARTAO_PARCELADO_ATIVO no mesmo deploy em que o cartão entrar no checkout',
+  if (!CARTAO_PARCELADO_ATIVO) return
+
+  assert.equal(calcularPrecoVitrine(1000).mostrarParcelamento, true)
+
+  if (temCartaoNoCheckout) return
+
+  assert.ok(
+    CARTAO_ONDE_PARCELA.trim().length > 0,
+    'sem cartão no checkout, CARTAO_ONDE_PARCELA precisa dizer onde o cliente parcela',
   )
-  assert.equal(calcularPrecoVitrine(1000).mostrarParcelamento, temCartaoNoCheckout)
+  const ficha = readFileSync('components/store/ProductDetail.tsx', 'utf8')
+  assert.ok(
+    ficha.includes('CARTAO_ONDE_PARCELA'),
+    'a ficha do produto precisa exibir CARTAO_ONDE_PARCELA junto da parcela',
+  )
 })
 
 test('constantes seguem o que a loja combinou', () => {

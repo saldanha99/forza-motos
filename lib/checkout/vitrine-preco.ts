@@ -12,12 +12,19 @@ import { DESCONTO_AVISTA_PERCENTUAL } from './desconto-avista'
 export const MAX_PARCELAS_VITRINE = 6
 
 /**
- * O checkout da loja ainda é só Pix (MEIOS_PAGAMENTO_CHECKOUT). Enquanto for
- * assim a vitrine não anuncia parcela: prometer "6x" e o cliente só encontrar
- * Pix no fim do funil é pior do que não falar nada. Ligue este flag no mesmo
- * deploy em que o cartão entrar no checkout.
+ * A ficha do produto anuncia o parcelamento em 6x — pedido da loja, que vende
+ * no cartão em 6x sem juros no balcão e pelo WhatsApp.
+ *
+ * ATENÇÃO: o checkout online ainda fecha só no Pix (MEIOS_PAGAMENTO_CHECKOUT).
+ * Por isso a ficha é obrigada a dizer ONDE o cartão é aceito — ver
+ * `CARTAO_ONDE_PARCELA`. Prometer 6x e o cliente achar só Pix no fim do funil
+ * seria pior do que não falar nada. Quando o cartão entrar no checkout, apague
+ * essa ressalva no mesmo deploy.
  */
-export const CARTAO_PARCELADO_ATIVO = false
+export const CARTAO_PARCELADO_ATIVO = true
+
+/** Onde o cliente paga no cartão hoje — aparece junto da parcela. */
+export const CARTAO_ONDE_PARCELA = 'na loja ou pelo WhatsApp'
 
 export interface PrecoVitrine {
   /** Preço cheio — é o que o cartão parcela */
