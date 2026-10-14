@@ -773,9 +773,6 @@
       radial-gradient(40% 62% at 92% 104%, rgba(212, 43, 43, 0.16) 0%, transparent 72%);
   }
 
-  .fm-medida__pneu { transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1); }
-  .fm-medida__pneu.is-completo { transform: rotate(-8deg) scale(1.03); }
-
   /* Botão com relevo de metal pintado */
   .fm-medida__btn {
     background: linear-gradient(180deg, #e8413f 0%, #d42b2b 52%, #a81f1f 100%);
@@ -854,10 +851,8 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .fm-medida__pneu,
     .fm-medida__btn,
     .fm-campo__select { transition: none; }
-    .fm-medida__pneu.is-completo { transform: none; }
     .fm-campo__pulso { animation: none; }
   }
 }

@@ -43,6 +43,9 @@ export const REGRAS_LINHA: RegraLinha[] = [
   { termo: 'e-07', linha: 'Enduro Trail+ E-07+', segmento: 'big-trail' },
   { termo: 'karoo', linha: 'Karoo', segmento: 'big-trail' },
   { termo: 'tkc', linha: 'TKC', segmento: 'big-trail' },
+  // Misto on/off (scrambler, XRE, Lander) — era o único pneu publicado sem palpite.
+  { termo: 'mt60', linha: 'MT60', segmento: 'big-trail' },
+  { termo: 'mt 60', linha: 'MT60', segmento: 'big-trail' },
 
   // ── Esportivo / street ──────────────────────────────────────────────
   { termo: 'diablo rosso iv corsa', linha: 'Diablo Rosso IV Corsa', segmento: 'esportivo-street' },
@@ -72,6 +75,9 @@ export const REGRAS_LINHA: RegraLinha[] = [
   { termo: 'cruisetec', linha: 'Cruisetec', segmento: 'custom' },
   { termo: 'marathon me888', linha: 'Marathon ME888', segmento: 'custom' },
   { termo: 'me888', linha: 'Marathon ME888', segmento: 'custom' },
+  // O ERP e o menu da loja também escrevem "ME 888", com espaço.
+  { termo: 'me 888', linha: 'Marathon ME888', segmento: 'custom' },
+  { termo: 'marathon', linha: 'Marathon ME888', segmento: 'custom' },
   { termo: 'scorcher', linha: 'Scorcher', segmento: 'custom' },
   { termo: 'commander', linha: 'Commander', segmento: 'custom' },
   { termo: 'exedra', linha: 'Exedra', segmento: 'custom' },

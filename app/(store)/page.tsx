@@ -8,6 +8,7 @@ import { ProductCard } from '@/components/store/ProductCard'
 import { FeaturedCarousel } from '@/components/store/FeaturedCarousel'
 import { HeroCarousel } from '@/components/store/HeroCarousel'
 import { ScrollReveal } from '@/components/store/ScrollReveal'
+import { ArteSlot } from '@/components/store/ArteSlot'
 import { ArrowRight } from 'lucide-react'
 import type { Metadata } from 'next'
 import { getLocalBusinessSchema } from '@/lib/schema'
@@ -123,17 +124,19 @@ async function getHomeData() {
 }
 
 // `banner` é a chave no módulo de marketing — a imagem sai de /admin/marketing.
+// Sem imagem enviada, o card usa a arte desenhada (ArteSlot) com `icone`.
 const POP_CATS = [
-  { id: 'Pneus',         label: 'Pneus Premium',          sub: 'Pirelli · Metzeler · Michelin',    banner: 'home-categoria-pneus',       href: '/produtos?categoria=Pneus' },
-  { id: 'Lubrificantes', label: 'Óleos e Lubrificantes',  sub: 'Motul · Castrol',                  banner: 'home-categoria-oleos',       href: '/produtos?categoria=Lubrificantes' },
-  { id: 'Freios',        label: 'Freios e Segurança',     sub: 'EBC · Brembo · ATE',              banner: 'home-categoria-freios',      href: '/produtos?categoria=Freios' },
-  { id: 'Transmissão',   label: 'Kit Transmissão',        sub: 'DID · RK · Regina',               banner: 'home-categoria-transmissao', href: '/produtos?categoria=Transmissão' },
+  { id: 'Pneus',         label: 'Pneus Premium',          sub: 'Pirelli · Metzeler · Michelin',    banner: 'home-categoria-pneus',       icone: 'pneus' as const,       cor: '#d42b2b', href: '/pneus' },
+  { id: 'Lubrificantes', label: 'Óleos e Lubrificantes',  sub: 'Motul · Castrol',                  banner: 'home-categoria-oleos',       icone: 'oleo' as const,        cor: '#e08a00', href: '/produtos?categoria=Lubrificantes' },
+  { id: 'Freios',        label: 'Freios e Segurança',     sub: 'EBC · Brembo · ATE',              banner: 'home-categoria-freios',      icone: 'freios' as const,      cor: '#e05a00', href: '/produtos?categoria=Freios' },
+  { id: 'Transmissão',   label: 'Kit Transmissão',        sub: 'DID · RK · Regina',               banner: 'home-categoria-transmissao', icone: 'transmissao' as const, cor: '#1a7a2e', href: '/produtos?categoria=Transmissão' },
 ]
 
 // Serviços do box rápido (extraído do áudio do Vinícius)
 const SERVICOS = [
   {
     titulo: 'Troca de Pneu',
+    icone: 'pneus' as const,
     sub: 'Instalação e balanceamento inclusos',
     tempo: '~30 min',
     banner: 'home-servico-pneu',
@@ -141,6 +144,7 @@ const SERVICOS = [
   },
   {
     titulo: 'Pastilha de Freio',
+    icone: 'freios' as const,
     sub: 'Peças originais e homologadas',
     tempo: '~30 min',
     banner: 'home-servico-freio',
@@ -148,6 +152,7 @@ const SERVICOS = [
   },
   {
     titulo: 'Troca de Óleo',
+    icone: 'oleo' as const,
     sub: 'Óleos certificados para motos',
     tempo: '~30 min',
     banner: 'home-servico-oleo',
@@ -155,6 +160,7 @@ const SERVICOS = [
   },
   {
     titulo: 'Kit Transmissão',
+    icone: 'transmissao' as const,
     sub: 'Corrente · Pinhão · Coroa',
     tempo: '~1h',
     banner: 'home-servico-transmissao',
@@ -309,20 +315,25 @@ export default async function HomePage() {
               <ScrollReveal key={s.titulo} type="scale" delay={i * 100}>
                 <Link href="/agendar">
                   <div className="overflow-hidden rounded-xl cursor-pointer group card-lift h-full relative" style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.15)' }}>
-                    {/* Imagem de fundo */}
+                    {/* Foto enviada em /admin/marketing — sem ela, a arte da casa */}
                     <div className="relative w-full" style={{ aspectRatio: '1/1' }}>
-                      <Image
-                        src={banners[s.banner]}
-                        alt={s.titulo}
-                        fill
-                        sizes="(max-width: 768px) 50vw, 25vw"
-                        className="object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
-                      {/* Overlay escuro */}
-                      <div
-                        className="absolute inset-0 transition-opacity duration-300 group-hover:opacity-90"
-                        style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0.1) 100%)' }}
-                      />
+                      {banners[s.banner] ? (
+                        <>
+                          <Image
+                            src={banners[s.banner] as string}
+                            alt={s.titulo}
+                            fill
+                            sizes="(max-width: 768px) 50vw, 25vw"
+                            className="object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                          <div
+                            className="absolute inset-0 transition-opacity duration-300 group-hover:opacity-90"
+                            style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0.1) 100%)' }}
+                          />
+                        </>
+                      ) : (
+                        <ArteSlot icone={s.icone} cor={s.cor} />
+                      )}
                       {/* Badge tempo */}
                       <div className="absolute top-3 right-3">
                         <span
@@ -398,7 +409,7 @@ export default async function HomePage() {
               Ver todas <ArrowRight size={13} />
             </Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {POP_CATS.map((cat, i) => (
               <ScrollReveal key={cat.id} type="scale" delay={i * 80}>
                 <Link href={cat.href}>
@@ -410,23 +421,27 @@ export default async function HomePage() {
                       boxShadow: '0 2px 20px rgba(0,0,0,0.3)',
                     }}
                   >
-                    {/* Imagem trocável em /admin/marketing */}
-                    <Image
-                      src={banners[cat.banner]}
-                      alt={cat.label}
-                      fill
-                      sizes="(max-width: 768px) 50vw, 20vw"
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      priority={i < 2}
-                    />
-
-                    {/* Overlay escuro gradiente */}
-                    <div
-                      className="absolute inset-0 transition-opacity duration-300 group-hover:opacity-80"
-                      style={{
-                        background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.3) 55%, rgba(0,0,0,0.1) 100%)',
-                      }}
-                    />
+                    {/* Foto trocável em /admin/marketing — sem ela, a arte da casa */}
+                    {banners[cat.banner] ? (
+                      <>
+                        <Image
+                          src={banners[cat.banner] as string}
+                          alt={cat.label}
+                          fill
+                          sizes="(max-width: 768px) 50vw, 20vw"
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          priority={i < 2}
+                        />
+                        <div
+                          className="absolute inset-0 transition-opacity duration-300 group-hover:opacity-80"
+                          style={{
+                            background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.3) 55%, rgba(0,0,0,0.1) 100%)',
+                          }}
+                        />
+                      </>
+                    ) : (
+                      <ArteSlot icone={cat.icone} cor={cat.cor} />
+                    )}
 
                     {/* Conteúdo */}
                     <div className="relative z-10 p-4">
@@ -456,15 +471,17 @@ export default async function HomePage() {
 
       {/* ── RedBanner ─────────────────────────────────────────────────────── */}
       <div className="relative overflow-hidden" style={{ minHeight: 220 }}>
-        {/* Imagem de fundo */}
-        <Image
-          src={banners['home-cta-banner']}
-          alt=""
-          fill
-          sizes="100vw"
-          className="object-cover object-center"
-          priority={false}
-        />
+        {/* Foto de fundo, quando a loja enviou uma: a faixa já é vermelha sozinha */}
+        {banners['home-cta-banner'] && (
+          <Image
+            src={banners['home-cta-banner'] as string}
+            alt=""
+            fill
+            sizes="100vw"
+            className="object-cover object-center"
+            priority={false}
+          />
+        )}
         {/* Overlay vermelho semitransparente */}
         <div
           className="absolute inset-0"
@@ -530,13 +547,18 @@ export default async function HomePage() {
               },
             ].map((item) => (
               <div key={item.label} className="relative rounded-2xl overflow-hidden shadow-md group" style={{ aspectRatio: '3/4' }}>
-                <Image
-                  src={item.src}
-                  alt={item.alt}
-                  fill
-                  className={`object-cover ${item.pos} group-hover:scale-105 transition-transform duration-700`}
-                  sizes="(max-width: 640px) 100vw, 33vw"
-                />
+                {/* Estas três são fotos reais da loja — só somem se o admin apagar */}
+                {item.src ? (
+                  <Image
+                    src={item.src}
+                    alt={item.alt}
+                    fill
+                    className={`object-cover ${item.pos} group-hover:scale-105 transition-transform duration-700`}
+                    sizes="(max-width: 640px) 100vw, 33vw"
+                  />
+                ) : (
+                  <ArteSlot icone="servicos" />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
                 <div className="absolute bottom-5 left-5">
                   <p className="text-white font-barlow font-black text-xl drop-shadow">{item.label}</p>

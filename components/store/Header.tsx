@@ -9,6 +9,7 @@ import { useCartStore } from '@/store/cart'
 import { Search, User, ShoppingCart, Menu, X } from 'lucide-react'
 import { ThemeToggle } from '@/components/store/ThemeToggle'
 import { MARCAS_PNEUS, SUBMENUS } from '@/lib/menu-loja'
+import { IconeCategoria, type IdCategoria } from '@/components/store/IconeCategoria'
 
 const CATS = [
   { id: 'Pneus',       label: 'Pneus',       href: '/pneus' },
@@ -21,93 +22,36 @@ const CATS = [
   { id: 'eventos',     label: 'Eventos',     href: '/calendario' },
 ]
 
+/** Ícones da barra de categorias — o desenho mora em IconeCategoria. */
+const ICONE_DA_ABA: Record<string, IdCategoria> = {
+  Pneus: 'pneus',
+  oleo: 'oleo',
+  freios: 'freios',
+  suspensao: 'servicos',
+  filtros: 'filtros',
+  correntes: 'transmissao',
+  acessorios: 'capacetes',
+  eventos: 'eventos',
+}
+
 function CatIcon({ id, active }: { id: string; active: boolean }) {
-  const c = active ? '#d42b2b' : '#444'
-  const op = active ? 1 : 0.6
-
-  if (id === 'Pneus') return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ opacity: op }}>
-      <circle cx="14" cy="14" r="11" stroke={c} strokeWidth="2.5"/>
-      <circle cx="14" cy="14" r="4.5" fill={c}/>
-      {[0,45,90,135,180,225,270,315].map((a, i) => {
-        const r = a * Math.PI / 180
-        return <circle key={i} cx={14 + 9 * Math.cos(r)} cy={14 + 9 * Math.sin(r)} r="1.6" fill={c}/>
-      })}
-    </svg>
-  )
-
-  if (id === 'oleo') return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ opacity: op }}>
-      <path d="M10 4h8v3H10z" fill={c}/>
-      <path d="M9 7h10v3l2 4v8a2 2 0 01-2 2H9a2 2 0 01-2-2v-8l2-4V7z" fill={c}/>
-      <rect x="10" y="16" width="8" height="2" rx="1" fill="#fff" opacity="0.45"/>
-    </svg>
-  )
-
-  if (id === 'filtros') return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ opacity: op }}>
-      <ellipse cx="14" cy="8.5" rx="8" ry="3.5" stroke={c} strokeWidth="2.2"/>
-      <path d="M6 8.5v11c0 2 3.6 3.5 8 3.5s8-1.5 8-3.5v-11" stroke={c} strokeWidth="2.2"/>
-    </svg>
-  )
-
-  if (id === 'freios') return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ opacity: op }}>
-      <circle cx="14" cy="14" r="11" stroke={c} strokeWidth="2"/>
-      <circle cx="14" cy="14" r="4.5" fill="none" stroke={c} strokeWidth="1.5"/>
-      {[0,60,120,180,240,300].map((a, i) => {
-        const r = a * Math.PI / 180
-        return <circle key={i} cx={14 + 10.5 * Math.cos(r)} cy={14 + 10.5 * Math.sin(r)} r="1.8" fill={c}/>
-      })}
-    </svg>
-  )
-
-  if (id === 'suspensao') return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ opacity: op }}>
-      <rect x="8" y="2" width="4" height="11" rx="2" stroke={c} strokeWidth="2"/>
-      <rect x="16" y="2" width="4" height="11" rx="2" stroke={c} strokeWidth="2"/>
-      <path d="M8 13C6 15 6 19 8 21 6 23 6 26 8 26" stroke={c} strokeWidth="2" strokeLinecap="round" fill="none"/>
-      <path d="M20 13C22 15 22 19 20 21 22 23 22 26 20 26" stroke={c} strokeWidth="2" strokeLinecap="round" fill="none"/>
-    </svg>
-  )
-
-  if (id === 'correntes') return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ opacity: op }}>
-      <rect x="1" y="9.5" width="9" height="9" rx="3" stroke={c} strokeWidth="2"/>
-      <rect x="18" y="9.5" width="9" height="9" rx="3" stroke={c} strokeWidth="2"/>
-      <line x1="10" y1="14" x2="18" y2="14" stroke={c} strokeWidth="2.5"/>
-    </svg>
-  )
-
-  if (id === 'capacetes') return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ opacity: op }}>
-      <path d="M3.5 18c0-5.8 4.7-12 10.5-12S24.5 12.2 24.5 18H3.5z" stroke={c} strokeWidth="2" fill="none"/>
-      <path d="M3.5 18h21" stroke={c} strokeWidth="2"/>
-      <path d="M6.5 18c0 2.5 2 4.5 7.5 4.5s7.5-2 7.5-4.5" stroke={c} strokeWidth="1.8" fill="none"/>
-      <rect x="6" y="12.5" width="16" height="5.5" rx="1.5" fill={c} opacity="0.35"/>
-    </svg>
-  )
-
-  if (id === 'eventos') return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ opacity: op }}>
-      <rect x="3" y="6" width="22" height="19" rx="2.5" stroke={c} strokeWidth="2"/>
-      <line x1="3" y1="12" x2="25" y2="12" stroke={c} strokeWidth="2"/>
-      <line x1="9" y1="3" x2="9" y2="9" stroke={c} strokeWidth="2" strokeLinecap="round"/>
-      <line x1="19" y1="3" x2="19" y2="9" stroke={c} strokeWidth="2" strokeLinecap="round"/>
-      <circle cx="9" cy="18" r="1.5" fill={c}/>
-      <circle cx="14" cy="18" r="1.5" fill={c}/>
-      <circle cx="19" cy="18" r="1.5" fill={c}/>
-    </svg>
-  )
-
   return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ opacity: op }}>
-      <path d="M7 7l3.5 3.5m0 0l11 11M10.5 10.5L9.5 5.5l5 1.5M21.5 21.5l4 4-2.5 2.5-4-4" stroke={c} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
+    <IconeCategoria
+      id={ICONE_DA_ABA[id] ?? 'servicos'}
+      cor={active ? '#d42b2b' : '#444'}
+      opacidade={active ? 1 : 0.6}
+    />
   )
 }
 
-export function Header() {
+/** Categoria de pneu no mega menu — vem do layout, que lê /admin/pneus-segmentos. */
+export interface SegmentoMenu {
+  nome: string
+  slug: string
+  produtos: number
+}
+
+export function Header({ segmentosPneu = [] }: { segmentosPneu?: SegmentoMenu[] }) {
   const router = useRouter()
   const { data: session } = useSession()
   const [query, setQuery] = useState('')
@@ -144,17 +88,19 @@ export function Header() {
         </span>
       </div>
 
-      {/* ── MainHeader ── */}
-      <div className="bg-black px-4 md:px-12 py-3 flex items-center gap-4 md:gap-6">
+      {/* ── MainHeader ──
+          O logo é o elemento dominante da faixa, como na Barata Pneus e na
+          Varella Motos: marca grande à esquerda, busca menor ao lado. */}
+      <div className="bg-black px-4 md:px-10 py-3 md:py-5 flex items-center gap-4 md:gap-8">
 
         {/* Logo */}
-        <Link href="/" className="shrink-0">
-          <LogoSVG dark height={74} className="hidden md:block" />
-          <LogoSVG dark height={46} className="md:hidden" />
+        <Link href="/" className="shrink-0" aria-label="Forza Motos — página inicial">
+          <LogoSVG dark variante="horizontal" height={58} className="hidden md:block" />
+          <LogoSVG dark variante="horizontal" height={34} className="md:hidden" />
         </Link>
 
         {/* Search */}
-        <form onSubmit={handleSearch} className="flex-1 hidden sm:flex max-w-[620px] mx-auto rounded-[4px] overflow-hidden">
+        <form onSubmit={handleSearch} className="flex-1 hidden sm:flex max-w-[520px] mx-auto rounded-[4px] overflow-hidden">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -251,6 +197,33 @@ export function Header() {
           >
             <div className="max-w-[1080px] mx-auto px-8 py-7">
               {hoverCat === 'Pneus' ? (
+                <>
+                  {/* Categorias de uso — o caminho que a loja pediu primeiro */}
+                  {segmentosPneu.length > 0 && (
+                    <div className="mb-7 pb-6 border-b border-[#eee]">
+                      <p className="font-barlow font-bold text-[14px] uppercase tracking-wider text-[#111] mb-3">
+                        Categorias
+                      </p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                        {segmentosPneu.map((seg) => (
+                          <Link
+                            key={seg.slug}
+                            href={`/pneus/categoria/${seg.slug}`}
+                            onClick={() => setHoverCat(null)}
+                            className="group rounded-lg border border-[#e6e6e6] hover:border-[#d42b2b] px-3.5 py-3 transition-colors"
+                          >
+                            <span className="block font-barlow font-bold text-[14.5px] uppercase text-[#111] group-hover:text-[#d42b2b] transition-colors">
+                              {seg.nome}
+                            </span>
+                            <span className="block text-[11.5px] font-inter text-[#999] mt-0.5">
+                              {seg.produtos} {seg.produtos === 1 ? 'pneu' : 'pneus'}
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                 <div className="grid grid-cols-4 gap-8">
                   {MARCAS_PNEUS.map((m) => (
                     <div key={m.marca}>
@@ -318,6 +291,7 @@ export function Header() {
                     </ul>
                   </div>
                 </div>
+                </>
               ) : (
                 <div className="grid gap-8" style={{ gridTemplateColumns: `repeat(${(SUBMENUS[hoverCat] ?? []).length}, minmax(0, 260px))`, justifyContent: 'center' }}>
                   {(SUBMENUS[hoverCat] ?? []).map((col) => (

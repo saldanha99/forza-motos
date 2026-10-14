@@ -4,10 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import {
-  LogoPirelli, LogoMetzeler,
-  LogoMotul, LogoEBC, LogoDID,
-} from './BrandLogo'
+import { ArteSlot } from './ArteSlot'
 
 // ── Tire SVG animado ──────────────────────────────────────────────────────────
 function AnimatedTire({ size = 260 }: { size?: number }) {
@@ -77,7 +74,6 @@ const SLIDES = [
     cta: { label: 'VER PRODUTOS', href: '/produtos' },
     ctaSecond: { label: 'AGENDAR SERVIÇO', href: '/agendar' },
     visual: 'tire',
-    bgImg: '/images/hero/slide-pneus.jpg',
     accent1: { label: 'Credenciada', value: 'PIRELLI · METZELER' },
     accent2: { label: 'Box rápido', value: '30 MINUTOS' },
   },
@@ -91,7 +87,6 @@ const SLIDES = [
     cta: { label: 'AGENDAR AGORA', href: '/agendar' },
     ctaSecond: { label: 'VER SERVIÇOS', href: '/#servicos' },
     visual: 'services',
-    bgImg: '/images/hero/slide-servicos.jpg',
     accent1: { label: '+10 anos', value: 'EXPERIÊNCIA' },
     accent2: { label: 'Tempo médio', value: '~30 MIN' },
   },
@@ -104,29 +99,28 @@ const SLIDES = [
     sub: 'Mais de 2.800 produtos em estoque\nFrete grátis acima de R$499 para SP',
     cta: { label: 'COMPRAR AGORA', href: '/produtos' },
     ctaSecond: { label: 'VER PROMOÇÕES', href: '/produtos?promo=1' },
-    visual: 'brands',
-    bgImg: '/images/hero/slide-entrega.jpg',
+    visual: 'entrega',
     accent1: { label: 'Frete grátis', value: 'ACIMA R$499 SP' },
     accent2: { label: 'Pagamento via Pix', value: '5% DE DESCONTO' },
   },
 ]
 
-// `id` casa com a chave vinda do módulo de marketing (home-atalho-<id>);
-// `img` é só o padrão de quando o admin ainda não trocou a imagem.
+// `id` casa com a chave vinda do módulo de marketing (home-atalho-<id>).
+// Sem foto enviada pela loja, o quadradinho usa a arte da casa.
 const SERVICE_CARDS = [
-  { id: 'pneu',        img: '/images/services/card-pneu.jpg',     label: 'Pneu',        time: '~30min' },
-  { id: 'freio',       img: '/images/services/card-freio.jpg',    label: 'Freio',       time: '~30min' },
-  { id: 'oleo',        img: '/images/services/card-oleo.jpg',     label: 'Óleo',        time: '~30min' },
-  { id: 'transmissao', img: '/images/services/card-corrente.jpg', label: 'Transmissão', time: '~1h' },
+  { id: 'pneu',        icone: 'pneus' as const,       cor: '#d42b2b', label: 'Pneu',        time: '~30min' },
+  { id: 'freio',       icone: 'freios' as const,      cor: '#e05a00', label: 'Freio',       time: '~30min' },
+  { id: 'oleo',        icone: 'oleo' as const,        cor: '#e08a00', label: 'Óleo',        time: '~30min' },
+  { id: 'transmissao', icone: 'transmissao' as const, cor: '#1a7a2e', label: 'Transmissão', time: '~1h' },
 ]
 
-// Michelin volta à grade quando o Caio enviar o logo atualizado (substituir /images/brands/michelin.svg)
-const HERO_BRANDS = [
-  { key: 'pirelli',     Logo: LogoPirelli,     h: 22, bg: false },
-  { key: 'metzeler',    Logo: LogoMetzeler,    h: 14, bg: false },
-  { key: 'motul',       Logo: LogoMotul,       h: 22, bg: true  }, // bg vermelho próprio
-  { key: 'ebc',         Logo: LogoEBC,         h: 24, bg: false },
-  { key: 'did',         Logo: LogoDID,         h: 20, bg: false },
+// Vantagens da loja online — ocupavam o lugar da grade de logos das marcas,
+// retirada a pedido do cliente.
+const HERO_VANTAGENS = [
+  { titulo: '+2.800', sub: 'produtos em estoque' },
+  { titulo: '24h', sub: 'para postar seu pedido' },
+  { titulo: '5% OFF', sub: 'pagando no Pix' },
+  { titulo: 'SP', sub: 'frete grátis acima de R$499' },
 ]
 
 // ── Visual right panel ────────────────────────────────────────────────────────
@@ -163,7 +157,7 @@ function SlideVisual({
           animation: active ? 'float-up 3.2s ease-in-out infinite' : 'none',
         }}
       >
-        <div className="text-[#666] text-[10px] font-inter">Credenciada</div>
+        <div className="text-white/55 text-[10px] font-inter">Credenciada</div>
         <div className="text-white text-[13px] font-barlow font-bold tracking-wide">PIRELLI · METZELER</div>
       </div>
       {/* floating badge 2 */}
@@ -177,7 +171,7 @@ function SlideVisual({
           animation: active ? 'float-up 3.2s ease-in-out infinite 1.6s' : 'none',
         }}
       >
-        <div className="text-[#888] text-[10px] font-inter">Box rápido</div>
+        <div className="text-white/60 text-[10px] font-inter">Box rápido</div>
         <div className="text-[#d42b2b] text-[18px] font-barlow font-black">30 MINUTOS</div>
       </div>
     </div>
@@ -198,15 +192,20 @@ function SlideVisual({
               border: '1px solid rgba(255,255,255,0.12)',
             }}
           >
-            <Image
-              src={atalhos[s.id] ?? s.img}
-              alt={s.label}
-              fill
-              sizes="140px"
-              className="object-cover"
-            />
-            {/* Overlay escuro */}
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)' }} />
+            {atalhos[s.id] ? (
+              <>
+                <Image
+                  src={atalhos[s.id] as string}
+                  alt={s.label}
+                  fill
+                  sizes="140px"
+                  className="object-cover"
+                />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)' }} />
+              </>
+            ) : (
+              <ArteSlot icone={s.icone} cor={s.cor} />
+            )}
             {/* Texto */}
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '10px 8px', textAlign: 'center' }}>
               <div className="text-white text-[13px] font-barlow font-bold leading-none mb-1">{s.label}</div>
@@ -220,32 +219,28 @@ function SlideVisual({
     </div>
   )
 
-  // brands — logos reais SVG em grid
+  // entrega — vantagens da loja online (sem logos de marca)
   return (
     <div className="flex items-center justify-center h-full px-4">
       <div className="w-full max-w-[300px]">
         <div className="grid grid-cols-2 gap-2.5">
-          {HERO_BRANDS.map((brand, i) => (
+          {HERO_VANTAGENS.map((v, i) => (
             <div
-              key={brand.key}
+              key={v.titulo}
               style={{
-                background: brand.bg ? 'rgba(238,28,37,0.18)' : 'rgba(255,255,255,0.05)',
-                border: brand.bg
-                  ? '1px solid rgba(238,28,37,0.35)'
-                  : '1px solid rgba(255,255,255,0.1)',
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
                 borderRadius: 8,
-                padding: '12px 10px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: 54,
+                padding: '14px 12px',
+                minHeight: 74,
                 backdropFilter: 'blur(4px)',
                 animation: active ? `fade-up 0.5s ease ${i * 0.08 + 0.15}s both` : 'none',
-                // Com quantidade ímpar de marcas, o último card ocupa a linha inteira
-                gridColumn: i === HERO_BRANDS.length - 1 && HERO_BRANDS.length % 2 === 1 ? 'span 2' : undefined,
               }}
             >
-              <brand.Logo height={brand.h} />
+              <div className="font-barlow font-black text-[20px] leading-none text-white">{v.titulo}</div>
+              <div className="font-inter text-[10.5px] leading-[1.35] mt-1" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                {v.sub}
+              </div>
             </div>
           ))}
         </div>
@@ -258,7 +253,7 @@ function SlideVisual({
           }}
         >
           <span className="text-[#d42b2b] font-barlow font-bold text-[13px] tracking-[0.5px]">
-            + 2.800 PRODUTOS EM ESTOQUE
+            ENTREGA EM TODO O BRASIL
           </span>
         </div>
       </div>
@@ -337,14 +332,18 @@ export function HeroCarousel({
               zIndex: 0,
             }}
           >
-            <Image
-              src={bgImgs[s.id] ?? s.bgImg}
-              alt=""
-              fill
-              sizes="100vw"
-              className="object-cover object-center"
-              priority={i === 0}
-            />
+            {bgImgs[s.id] ? (
+              <Image
+                src={bgImgs[s.id] as string}
+                alt=""
+                fill
+                sizes="100vw"
+                className="object-cover object-center"
+                priority={i === 0}
+              />
+            ) : (
+              <ArteSlot vinheta={false} />
+            )}
           </div>
         ))}
 
@@ -386,7 +385,7 @@ export function HeroCarousel({
               >
                 {slide.badge}
               </span>
-              <span className="text-[#555] text-[11px] font-inter">{slide.badgeSub}</span>
+              <span className="text-white/55 text-[11px] font-inter">{slide.badgeSub}</span>
             </div>
 
             {/* Headline */}
@@ -396,7 +395,7 @@ export function HeroCarousel({
                 {slide.headline[0]}<br />
                 <span style={{ color: '#d42b2b' }}>{slide.headline[1]}</span>
               </h1>
-              <p className="font-inter text-[13px] text-[#555] mt-4 leading-[1.7]"
+              <p className="font-inter text-[13.5px] text-white/70 mt-4 leading-[1.7]"
                 style={{ whiteSpace: 'pre-line' }}>
                 {slide.sub}
               </p>
@@ -424,12 +423,12 @@ export function HeroCarousel({
             <div className="flex gap-6 pt-2">
               <div>
                 <div className="font-barlow font-black text-[22px] text-white leading-none">{slide.accent1.value}</div>
-                <div className="font-inter text-[11px] text-[#555] mt-0.5">{slide.accent1.label}</div>
+                <div className="font-inter text-[11px] text-white/55 mt-0.5">{slide.accent1.label}</div>
               </div>
               <div style={{ width: 1, background: 'rgba(255,255,255,0.1)' }} />
               <div>
                 <div className="font-barlow font-black text-[22px] text-[#d42b2b] leading-none">{slide.accent2.value}</div>
-                <div className="font-inter text-[11px] text-[#555] mt-0.5">{slide.accent2.label}</div>
+                <div className="font-inter text-[11px] text-white/55 mt-0.5">{slide.accent2.label}</div>
               </div>
             </div>
           </div>

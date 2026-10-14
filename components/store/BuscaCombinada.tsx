@@ -5,8 +5,10 @@
  *
  * Em vez de dois blocos disputando espaço, um único painel com duas abas —
  * "Pela medida" e "Pela placa". O cliente vê que existem os dois caminhos sem
- * poluição visual, e o pneu ilustrado serve aos dois: na medida ele acompanha
- * o funil; na placa, grava a medida de fábrica que a consulta devolveu.
+ * poluição visual.
+ *
+ * Sem ilustração: o pneu desenhado que ficava à esquerda tinha roda de carro e
+ * saiu a pedido da loja. O painel agora usa a largura inteira.
  *
  * A aba inicial é a MEDIDA porque ela funciona para todo o estoque hoje. A
  * placa só devolve medida das motos já conferidas em /admin/motos — quando
@@ -15,29 +17,13 @@
 import { useState } from 'react'
 import { Ruler, ScanLine } from 'lucide-react'
 import type { IndiceMedidasJSON } from '@/lib/medida-pneu'
-import { PneuRealista } from './PneuRealista'
-import { FunilMedida, type SelecaoMedida } from './FunilMedida'
+import { FunilMedida } from './FunilMedida'
 import { BuscaPorPlaca } from './BuscaPorPlaca'
-import { parseMedida } from '@/lib/medida-pneu'
 
 type Aba = 'medida' | 'placa'
-const VAZIO: SelecaoMedida = { largura: null, perfil: null, aro: null }
 
 export function BuscaCombinada({ indice }: { indice: IndiceMedidasJSON }) {
   const [aba, setAba] = useState<Aba>('medida')
-  const [selMedida, setSelMedida] = useState<SelecaoMedida>(VAZIO)
-  const [selPlaca, setSelPlaca] = useState<SelecaoMedida>(VAZIO)
-
-  // O pneu mostra o que a aba ativa produziu
-  const sel = aba === 'medida' ? selMedida : selPlaca
-  const completo = sel.largura != null && sel.perfil != null && sel.aro != null
-
-  /** A placa devolve "120/70-19"; o pneu precisa dos três números */
-  function medidasDaPlaca(medidas: { dianteira: string; traseira: string } | null) {
-    if (!medidas) return setSelPlaca(VAZIO)
-    const m = parseMedida(medidas.dianteira)
-    setSelPlaca(m ? { largura: m.largura, perfil: m.perfil, aro: m.aro } : VAZIO)
-  }
 
   return (
     <div className="fm-medida relative overflow-hidden rounded-2xl">
@@ -45,17 +31,8 @@ export function BuscaCombinada({ indice }: { indice: IndiceMedidasJSON }) {
       <div aria-hidden className="fm-medida__grao" />
       <div aria-hidden className="fm-medida__brilho" />
 
-      <div className="relative flex flex-col lg:flex-row items-center gap-6 lg:gap-9 px-6 py-7 md:px-9 md:py-8">
-        <div className="shrink-0 w-[132px] md:w-[164px] lg:w-[188px]">
-          <PneuRealista
-            largura={sel.largura}
-            perfil={sel.perfil}
-            aro={sel.aro}
-            className={`w-full h-auto drop-shadow-2xl fm-medida__pneu ${completo ? 'is-completo' : ''}`}
-          />
-        </div>
-
-        <div className="flex-1 w-full min-w-0">
+      <div className="relative px-6 py-7 md:px-9 md:py-8">
+        <div className="w-full min-w-0">
           {/* Abas — deixam explícito que há dois caminhos */}
           <div
             role="tablist"
@@ -76,9 +53,9 @@ export function BuscaCombinada({ indice }: { indice: IndiceMedidasJSON }) {
                 Encontre o pneu certo <span className="text-[#d42b2b]">da sua moto</span>
               </h3>
               <p className="text-[13px] text-[#666] dark:text-white/65 font-inter leading-relaxed mb-4">
-                A medida está gravada na lateral do seu pneu atual — igual à do desenho ao lado.
+                A medida está gravada na lateral do seu pneu atual, no formato 120/70-17.
               </p>
-              <FunilMedida indice={indice} onSelecao={setSelMedida} />
+              <FunilMedida indice={indice} />
             </div>
           ) : (
             <div role="tabpanel" aria-label="Busca pela placa">
@@ -88,7 +65,7 @@ export function BuscaCombinada({ indice }: { indice: IndiceMedidasJSON }) {
               <p className="text-[13px] text-[#666] dark:text-white/65 font-inter leading-relaxed mb-4">
                 A gente identifica sua moto e mostra o que serve nela — sem precisar saber medida nem modelo.
               </p>
-              <BuscaPorPlaca onResultado={medidasDaPlaca} />
+              <BuscaPorPlaca />
             </div>
           )}
         </div>

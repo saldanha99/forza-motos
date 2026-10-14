@@ -3,8 +3,13 @@
  *
  * Cada "slot" é um ponto fixo da loja que aceita troca de imagem em
  * /admin/marketing. A imagem enviada vai para o storage da VPS (/imagens)
- * e a URL fica em MarketingBanner. Sem registro (ou imagemUrl null),
- * o site usa a imagem padrão versionada em /public.
+ * e a URL fica em MarketingBanner.
+ *
+ * `fallback: null` é o normal: o slot começa VAZIO e a página desenha a arte
+ * dela (gradiente da marca, ícone, faixa vermelha). As fotos de catálogo que
+ * ocupavam esses lugares eram geradas por IA e saíram a pedido da loja — no
+ * lugar delas entra foto de verdade, enviada pelo admin. Só sobra `fallback`
+ * onde existe foto real da loja versionada no repositório.
  *
  * Ao acrescentar um slot aqui, lembre de consumir `banners['<chave>']` na
  * página correspondente — senão ele aparece no admin sem efeito nenhum.
@@ -22,8 +27,11 @@ export interface BannerSlot {
   dimensao: string
   /** aspect-ratio do preview no admin — igual ao recorte que o site faz */
   proporcao: string
-  /** Imagem padrão versionada no repositório */
-  fallback: string
+  /**
+   * Foto real versionada no repositório, usada enquanto o admin não envia
+   * outra. `null` = sem imagem; a página desenha a própria arte.
+   */
+  fallback: string | null
 }
 
 const GRUPO = {
@@ -44,7 +52,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Primeira tela da home. A arte recebe texto branco por cima, do lado esquerdo.',
     dimensao: '1920 × 960 px (2:1) · arte escura',
     proporcao: '2/1',
-    fallback: '/images/hero/slide-pneus.jpg',
+    fallback: null,
   },
   {
     chave: 'home-slide-servicos',
@@ -53,7 +61,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Segunda tela da home. A arte recebe texto branco por cima, do lado esquerdo.',
     dimensao: '1920 × 960 px (2:1) · arte escura',
     proporcao: '2/1',
-    fallback: '/images/hero/slide-servicos.jpg',
+    fallback: null,
   },
   {
     chave: 'home-slide-entrega',
@@ -62,7 +70,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Terceira tela da home. A arte recebe texto branco por cima, do lado esquerdo.',
     dimensao: '1920 × 960 px (2:1) · arte escura',
     proporcao: '2/1',
-    fallback: '/images/hero/slide-entrega.jpg',
+    fallback: null,
   },
 
   // ── Home — atalhos de serviço sobre o carrossel ───────────────────────
@@ -73,7 +81,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Quadradinho sobre o carrossel. Aparece pequeno: use foto bem fechada.',
     dimensao: '600 × 600 px (1:1)',
     proporcao: '1/1',
-    fallback: '/images/services/card-pneu.jpg',
+    fallback: null,
   },
   {
     chave: 'home-atalho-freio',
@@ -82,7 +90,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Quadradinho sobre o carrossel. Aparece pequeno: use foto bem fechada.',
     dimensao: '600 × 600 px (1:1)',
     proporcao: '1/1',
-    fallback: '/images/services/card-freio.jpg',
+    fallback: null,
   },
   {
     chave: 'home-atalho-oleo',
@@ -91,7 +99,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Quadradinho sobre o carrossel. Aparece pequeno: use foto bem fechada.',
     dimensao: '600 × 600 px (1:1)',
     proporcao: '1/1',
-    fallback: '/images/services/card-oleo.jpg',
+    fallback: null,
   },
   {
     chave: 'home-atalho-transmissao',
@@ -100,7 +108,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Quadradinho sobre o carrossel. Aparece pequeno: use foto bem fechada.',
     dimensao: '600 × 600 px (1:1)',
     proporcao: '1/1',
-    fallback: '/images/services/card-corrente.jpg',
+    fallback: null,
   },
 
   // ── Home — categorias populares ───────────────────────────────────────
@@ -111,7 +119,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Card vertical. O nome da categoria entra por cima, embaixo.',
     dimensao: '900 × 1200 px (3:4) · retrato',
     proporcao: '3/4',
-    fallback: '/images/categories/pneus.jpg',
+    fallback: null,
   },
   {
     chave: 'home-categoria-oleos',
@@ -120,7 +128,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Card vertical. O nome da categoria entra por cima, embaixo.',
     dimensao: '900 × 1200 px (3:4) · retrato',
     proporcao: '3/4',
-    fallback: '/images/categories/oleos.jpg',
+    fallback: null,
   },
   {
     chave: 'home-categoria-freios',
@@ -129,7 +137,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Card vertical. O nome da categoria entra por cima, embaixo.',
     dimensao: '900 × 1200 px (3:4) · retrato',
     proporcao: '3/4',
-    fallback: '/images/categories/freios.jpg',
+    fallback: null,
   },
   {
     chave: 'home-categoria-transmissao',
@@ -138,7 +146,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Card vertical. O nome da categoria entra por cima, embaixo.',
     dimensao: '900 × 1200 px (3:4) · retrato',
     proporcao: '3/4',
-    fallback: '/images/categories/transmissao.jpg',
+    fallback: null,
   },
 
   // ── Home — serviços com agendamento ───────────────────────────────────
@@ -149,7 +157,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Card quadrado do box rápido. Foto real da oficina funciona melhor que arte.',
     dimensao: '1000 × 1000 px (1:1)',
     proporcao: '1/1',
-    fallback: '/images/loja-servico-1.jpg',
+    fallback: null,
   },
   {
     chave: 'home-servico-freio',
@@ -158,7 +166,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Card quadrado do box rápido. Foto real da oficina funciona melhor que arte.',
     dimensao: '1000 × 1000 px (1:1)',
     proporcao: '1/1',
-    fallback: '/images/services/freio.jpg',
+    fallback: null,
   },
   {
     chave: 'home-servico-oleo',
@@ -167,7 +175,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Card quadrado do box rápido. Foto real da oficina funciona melhor que arte.',
     dimensao: '1000 × 1000 px (1:1)',
     proporcao: '1/1',
-    fallback: '/images/services/oleo.jpg',
+    fallback: null,
   },
   {
     chave: 'home-servico-transmissao',
@@ -176,7 +184,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Card quadrado do box rápido. Foto real da oficina funciona melhor que arte.',
     dimensao: '1000 × 1000 px (1:1)',
     proporcao: '1/1',
-    fallback: '/images/services/transmissao.jpg',
+    fallback: null,
   },
 
   // ── Home — chamada e fotos da loja ────────────────────────────────────
@@ -187,7 +195,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Faixa larga no meio da home. Leva overlay vermelho forte por cima — a foto aparece só como textura.',
     dimensao: '1920 × 600 px (16:5)',
     proporcao: '16/5',
-    fallback: '/images/cta-banner.jpg',
+    fallback: null,
   },
   {
     chave: 'home-loja-fachada',
@@ -225,7 +233,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Topo de /pneus. O texto branco fica à esquerda.',
     dimensao: '1800 × 880 px · arte escura',
     proporcao: '2/1',
-    fallback: '/images/hero/hero-pneus-bg.jpg',
+    fallback: null,
   },
   {
     chave: 'hero-servicos',
@@ -234,7 +242,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Topo de /servicos. Recebe overlay vermelho por cima.',
     dimensao: '1800 × 700 px',
     proporcao: '18/7',
-    fallback: '/images/hero/hero-servicos.jpg',
+    fallback: null,
   },
   {
     chave: 'hero-oleos',
@@ -243,7 +251,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Topo de /oleos.',
     dimensao: '1800 × 700 px',
     proporcao: '18/7',
-    fallback: '/images/hero/hero-oleos.jpg',
+    fallback: null,
   },
   {
     chave: 'hero-pastilhas',
@@ -252,7 +260,7 @@ export const BANNER_SLOTS: BannerSlot[] = [
     dica: 'Topo de /pastilhas.',
     dimensao: '1800 × 700 px',
     proporcao: '18/7',
-    fallback: '/images/hero/hero-pastilhas.jpg',
+    fallback: null,
   },
 ]
 
@@ -266,22 +274,29 @@ export const GRUPOS_BANNER: string[] = [
   GRUPO.internas,
 ]
 
-export type BannerUrls = Record<string, string>
+/**
+ * Chave → URL. Slot sem imagem nenhuma simplesmente não aparece no mapa, e a
+ * página desenha a própria arte no lugar — por isso `undefined` no tipo.
+ */
+export type BannerUrls = Record<string, string | undefined>
 
 /**
- * URLs efetivas de todos os slots (imagem do admin ou fallback).
+ * URLs efetivas de todos os slots (imagem do admin ou foto padrão).
  * Nunca lança: com o banco fora (ou tabela ainda não migrada) devolve os padrões.
  */
 export async function getBannerUrls(): Promise<BannerUrls> {
   const urls: BannerUrls = {}
-  for (const slot of BANNER_SLOTS) urls[slot.chave] = slot.fallback
+  for (const slot of BANNER_SLOTS) {
+    if (slot.fallback) urls[slot.chave] = slot.fallback
+  }
   try {
     const rows = await prisma.marketingBanner.findMany({
       where: { imagemUrl: { not: null } },
       select: { chave: true, imagemUrl: true },
     })
+    const conhecidas = new Set(BANNER_SLOTS.map((s) => s.chave))
     for (const row of rows) {
-      if (row.imagemUrl && urls[row.chave] !== undefined) urls[row.chave] = row.imagemUrl
+      if (row.imagemUrl && conhecidas.has(row.chave)) urls[row.chave] = row.imagemUrl
     }
   } catch (e) {
     console.warn('[marketing] usando banners padrão:', (e as Error)?.message)
